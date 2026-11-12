@@ -71,8 +71,9 @@ export function buildStatements(accounts: StatementAccount[]): Statements {
   const line = (code: string, label: string, sign: 1 | -1): StatementLine => ({
     key: code,
     label,
-    current: sign * (current.get(code) ?? 0),
-    prior: sign * (prior.get(code) ?? 0),
+    // "+ 0" turns a negative zero into zero, so an empty credit line never prints as (0.00).
+    current: sign * (current.get(code) ?? 0) + 0,
+    prior: sign * (prior.get(code) ?? 0) + 0,
     kind: "line",
     groupCode: code,
   });
