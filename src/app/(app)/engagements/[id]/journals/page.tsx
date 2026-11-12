@@ -5,6 +5,7 @@ import { getSession } from "@/server/session";
 import * as repo from "@/server/repo";
 import * as journals from "@/server/journals";
 import { formatAmount } from "@/domain/money";
+import { canDeleteJournal } from "@/domain/permissions";
 import { deleteJournalAction } from "@/app/actions";
 import { EngagementNav } from "../nav";
 import { DeleteJournalButton, JournalForm } from "./journal-form";
@@ -60,11 +61,13 @@ export default async function JournalsPage({ params }: { params: Promise<{ id: s
                           <span className="ml-2">{j.description}</span>
                           <span className="ml-2 text-xs text-slate-600">{j.createdAt}</span>
                         </span>
+                        {engagement.status === "open" && canDeleteJournal(session.role, j.createdBy === session.userId) && (
                         <form action={deleteJournalAction}>
                           <input type="hidden" name="engagementId" value={id} />
                           <input type="hidden" name="journalId" value={j.id} />
                           <DeleteJournalButton label={`${j.type === "adjusting" ? "AJE" : "RJE"} ${j.number}`} />
                         </form>
+                        )}
                       </div>
                     </caption>
                     <thead className="text-slate-600">

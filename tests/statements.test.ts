@@ -120,8 +120,8 @@ describe("financial statements", () => {
 });
 
 describe("journals in the database", () => {
-  const A = { firmId: "aaaaaaaa-1111-4000-8000-000000000001", userId: "aaaaaaaa-1111-4000-8000-000000000002" };
-  const B = { firmId: "bbbbbbbb-1111-4000-8000-000000000001", userId: "bbbbbbbb-1111-4000-8000-000000000002" };
+  const A = { firmId: "aaaaaaaa-1111-4000-8000-000000000001", userId: "aaaaaaaa-1111-4000-8000-000000000002", role: "admin" as const };
+  const B = { firmId: "bbbbbbbb-1111-4000-8000-000000000001", userId: "bbbbbbbb-1111-4000-8000-000000000002", role: "admin" as const };
   const TB = [
     { code: "1000", name: "Bank - current account", closingMinor: 100000, priorMinor: null },
     { code: "2100", name: "Accrued expenses", closingMinor: 0, priorMinor: -1000 },

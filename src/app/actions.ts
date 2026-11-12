@@ -29,7 +29,11 @@ export async function createClientAction(_prev: FormState, form: FormData): Prom
   const name = String(form.get("name") ?? "").trim();
   if (name.length < 2 || name.length > 200) return { ok: false, message: "Enter the client's name." };
   const session = await getSession();
-  await withFirm(await getDb(), session.firmId, (tx) => repo.createClient(tx, session, name));
+  try {
+    await withFirm(await getDb(), session.firmId, (tx) => repo.createClient(tx, session, name));
+  } catch (e) {
+    return { ok: false, message: e instanceof Error && !("code" in e) ? e.message : "The client was not added." };
+  }
   revalidatePath("/");
   return { ok: true, message: `Added ${name}.` };
 }
@@ -43,7 +47,12 @@ export async function createEngagementAction(_prev: FormState, form: FormData): 
   if (end <= start) return { ok: false, message: "The period end must be after the period start." };
 
   const session = await getSession();
-  const id = await withFirm(await getDb(), session.firmId, (tx) => repo.createEngagement(tx, session, clientId, start, end));
+  let id: string;
+  try {
+    id = await withFirm(await getDb(), session.firmId, (tx) => repo.createEngagement(tx, session, clientId, start, end));
+  } catch (e) {
+    return { ok: false, message: e instanceof Error && !("code" in e) ? e.message : "The engagement was not created. Check the dates." };
+  }
   redirect(`/engagements/${id}`);
 }
 

@@ -4,8 +4,8 @@ import { createFirm, openDatabase, withFirm } from "../src/server/db";
 import * as repo from "../src/server/repo";
 import { buildLeadSheets } from "../src/domain/leadsheet";
 
-const FIRM_A = { firmId: "aaaaaaaa-0000-4000-8000-000000000001", userId: "aaaaaaaa-0000-4000-8000-000000000002" };
-const FIRM_B = { firmId: "bbbbbbbb-0000-4000-8000-000000000001", userId: "bbbbbbbb-0000-4000-8000-000000000002" };
+const FIRM_A = { firmId: "aaaaaaaa-0000-4000-8000-000000000001", userId: "aaaaaaaa-0000-4000-8000-000000000002", role: "admin" as const };
+const FIRM_B = { firmId: "bbbbbbbb-0000-4000-8000-000000000001", userId: "bbbbbbbb-0000-4000-8000-000000000002", role: "admin" as const };
 
 const TB_2024 = [
   { code: "1000", name: "Bank - current account", closingMinor: 4000000, priorMinor: null },

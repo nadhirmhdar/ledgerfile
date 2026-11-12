@@ -3,10 +3,14 @@ import type { TbAccount } from "../domain/tb-parse";
 import { proposeMappings, type MappingSource } from "../domain/mapping";
 import { GROUP_BY_CODE } from "../domain/groups";
 import type { MappedAccount } from "../domain/leadsheet";
+import type { Role } from "../domain/signoff";
+import { canCreateClient, canCreateEngagement, CLIENT_REFUSAL, ENGAGEMENT_REFUSAL } from "../domain/permissions";
 
 export interface Session {
   firmId: string;
   userId: string;
+  /** The user's role, read from the database for this request. */
+  role: Role;
 }
 
 export interface ClientRow {
@@ -68,6 +72,7 @@ export async function listClients(tx: Tx): Promise<ClientRow[]> {
 }
 
 export async function createClient(tx: Tx, s: Session, name: string): Promise<string> {
+  if (!canCreateClient(s.role)) throw new Error(CLIENT_REFUSAL);
   const { rows } = await tx.query<{ id: string }>("insert into clients (firm_id, name) values ($1, $2) returning id", [s.firmId, name]);
   await audit(tx, s, "create", "client", rows[0].id, { name });
   return rows[0].id;
@@ -90,6 +95,7 @@ export async function getEngagement(tx: Tx, id: string): Promise<EngagementRow |
 
 /** Create an engagement and link it to the client's most recent earlier period, for mapping carry-forward. */
 export async function createEngagement(tx: Tx, s: Session, clientId: string, periodStart: string, periodEnd: string): Promise<string> {
+  if (!canCreateEngagement(s.role)) throw new Error(ENGAGEMENT_REFUSAL);
   const client = await tx.query("select 1 from clients where id = $1", [clientId]);
   if (client.rows.length === 0) throw new Error("Client not found.");
   const prior = await tx.query<{ id: string }>(
