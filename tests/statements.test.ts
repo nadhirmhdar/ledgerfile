@@ -65,6 +65,31 @@ describe("financial statements", () => {
     expect(s.hasComparatives).toBe(true);
   });
 
+  it("shows the current portion of borrowings under current liabilities", () => {
+    const split = buildStatements(BOOKS, { borrowingsCurrent: { current: 5000, prior: 20000 } });
+    const lines = split.financialPosition.flatMap((sec) => sec.lines);
+    const find = (key: string) => lines.find((l) => l.key === key)!;
+    expect(find("BORROW_CUR")).toMatchObject({ current: 5000, prior: 20000, label: "Borrowings: current portion" });
+    expect(find("BORROW")).toMatchObject({ current: 15000, prior: 0 });
+    expect(find("T:Current liabilities").current).toBe(45000);
+    expect(find("T:Non-current liabilities").current).toBe(15000);
+    // Only the presentation moves: totals and the balance are unchanged.
+    expect(find("TOTAL_LIABILITIES").current).toBe(60000);
+    expect(find("TOTAL_EL").current).toBe(find("TOTAL_ASSETS").current);
+    expect(split.clean).toBe(true);
+    const sections = split.financialPosition.map((x) => x.title);
+    expect(sections.indexOf("Current liabilities")).toBeGreaterThan(sections.indexOf("Non-current liabilities"));
+
+    // When everything is current, the non-current line disappears.
+    const allCurrent = buildStatements(BOOKS, { borrowingsCurrent: { current: 20000, prior: 20000 } });
+    expect(allCurrent.financialPosition.flatMap((sec) => sec.lines).some((l) => l.key === "BORROW")).toBe(false);
+
+    const tooMuch = buildStatements(BOOKS, { borrowingsCurrent: { current: 25000, prior: 0 } });
+    expect(tooMuch.checks.find((c) => c.label.includes("Current portion"))?.passed).toBe(false);
+    expect(tooMuch.clean).toBe(false);
+    expect(s.checks.some((c) => c.label.includes("Current portion"))).toBe(false);
+  });
+
   it("omits groups with no balance in either year", () => {
     expect(s.comprehensiveIncome.some((l) => l.key === "OTHERINC")).toBe(false);
     expect(s.financialPosition.flatMap((sec) => sec.lines).some((l) => l.key === "INVENT")).toBe(false);

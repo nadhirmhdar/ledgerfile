@@ -54,7 +54,15 @@ function fmt(minor: number): string {
   return (Math.abs(minor) / 100).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-export function buildStatements(accounts: StatementAccount[]): Statements {
+export interface StatementOptions {
+  /**
+   * The amount of total borrowings due within twelve months, in presentation sign, for each
+   * year. It is shown under current liabilities and deducted from the non-current line.
+   */
+  borrowingsCurrent?: { current: number; prior: number };
+}
+
+export function buildStatements(accounts: StatementAccount[], options: StatementOptions = {}): Statements {
   // Ledger-sign totals per group for each year.
   const current = new Map<string, number>();
   const prior = new Map<string, number>();
@@ -141,8 +149,17 @@ export function buildStatements(accounts: StatementAccount[]): Statements {
   const equityAll = [...equityLines, result];
   const totalEquity = sum("TOTAL_EQUITY", "Total equity", equityAll);
 
+  const split = options.borrowingsCurrent ?? { current: 0, prior: 0 };
   const liabilitySections = LIABILITY_SECTIONS.map((title) => {
-    const lines = sectionLines(title, -1);
+    let lines = sectionLines(title, -1);
+    if (title === "Non-current liabilities") {
+      lines = lines
+        .map((l) => (l.key === "BORROW" ? { ...l, current: l.current - split.current, prior: l.prior - split.prior } : l))
+        .filter((l) => l.key !== "BORROW" || l.current !== 0 || l.prior !== 0);
+    }
+    if (title === "Current liabilities" && (split.current !== 0 || split.prior !== 0)) {
+      lines = [{ key: "BORROW_CUR", label: "Borrowings: current portion", current: split.current, prior: split.prior, kind: "line", groupCode: "BORROW" }, ...lines];
+    }
     return { title, lines: [...lines, sum(`T:${title}`, `Total ${title.toLowerCase()}`, lines)] };
   });
   const totalLiabilities = sum("TOTAL_LIABILITIES", "Total liabilities", liabilitySections.map((s) => s.lines[s.lines.length - 1]));
@@ -172,6 +189,16 @@ export function buildStatements(accounts: StatementAccount[]): Statements {
     { label: "Every mapping has been reviewed", passed: unapproved === 0, detail: unapproved === 0 ? undefined : `${unapproved} suggested mapping(s) are not yet accepted.` },
     { label: "Total assets equal total equity and liabilities", passed: diff === 0, detail: diff === 0 ? undefined : `Difference of ${fmt(diff)}.` },
   ];
+  if (split.current !== 0 || split.prior !== 0) {
+    const totalCurrent = -(current.get("BORROW") ?? 0);
+    const totalPrior = -(prior.get("BORROW") ?? 0);
+    const within = split.current >= 0 && split.prior >= 0 && split.current <= totalCurrent && split.prior <= totalPrior;
+    checks.push({
+      label: "Current portion of borrowings is within total borrowings",
+      passed: within,
+      detail: within ? undefined : "The amount entered as due within twelve months is more than the borrowings in the trial balance.",
+    });
+  }
   if (hasComparatives) {
     checks.push({
       label: "Comparative figures balance",

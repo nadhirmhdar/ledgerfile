@@ -113,9 +113,16 @@ export function roundAccounts(accounts: PackAccount[], unitMinor: number): { acc
 const EQUITY_COLUMNS = ["CAPITAL", "RESERVES", "RETAINED", "OWNERCA"];
 const FRAMEWORK_NOTES = 3;
 
-export function buildStatementPack(input: PackAccount[], options: { unitMinor?: number; framework?: string; currency?: string } = {}): StatementPack {
+export function buildStatementPack(
+  input: PackAccount[],
+  options: { unitMinor?: number; framework?: string; currency?: string; borrowingsCurrent?: { current: number; prior: number } } = {},
+): StatementPack {
   const { accounts, rounding } = roundAccounts(input, options.unitMinor ?? 1);
-  const base = buildStatements(accounts);
+  const unit = options.unitMinor ?? 1;
+  const split = options.borrowingsCurrent;
+  const base = buildStatements(accounts, {
+    borrowingsCurrent: split ? { current: roundTo(split.current, unit), prior: roundTo(split.prior, unit) } : undefined,
+  });
   const framework = options.framework ?? "IFRS for SMEs";
 
   // Ledger-sign totals per group.

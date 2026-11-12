@@ -87,6 +87,22 @@ export async function uploadTrialBalanceAction(_prev: FormState, form: FormData)
   }
 }
 
+export async function setBorrowingsCurrentAction(_prev: FormState, form: FormData): Promise<FormState> {
+  const session = await getSession();
+  const engagementId = String(form.get("engagementId") ?? "");
+  if (!UUID.test(engagementId)) return { ok: false, message: "Engagement not found." };
+  const current = parseAmount(form.get("current")) ?? 0;
+  const prior = parseAmount(form.get("prior")) ?? 0;
+  if (Number.isNaN(current) || Number.isNaN(prior) || current < 0 || prior < 0) return { ok: false, message: "Enter the amounts as positive numbers." };
+  try {
+    await withFirm(await getDb(), session.firmId, (tx) => repo.setBorrowingsCurrent(tx, session, engagementId, current, prior));
+  } catch (e) {
+    return { ok: false, message: e instanceof Error && !("code" in e) ? e.message : "The amounts were not saved." };
+  }
+  revalidatePath(`/engagements/${engagementId}`, "layout");
+  return { ok: true, message: "Saved." };
+}
+
 export async function setMappingAction(form: FormData): Promise<void> {
   const engagementId = String(form.get("engagementId") ?? "");
   const accountId = String(form.get("accountId") ?? "");

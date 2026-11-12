@@ -57,8 +57,8 @@ async function requireOpen(tx: Tx, engagementId: string) {
 const targetName = (target: string) => (target === GENERAL ? "General" : (GROUP_BY_CODE.get(target)?.name ?? target));
 
 export async function getOverview(tx: Tx, engagementId: string): Promise<ReviewOverview | null> {
-  const lock = await tx.query<{ status: string; lockedByName: string | null; lockedAt: string | null }>(
-    `select e.status, u.name as "lockedByName", to_char(e.locked_at at time zone 'UTC', 'YYYY-MM-DD HH24:MI') || ' UTC' as "lockedAt"
+  const lock = await tx.query<{ status: string; lockedByName: string | null; lockedAt: string | null; splitCurrent: number; splitPrior: number }>(
+    `select e.status, e.borrowings_current_minor::float8 as "splitCurrent", e.borrowings_current_prior_minor::float8 as "splitPrior", u.name as "lockedByName", to_char(e.locked_at at time zone 'UTC', 'YYYY-MM-DD HH24:MI') || ' UTC' as "lockedAt"
      from engagements e left join users u on u.id = e.locked_by where e.id = $1`,
     [engagementId],
   );
@@ -66,7 +66,7 @@ export async function getOverview(tx: Tx, engagementId: string): Promise<ReviewO
 
   const accounts = (await listAccounts(tx, engagementId)).map((a) => ({ ...a, closingMinor: a.closingMinor + a.adjustmentMinor }));
   const sheets = buildLeadSheets(accounts).sheets;
-  const statements = buildStatements(accounts);
+  const statements = buildStatements(accounts, { borrowingsCurrent: { current: lock.rows[0].splitCurrent, prior: lock.rows[0].splitPrior } });
 
   const signOffs = await tx.query<{ target: string; level: Level; userId: string; name: string; at: string }>(
     `select s.target, s.level, s.user_id as "userId", u.name, to_char(s.signed_at, 'YYYY-MM-DD') as at
@@ -103,7 +103,9 @@ export async function getOverview(tx: Tx, engagementId: string): Promise<ReviewO
   }));
 
   return {
-    ...lock.rows[0],
+    status: lock.rows[0].status,
+    lockedByName: lock.rows[0].lockedByName,
+    lockedAt: lock.rows[0].lockedAt,
     solePractitioner: users.rows[0].n === 1,
     leadSheets,
     points: points.rows.map((p) => ({ ...p, targetName: targetName(p.target) })),

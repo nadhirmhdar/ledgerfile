@@ -189,3 +189,14 @@ describe("locked engagements", () => {
     await expect(withFirm(db, FIRM_A.firmId, (tx) => repo.approveAllMappings(tx, FIRM_A, engagement2024))).rejects.toThrow(/locked/);
   });
 });
+
+describe("borrowings split", () => {
+  it("stores the current portion, rejects bad amounts, and is hidden from other firms", async () => {
+    await withFirm(db, FIRM_A.firmId, (tx) => repo.setBorrowingsCurrent(tx, FIRM_A, engagement2025, 600000, 0));
+    const e = await withFirm(db, FIRM_A.firmId, (tx) => repo.getEngagement(tx, engagement2025));
+    expect(e).toMatchObject({ borrowingsCurrentMinor: 600000, borrowingsCurrentPriorMinor: 0 });
+    await expect(withFirm(db, FIRM_A.firmId, (tx) => repo.setBorrowingsCurrent(tx, FIRM_A, engagement2025, -1, 0))).rejects.toThrow(/positive/);
+    await expect(withFirm(db, FIRM_A.firmId, (tx) => repo.setBorrowingsCurrent(tx, FIRM_A, engagement2024, 1, 0))).rejects.toThrow(/locked/);
+    await expect(withFirm(db, FIRM_B.firmId, (tx) => repo.setBorrowingsCurrent(tx, FIRM_B, engagement2025, 1, 0))).rejects.toThrow(/not found/);
+  });
+});

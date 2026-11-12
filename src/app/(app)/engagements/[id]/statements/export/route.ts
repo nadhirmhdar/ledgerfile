@@ -23,7 +23,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   const whole = new URL(request.url).searchParams.get("units") === "whole";
   const pack = buildStatementPack(
     accounts.map((a) => ({ ...a, closingMinor: a.closingMinor + a.adjustmentMinor })),
-    { unitMinor: whole ? 100 : 1 },
+    { unitMinor: whole ? 100 : 1, borrowingsCurrent: { current: engagement.borrowingsCurrentMinor, prior: engagement.borrowingsCurrentPriorMinor } },
   );
   const buffer = await buildStatementsDocx({
     clientName: engagement.clientName,

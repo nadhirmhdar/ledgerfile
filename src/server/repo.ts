@@ -23,6 +23,9 @@ export interface EngagementRow {
   periodEnd: string;
   status: string;
   priorEngagementId: string | null;
+  /** Borrowings due within twelve months, as entered by the preparer, for each year. */
+  borrowingsCurrentMinor: number;
+  borrowingsCurrentPriorMinor: number;
 }
 
 export interface AccountRow extends MappedAccount {
@@ -73,7 +76,8 @@ export async function createClient(tx: Tx, s: Session, name: string): Promise<st
 const ENGAGEMENT_SELECT = `
   select e.id, e.client_id as "clientId", c.name as "clientName",
          to_char(e.period_start, 'YYYY-MM-DD') as "periodStart", to_char(e.period_end, 'YYYY-MM-DD') as "periodEnd",
-         e.status, e.prior_engagement_id as "priorEngagementId"
+         e.status, e.prior_engagement_id as "priorEngagementId",
+         e.borrowings_current_minor::float8 as "borrowingsCurrentMinor", e.borrowings_current_prior_minor::float8 as "borrowingsCurrentPriorMinor"
   from engagements e join clients c on c.id = e.client_id`;
 
 export async function listEngagements(tx: Tx): Promise<EngagementRow[]> {
@@ -225,6 +229,20 @@ export async function listAccounts(tx: Tx, engagementId: string): Promise<Accoun
     approved: r.approved ?? false,
     adjustmentMinor: Number(r.adjustment),
   }));
+}
+
+/** Record how much of total borrowings falls due within twelve months, for presentation as current. */
+export async function setBorrowingsCurrent(tx: Tx, s: Session, engagementId: string, currentMinor: number, priorMinor: number): Promise<void> {
+  const engagement = await getEngagement(tx, engagementId);
+  if (!engagement) throw new Error("Engagement not found.");
+  if (engagement.status !== "open") throw new Error("This engagement is locked.");
+  if (!Number.isInteger(currentMinor) || !Number.isInteger(priorMinor) || currentMinor < 0 || priorMinor < 0) {
+    throw new Error("Enter the amounts as positive numbers.");
+  }
+  await tx.query("update engagements set borrowings_current_minor = $2, borrowings_current_prior_minor = $3 where id = $1", [engagementId, currentMinor, priorMinor]);
+  // The split changes how the borrowings lead sheet is presented, so its sign-offs no longer stand.
+  await clearSignOffs(tx, s, engagementId, ["BORROW"], "current portion of borrowings changed");
+  await audit(tx, s, "set_borrowings_current", "engagement", engagementId, { currentMinor, priorMinor });
 }
 
 /** The preparer sets or changes an account's group. A manual choice is approved by definition. */
