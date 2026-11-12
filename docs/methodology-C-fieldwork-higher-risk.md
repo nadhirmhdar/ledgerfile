@@ -43,14 +43,18 @@ Accounting requirements are worded neutrally ("under the framework"). IFRS for S
 
 ## C16 Journal entries and management override
 
-**Audit objective:** to respond to the risk that management overrides controls to misstate the financial statements. This risk is significant on every engagement, so all procedures are Core. The reviewer should confirm that C16.01-C16.08 cover what ISA 240 requires on every audit.
+**Audit objective:** to respond to the risk that management overrides controls to misstate the financial statements.
+
+**Notes for the methodology reviewer** (not part of the procedures)
+- This risk is significant on every engagement, so all procedures are Core. Confirm that C16.01-C16.08 cover what ISA 240 requires on every audit.
+- C16.04 needs the client's journal listing. The product does not import it yet, so the filters are applied to an exported listing.
 
 | ID | Tier | Assertions | Procedure | Evidence expected | Reference |
 |---|---|---|---|---|---|
 | C16.01 | Core | All | Understand how journal entries are initiated, authorised and posted, who has access, and whether entries can be changed or deleted after posting. Uses B1.07. | Process notes | ISA 240, ISA 315 |
 | C16.02 | Core | C | Obtain the full population of journal entries for the period, including post-closing and consolidation-type adjustments. Prove completeness by rolling opening balances forward to closing balances. | Journal listing; completeness check | ISA 240 |
 | C16.03 | Core | All | Ask staff involved in financial reporting whether they were asked to make unusual entries or noticed inappropriate ones. | Inquiry record | ISA 240 |
-| C16.04 | Core | All | Select entries for testing using risk characteristics. This needs the journal listing imported into the product (added to the build plan); until then, apply the filters to an exported listing. Filter for: entries at or after the period end; entries posted by senior management or unusual users; round amounts; entries with no description; unusual account pairings, such as revenue against anything other than receivables or cash; entries to seldom-used accounts; entries posted at weekends or outside working hours. | Selection criteria and results | ISA 240 |
+| C16.04 | Core | All | Select entries for testing using risk characteristics. Filter the journal listing for: entries at or after the period end; entries posted by senior management or unusual users; round amounts; entries with no description; unusual account pairings, such as revenue against anything other than receivables or cash; entries to seldom-used accounts; entries posted at weekends or outside working hours. | Selection criteria and results | ISA 240 |
 | C16.05 | Core | All | For each selected entry, inspect support, confirm authorisation, and conclude whether it has a valid business reason and is correctly recorded. | Schedule with support | ISA 240 |
 | C16.06 | Core | All | Consider whether entries during the period, not only at its end, also need testing, and record the decision. | Decision note | ISA 240 |
 | C16.07 | Core | V | Review accounting estimates for bias. Consider whether judgements, taken together, lean in one direction, and compare prior-year estimates with outcomes. Uses the retrospective reviews in each area. | Bias assessment across estimates | ISA 240, ISA 540 |

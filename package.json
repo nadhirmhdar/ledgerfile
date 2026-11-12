@@ -11,7 +11,8 @@
     "typecheck": "tsc --noEmit",
     "sample": "node scripts/make-sample-tb.mjs",
     "seed": "tsx --env-file-if-exists=.env.local scripts/seed-demo.mts",
-    "sample:statements": "tsx scripts/sample-statements.mts"
+    "sample:statements": "tsx scripts/sample-statements.mts",
+    "methodology": "tsx scripts/build-methodology.mts"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.16",
