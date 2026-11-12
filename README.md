@@ -14,11 +14,12 @@ This repository holds the first slice of the MVP: trial balance to lead sheets.
 - Lead sheets per group with prior-year comparison, checked to agree with the trial balance.
 - Adjusting and reclassification journal entries, with numbers that are never reused. Entries flow through to lead sheets and statements.
 - Statement of financial position and statement of comprehensive income with comparatives, drill-down to lead sheets, and checks that must pass before the statements are clean.
+- Sign-in: firms register themselves, the first user is the administrator and adds colleagues with a role. Passwords are hashed with scrypt, accounts lock after repeated failures, and sessions expire after 12 hours.
 - Tenant isolation enforced in the database with row-level security, and an append-only audit log.
 
 ## Not built yet
 
-Sign-in (every request runs as one seeded demo firm), the statement of changes in equity, cash flow statement,
+Password reset and email verification, role-based permissions beyond user management, the statement of changes in equity, cash flow statement,
 notes, rounding and Word/PDF export, the audit engine, sign-off and review points, working paper files, journal listing import, and AI features.
 
 ## Run it
@@ -26,7 +27,7 @@ notes, rounding and Word/PDF export, the audit engine, sign-off and review point
 ```bash
 npm install
 npm run sample   # writes synthetic trial balances to samples/
-npm run seed     # optional: loads the sample client (run while the dev server is stopped)
+npm run seed     # optional: creates a demo firm and sample client (run while the dev server is stopped)
 npm run dev      # http://localhost:3000
 ```
 
@@ -36,13 +37,16 @@ npm run typecheck
 npm run lint
 ```
 
+After `npm run seed`, sign in as `demo@ledgerfile.test`. The password is `DEMO_PASSWORD`, with a default in `.env.example`
+that is for your own machine only. Or open `/sign-up` and register a new firm.
+
 ## Layout
 
 | Path | Purpose |
 |---|---|
 | `db/migrations/` | PostgreSQL schema and row-level security policies |
 | `src/domain/` | Pure logic: money, trial balance parsing, mapping, lead sheets, journals, statements, grouping structure |
-| `src/server/` | Database access, Excel reading, session |
+| `src/server/` | Database access, authentication and sessions, Excel reading |
 | `src/app/` | Screens and server actions |
 | `tests/` | Vitest suites |
 | `scripts/` | Sample data generator and loader |
@@ -53,3 +57,5 @@ npm run lint
 - Development uses PGlite, an embedded PostgreSQL, stored in `.data/` (not committed). The schema is plain PostgreSQL and is intended to run on a managed Postgres in production.
 - Amounts are stored as integer minor units; debits positive, credits negative.
 - All sample data is invented.
+- Authentication code runs as the database owner because sign-in happens before the firm is known; all other access goes through the tenant role. The tenant role cannot read password hashes or sessions.
+- Known gaps before any public deployment: no rate limiting by IP address, open self-registration, no password reset, and account lockout can be triggered by anyone who knows an email address.

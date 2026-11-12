@@ -5,7 +5,7 @@ import { GROUPS } from "../domain/groups";
 
 export type Tx = Transaction;
 
-/** Fixed identifiers for the seeded development firm and user. Replaced by real sign-in later. */
+/** Fixed identifiers for the demo firm and user that the seed script creates. */
 export const DEV_FIRM_ID = "00000000-0000-4000-8000-000000000001";
 export const DEV_USER_ID = "00000000-0000-4000-8000-000000000002";
 
@@ -65,11 +65,7 @@ const holder = globalThis as unknown as { __ledgerfileDb?: Promise<PGlite> };
 
 export function getDb(): Promise<PGlite> {
   if (!holder.__ledgerfileDb) {
-    holder.__ledgerfileDb = (async () => {
-      const db = await openDatabase(path.join(process.cwd(), ".data", "pg"));
-      await createFirm(db, { id: DEV_FIRM_ID, name: "Demo Audit Firm" }, { id: DEV_USER_ID, email: "preparer@demo.test", name: "Demo Preparer" });
-      return db;
-    })();
+    holder.__ledgerfileDb = openDatabase(path.join(process.cwd(), ".data", "pg"));
     // A failed open must not be cached, or every later request would fail until restart.
     holder.__ledgerfileDb.catch(() => {
       holder.__ledgerfileDb = undefined;
