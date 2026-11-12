@@ -1,4 +1,5 @@
 import { GROUPS, GROUP_BY_CODE } from "./groups";
+import { applicablePolicies, POLICY_REVIEW_NOTICE } from "./policies";
 import { buildStatements, type Check, type StatementAccount, type StatementLine, type Statements } from "./statements";
 
 /**
@@ -30,6 +31,8 @@ export interface Note {
   title: string;
   /** Narrative paragraphs. Text in [square brackets] is for the preparer to complete. */
   paragraphs: string[];
+  /** Titled passages within the note, used for the individual accounting policies. */
+  subsections?: { title: string; text: string }[];
   table?: { rows: { label: string; current: number; prior: number | null }[]; totalCurrent: number; totalPrior: number };
   groupCode?: string;
 }
@@ -110,9 +113,16 @@ export function roundAccounts(accounts: PackAccount[], unitMinor: number): { acc
 const EQUITY_COLUMNS = ["CAPITAL", "RESERVES", "RETAINED", "OWNERCA"];
 const FRAMEWORK_NOTES = 3;
 
-export function buildStatementPack(input: PackAccount[], options: { unitMinor?: number; framework?: string; currency?: string } = {}): StatementPack {
+export function buildStatementPack(
+  input: PackAccount[],
+  options: { unitMinor?: number; framework?: string; currency?: string; borrowingsCurrent?: { current: number; prior: number } } = {},
+): StatementPack {
   const { accounts, rounding } = roundAccounts(input, options.unitMinor ?? 1);
-  const base = buildStatements(accounts);
+  const unit = options.unitMinor ?? 1;
+  const split = options.borrowingsCurrent;
+  const base = buildStatements(accounts, {
+    borrowingsCurrent: split ? { current: roundTo(split.current, unit), prior: roundTo(split.prior, unit) } : undefined,
+  });
   const framework = options.framework ?? "IFRS for SMEs";
 
   // Ledger-sign totals per group.
@@ -222,7 +232,8 @@ export function buildStatementPack(input: PackAccount[], options: { unitMinor?: 
     {
       number: 3,
       title: "Significant accounting policies",
-      paragraphs: ["[Insert the accounting policies applied to each material item in these financial statements.]"],
+      paragraphs: [POLICY_REVIEW_NOTICE],
+      subsections: applicablePolicies(new Set(GROUPS.map((g) => g.code).filter(used))).map((p) => ({ title: p.title, text: p.text })),
     },
   ];
   const noteByGroup: Record<string, number> = {};

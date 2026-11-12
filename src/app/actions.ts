@@ -29,7 +29,11 @@ export async function createClientAction(_prev: FormState, form: FormData): Prom
   const name = String(form.get("name") ?? "").trim();
   if (name.length < 2 || name.length > 200) return { ok: false, message: "Enter the client's name." };
   const session = await getSession();
-  await withFirm(await getDb(), session.firmId, (tx) => repo.createClient(tx, session, name));
+  try {
+    await withFirm(await getDb(), session.firmId, (tx) => repo.createClient(tx, session, name));
+  } catch (e) {
+    return { ok: false, message: e instanceof Error && !("code" in e) ? e.message : "The client was not added." };
+  }
   revalidatePath("/");
   return { ok: true, message: `Added ${name}.` };
 }
@@ -43,7 +47,12 @@ export async function createEngagementAction(_prev: FormState, form: FormData): 
   if (end <= start) return { ok: false, message: "The period end must be after the period start." };
 
   const session = await getSession();
-  const id = await withFirm(await getDb(), session.firmId, (tx) => repo.createEngagement(tx, session, clientId, start, end));
+  let id: string;
+  try {
+    id = await withFirm(await getDb(), session.firmId, (tx) => repo.createEngagement(tx, session, clientId, start, end));
+  } catch (e) {
+    return { ok: false, message: e instanceof Error && !("code" in e) ? e.message : "The engagement was not created. Check the dates." };
+  }
   redirect(`/engagements/${id}`);
 }
 
@@ -85,6 +94,22 @@ export async function uploadTrialBalanceAction(_prev: FormState, form: FormData)
   } catch (e) {
     return { ok: false, message: e instanceof Error ? e.message : "The import failed." };
   }
+}
+
+export async function setBorrowingsCurrentAction(_prev: FormState, form: FormData): Promise<FormState> {
+  const session = await getSession();
+  const engagementId = String(form.get("engagementId") ?? "");
+  if (!UUID.test(engagementId)) return { ok: false, message: "Engagement not found." };
+  const current = parseAmount(form.get("current")) ?? 0;
+  const prior = parseAmount(form.get("prior")) ?? 0;
+  if (Number.isNaN(current) || Number.isNaN(prior) || current < 0 || prior < 0) return { ok: false, message: "Enter the amounts as positive numbers." };
+  try {
+    await withFirm(await getDb(), session.firmId, (tx) => repo.setBorrowingsCurrent(tx, session, engagementId, current, prior));
+  } catch (e) {
+    return { ok: false, message: e instanceof Error && !("code" in e) ? e.message : "The amounts were not saved." };
+  }
+  revalidatePath(`/engagements/${engagementId}`, "layout");
+  return { ok: true, message: "Saved." };
 }
 
 export async function setMappingAction(form: FormData): Promise<void> {

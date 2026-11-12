@@ -5,7 +5,9 @@ import { getSession } from "@/server/session";
 import * as repo from "@/server/repo";
 import { buildStatementPack } from "@/domain/statement-pack";
 import type { StatementLine } from "@/domain/statements";
-import { formatPresentation } from "@/domain/money";
+import { formatAmount, formatPresentation } from "@/domain/money";
+import { ActionForm } from "@/app/action-form";
+import { setBorrowingsCurrentAction } from "@/app/actions";
 import { EngagementNav } from "../nav";
 
 export const dynamic = "force-dynamic";
@@ -27,7 +29,7 @@ export default async function StatementsPage({ params, searchParams }: { params:
 
   const pack = buildStatementPack(
     accounts.map((a) => ({ ...a, closingMinor: a.closingMinor + a.adjustmentMinor })),
-    { unitMinor: whole ? 100 : 1 },
+    { unitMinor: whole ? 100 : 1, borrowingsCurrent: { current: engagement.borrowingsCurrentMinor, prior: engagement.borrowingsCurrentPriorMinor } },
   );
   const s = pack.base;
   const fmt = (n: number) => formatPresentation(n, pack.rounding.unitMinor);
@@ -35,6 +37,7 @@ export default async function StatementsPage({ params, searchParams }: { params:
   const priorYear = String(Number(year) - 1);
   const base = `/engagements/${id}`;
   const query = whole ? "?units=whole" : "";
+  const hasBorrowings = accounts.some((a) => a.groupCode === "BORROW");
 
   const head = (
     <thead className="border-b border-slate-300 text-slate-600">
@@ -101,6 +104,30 @@ export default async function StatementsPage({ params, searchParams }: { params:
               {pack.rounding.current && ` ${pack.rounding.current.account} (${year}: ${fmt(pack.rounding.current.amountMinor)})`}
               {pack.rounding.prior && ` ${pack.rounding.prior.account} (${priorYear}: ${fmt(pack.rounding.prior.amountMinor)})`}.
             </p>
+          )}
+
+          {hasBorrowings && engagement.status === "open" && (
+            <section className="mt-6 rounded border border-slate-200 bg-slate-50 p-4">
+              <h2 className="text-base font-semibold">Borrowings due within twelve months</h2>
+              <p className="mt-1 text-sm text-slate-600">
+                Enter how much of total borrowings is repayable within twelve months of the period end. It is shown under current liabilities and the rest stays non-current.
+              </p>
+              <ActionForm action={setBorrowingsCurrentAction} fields={{ engagementId: id }} className="mt-3">
+                <div className="flex flex-wrap items-end gap-3">
+                  <label className="flex flex-col gap-1 text-sm text-slate-700">
+                    {year}
+                    <input name="current" inputMode="decimal" defaultValue={formatAmount(engagement.borrowingsCurrentMinor)} className="w-40 rounded border border-slate-300 bg-white px-2 py-1.5 text-right text-sm text-slate-900" />
+                  </label>
+                  {s.hasComparatives && (
+                    <label className="flex flex-col gap-1 text-sm text-slate-700">
+                      {priorYear}
+                      <input name="prior" inputMode="decimal" defaultValue={formatAmount(engagement.borrowingsCurrentPriorMinor)} className="w-40 rounded border border-slate-300 bg-white px-2 py-1.5 text-right text-sm text-slate-900" />
+                    </label>
+                  )}
+                  <button className="rounded border border-slate-900 px-3 py-1.5 text-sm font-medium hover:bg-slate-100">Save</button>
+                </div>
+              </ActionForm>
+            </section>
           )}
 
           <section className="mt-8">
@@ -225,6 +252,12 @@ export default async function StatementsPage({ params, searchParams }: { params:
                 </h3>
                 {note.paragraphs.map((p, i) => (
                   <p key={i} className="mt-1 text-sm">{p}</p>
+                ))}
+                {note.subsections?.map((sub) => (
+                  <div key={sub.title} className="mt-3 text-sm">
+                    <h4 className="font-medium">{sub.title}</h4>
+                    <p className="mt-0.5">{sub.text}</p>
+                  </div>
                 ))}
                 {note.table && (
                   <table className="mt-2 w-full text-left text-sm">

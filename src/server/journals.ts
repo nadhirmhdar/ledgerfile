@@ -1,5 +1,6 @@
 import type { Tx } from "./db";
 import { audit, clearSignOffs, getEngagement, type Session } from "./repo";
+import { canDeleteJournal, JOURNAL_DELETE_REFUSAL } from "../domain/permissions";
 import { validateJournal, type JournalLineInput, type JournalType } from "../domain/journal";
 
 export interface JournalRow {
@@ -8,6 +9,8 @@ export interface JournalRow {
   type: JournalType;
   description: string;
   createdAt: string;
+  /** Who posted the entry. */
+  createdBy: string | null;
   lines: { accountCode: string; accountName: string; amountMinor: number }[];
 }
 
@@ -66,11 +69,12 @@ export async function listJournals(tx: Tx, engagementId: string): Promise<Journa
     type: JournalType;
     description: string;
     createdAt: string;
+    createdBy: string | null;
     accountCode: string;
     accountName: string;
     amount: string;
   }>(
-    `select j.id, j.number, j.type, j.description, to_char(j.created_at, 'YYYY-MM-DD') as "createdAt",
+    `select j.id, j.number, j.type, j.description, to_char(j.created_at, 'YYYY-MM-DD') as "createdAt", j.created_by as "createdBy",
             a.code as "accountCode", a.name as "accountName", l.amount_minor::text as amount
      from journal_entries j
      join journal_lines l on l.journal_entry_id = j.id
@@ -83,7 +87,7 @@ export async function listJournals(tx: Tx, engagementId: string): Promise<Journa
   for (const r of rows) {
     let j = byId.get(r.id);
     if (!j) {
-      j = { id: r.id, number: r.number, type: r.type, description: r.description, createdAt: r.createdAt, lines: [] };
+      j = { id: r.id, number: r.number, type: r.type, description: r.description, createdAt: r.createdAt, createdBy: r.createdBy, lines: [] };
       byId.set(r.id, j);
     }
     j.lines.push({ accountCode: r.accountCode, accountName: r.accountName, amountMinor: Number(r.amount) });
@@ -92,14 +96,15 @@ export async function listJournals(tx: Tx, engagementId: string): Promise<Journa
 }
 
 export async function deleteJournal(tx: Tx, s: Session, journalId: string): Promise<void> {
-  const j = await tx.query<{ engagementId: string; number: number }>(
-    'select engagement_id as "engagementId", number from journal_entries where id = $1',
+  const j = await tx.query<{ engagementId: string; number: number; createdBy: string | null }>(
+    'select engagement_id as "engagementId", number, created_by as "createdBy" from journal_entries where id = $1',
     [journalId],
   );
   if (j.rows.length === 0) throw new Error("Journal entry not found.");
   await requireOpenEngagement(tx, j.rows[0].engagementId);
+  if (!canDeleteJournal(s.role, j.rows[0].createdBy === s.userId)) throw new Error(JOURNAL_DELETE_REFUSAL);
   const affected = await tx.query<{ id: string }>("select account_id as id from journal_lines where journal_entry_id = $1", [journalId]);
   await clearSignOffs(tx, s, j.rows[0].engagementId, await groupsOfAccounts(tx, affected.rows.map((r) => r.id)), "journal entry deleted");
   await tx.query("delete from journal_entries where id = $1", [journalId]);
-  await audit(tx, s, "delete", "journal_entry", journalId, j.rows[0]);
+  await audit(tx, s, "delete", "journal_entry", journalId, { engagementId: j.rows[0].engagementId, number: j.rows[0].number });
 }

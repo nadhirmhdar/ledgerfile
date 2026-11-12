@@ -125,6 +125,7 @@ export async function buildStatementsDocx(input: DocxInput): Promise<Buffer> {
   for (const note of pack.notes) {
     children.push(heading(`${note.number}. ${note.title}`, HeadingLevel.HEADING_3));
     for (const p of note.paragraphs) children.push(para(p));
+    for (const sub of note.subsections ?? []) children.push(para(sub.title, { bold: true }), para(sub.text));
     if (note.table) {
       children.push(
         table([

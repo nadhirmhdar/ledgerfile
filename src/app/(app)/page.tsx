@@ -3,6 +3,7 @@ import { getDb, withFirm } from "@/server/db";
 import { getSession } from "@/server/session";
 import * as repo from "@/server/repo";
 import { NewClientForm, NewEngagementForm } from "@/app/forms";
+import { canCreateClient, canCreateEngagement, CLIENT_REFUSAL, ENGAGEMENT_REFUSAL } from "@/domain/permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -50,14 +51,20 @@ export default async function Home() {
       <section className="mt-8 rounded border border-slate-200 bg-slate-50 p-4">
         <h2 className="text-base font-semibold">New engagement</h2>
         <div className="mt-3">
-          {clients.length === 0 ? <p className="text-sm text-slate-600">Add a client first.</p> : <NewEngagementForm clients={clients} />}
+          {!canCreateEngagement(session.role) ? (
+            <p className="text-sm text-slate-600">{ENGAGEMENT_REFUSAL}</p>
+          ) : clients.length === 0 ? (
+            <p className="text-sm text-slate-600">Add a client first.</p>
+          ) : (
+            <NewEngagementForm clients={clients} />
+          )}
         </div>
       </section>
 
       <section className="mt-4 rounded border border-slate-200 bg-slate-50 p-4">
         <h2 className="text-base font-semibold">New client</h2>
         <div className="mt-3">
-          <NewClientForm />
+          {canCreateClient(session.role) ? <NewClientForm /> : <p className="text-sm text-slate-600">{CLIENT_REFUSAL}</p>}
         </div>
       </section>
     </main>

@@ -14,7 +14,7 @@ if (process.env.NODE_ENV === "production") {
   process.exit(1);
 }
 
-const session = { firmId: DEV_FIRM_ID, userId: DEV_USER_ID };
+const session = { firmId: DEV_FIRM_ID, userId: DEV_USER_ID, role: "admin" as const };
 
 async function load(file: string) {
   const buf = readFileSync(path.join("samples", file));

@@ -35,8 +35,8 @@ beforeAll(async () => {
     await db.query("insert into users (id, firm_id, email, name, role) values ($1, $2, $3, $4, $5)", [u.userId, u.firmId, `${u.userId}@x.test`, `${u.role} ${u.userId.slice(-1)}`, u.role]);
   }
   await as(prep, async (tx) => {
-    const client = await repo.createClient(tx, prep, "Review Co");
-    engagement = await repo.createEngagement(tx, prep, client, "2025-01-01", "2025-12-31");
+    const client = await repo.createClient(tx, partner, "Review Co");
+    engagement = await repo.createEngagement(tx, partner, client, "2025-01-01", "2025-12-31");
     await repo.importTrialBalance(tx, prep, engagement, "tb.xlsx", TB);
     await repo.approveAllMappings(tx, prep, engagement);
   });
@@ -207,6 +207,35 @@ describe("other changes that invalidate sign-offs", () => {
   });
 });
 
+describe("role restrictions", () => {
+  it("only a partner-level user adds clients; only a reviewer or above opens engagements", async () => {
+    await expect(as(prep, (tx) => repo.createClient(tx, prep, "Nope Ltd"))).rejects.toThrow(/Only a partner can add a client/);
+    await expect(as(rev, (tx) => repo.createClient(tx, rev, "Nope Ltd"))).rejects.toThrow(/Only a partner/);
+    const client = await as(admin, (tx) => repo.createClient(tx, admin, "Allowed Ltd"));
+    await expect(as(prep, (tx) => repo.createEngagement(tx, prep, client, "2025-01-01", "2025-12-31"))).rejects.toThrow(/Only a reviewer or partner/);
+    expect(await as(rev, (tx) => repo.createEngagement(tx, rev, client, "2025-01-01", "2025-12-31"))).toBeTruthy();
+  });
+
+  it("a journal is deleted by its author or a reviewer, not by another preparer", async () => {
+    const ids = Object.fromEntries((await as(prep, (tx) => repo.listAccounts(tx, engagement))).map((a) => [a.code, a.id]));
+    const post = () =>
+      as(prep, (tx) =>
+        journals.createJournal(tx, prep, engagement, {
+          type: "adjusting",
+          description: "Permission test entry",
+          lines: [{ accountId: ids["1100"], amountMinor: 100 }, { accountId: ids["1000"], amountMinor: -100 }],
+        }),
+      );
+    const first = await post();
+    expect((await as(prep, (tx) => journals.listJournals(tx, engagement))).find((j) => j.id === first)?.createdBy).toBe(prep.userId);
+    await expect(as(prep2, (tx) => journals.deleteJournal(tx, prep2, first))).rejects.toThrow(/Only the person who posted/);
+    await as(prep, (tx) => journals.deleteJournal(tx, prep, first));
+    const second = await post();
+    await as(rev, (tx) => journals.deleteJournal(tx, rev, second));
+    expect(await as(prep, (tx) => journals.listJournals(tx, engagement))).toHaveLength(0);
+  });
+});
+
 describe("sole practitioner", () => {
   it("a firm with one user can prepare, review and lock alone, and the self-review is logged", async () => {
     const solo = outsider;
@@ -226,6 +255,12 @@ describe("sole practitioner", () => {
     expect((await as(solo, (tx) => review.getOverview(tx, own)))!.status).toBe("locked");
     const log = await db.query("select 1 from audit_log where firm_id = $1 and action = 'sign_off' and detail->>'selfReview' = 'true'", [OTHER_FIRM]);
     expect(log.rows).toHaveLength(3);
+  });
+
+  it("deactivating a colleague does not bring the exception back", async () => {
+    await db.query("update users set active = false where firm_id = $1 and id <> $2", [FIRM, partner.userId]);
+    expect((await overview()).solePractitioner).toBe(false);
+    await db.query("update users set active = true where firm_id = $1", [FIRM]);
   });
 
   it("the exception ends as soon as the firm has a second user", async () => {

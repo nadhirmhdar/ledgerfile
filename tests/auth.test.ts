@@ -33,7 +33,7 @@ describe("passwords", () => {
 describe("sign-up", () => {
   it("creates a firm with an administrator", async () => {
     const team = await auth.listTeam(db, firmA.firmId);
-    expect(team).toEqual([{ id: firmA.userId, name: "Aisha Admin", email: "aisha@alpha.test", role: "admin" }]);
+    expect(team).toEqual([{ id: firmA.userId, name: "Aisha Admin", email: "aisha@alpha.test", role: "admin", active: true }]);
   });
 
   it("rejects a duplicate email regardless of case, a weak password and a bad email", async () => {
@@ -124,5 +124,70 @@ describe("what the application role can reach", () => {
     await expect(
       withFirm(db, firmA.firmId, (tx) => tx.query("insert into users (firm_id, email, name, role) values ($1, 'x@x.test', 'X', 'admin')", [firmA.firmId])),
     ).rejects.toThrow(/permission denied/);
+  });
+});
+
+describe("managing existing users", () => {
+  const admin = async () => (await auth.getSessionByToken(db, await auth.signIn(db, "aisha@alpha.test", PASSWORD)))!;
+  const idOf = async (email: string) => (await db.query<{ id: string }>("select id from users where email = $1", [email])).rows[0].id;
+
+  it("lets a user change their own password, ending every session", async () => {
+    const token = await auth.signIn(db, "rana@alpha.test", PASSWORD);
+    const session = (await auth.getSessionByToken(db, token))!;
+    await expect(auth.changeOwnPassword(db, session, "not-my-password", "a-new-passphrase-1")).rejects.toThrow(/current password is incorrect/);
+    await expect(auth.changeOwnPassword(db, session, PASSWORD, PASSWORD)).rejects.toThrow(/different/);
+    await expect(auth.changeOwnPassword(db, session, PASSWORD, "short")).rejects.toThrow(/at least 10/);
+    await auth.changeOwnPassword(db, session, PASSWORD, "a-new-passphrase-1");
+    expect(await auth.getSessionByToken(db, token)).toBeNull();
+    await expect(auth.signIn(db, "rana@alpha.test", PASSWORD)).rejects.toThrow(/incorrect/);
+    expect(await auth.signIn(db, "rana@alpha.test", "a-new-passphrase-1")).toBeTruthy();
+  });
+
+  it("lets an administrator reset a colleague's password, but not a user of another firm", async () => {
+    const a = await admin();
+    const rana = await idOf("rana@alpha.test");
+    await auth.resetUserPassword(db, a, rana, PASSWORD);
+    expect(await auth.signIn(db, "rana@alpha.test", PASSWORD)).toBeTruthy();
+    await expect(auth.resetUserPassword(db, a, firmB.userId, "taken-over-password")).rejects.toThrow(/User not found/);
+    expect(await auth.signIn(db, "bilal@beta.test", OTHER)).toBeTruthy();
+  });
+
+  it("changes roles, but never leaves a firm without an administrator", async () => {
+    const a = await admin();
+    const rana = await idOf("rana@alpha.test");
+    await expect(auth.setUserRole(db, a, a.userId, "partner")).rejects.toThrow(/at least one administrator/);
+    await expect(auth.setUserRole(db, a, rana, "owner")).rejects.toThrow(/Choose a role/);
+    await expect(auth.setUserRole(db, a, firmB.userId, "preparer")).rejects.toThrow(/User not found/);
+    await auth.setUserRole(db, a, rana, "admin");
+    // With a second administrator, the first can step down.
+    await auth.setUserRole(db, a, a.userId, "partner");
+    await expect(auth.setUserRole(db, a, rana, "preparer")).rejects.toThrow(/Only an administrator/);
+    const ranaSession = (await auth.getSessionByToken(db, await auth.signIn(db, "rana@alpha.test", PASSWORD)))!;
+    await auth.setUserRole(db, ranaSession, a.userId, "admin");
+    await auth.setUserRole(db, await admin(), rana, "reviewer");
+  });
+
+  it("deactivates a user: signed out, cannot sign in, still listed; and reactivates", async () => {
+    const a = await admin();
+    const rana = await idOf("rana@alpha.test");
+    const token = await auth.signIn(db, "rana@alpha.test", PASSWORD);
+    await expect(auth.setUserActive(db, a, a.userId, false)).rejects.toThrow(/your own account/);
+    await expect(auth.setUserActive(db, a, firmB.userId, false)).rejects.toThrow(/User not found/);
+
+    await auth.setUserActive(db, a, rana, false);
+    expect(await auth.getSessionByToken(db, token)).toBeNull();
+    // The same message as a wrong password, so a deactivated account is not revealed.
+    await expect(auth.signIn(db, "rana@alpha.test", PASSWORD)).rejects.toThrow(/email address or password is incorrect/);
+    expect((await auth.listTeam(db, firmA.firmId)).find((u) => u.id === rana)).toMatchObject({ active: false });
+
+    await auth.setUserActive(db, a, rana, true);
+    expect(await auth.signIn(db, "rana@alpha.test", PASSWORD)).toBeTruthy();
+  });
+
+  it("refuses all of it to non-administrators", async () => {
+    const reviewer = (await auth.getSessionByToken(db, await auth.signIn(db, "rana@alpha.test", PASSWORD)))!;
+    await expect(auth.setUserRole(db, reviewer, reviewer.userId, "admin")).rejects.toThrow(/Only an administrator/);
+    await expect(auth.setUserActive(db, reviewer, firmA.userId, false)).rejects.toThrow(/Only an administrator/);
+    await expect(auth.resetUserPassword(db, { ...reviewer, role: "admin" }, firmA.userId, "stolen-password-1")).rejects.toThrow(/Only an administrator/);
   });
 });

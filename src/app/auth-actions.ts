@@ -50,6 +50,51 @@ export async function signOutAction(): Promise<void> {
   redirect("/sign-in");
 }
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Run one user-management operation as the signed-in administrator. */
+async function manage(form: FormData, done: string, work: (session: auth.AuthSession, userId: string) => Promise<void>): Promise<FormState> {
+  const session = await getSession();
+  const userId = field(form, "userId");
+  if (!UUID.test(userId)) return { ok: false, message: "User not found." };
+  try {
+    await work(session, userId);
+  } catch (e) {
+    return failure(e);
+  }
+  revalidatePath("/team");
+  return { ok: true, message: done };
+}
+
+export async function setUserRoleAction(_prev: FormState, form: FormData): Promise<FormState> {
+  return manage(form, "Role updated.", async (session, userId) => auth.setUserRole(await getDb(), session, userId, field(form, "role")));
+}
+
+export async function setUserActiveAction(_prev: FormState, form: FormData): Promise<FormState> {
+  const active = field(form, "active") === "true";
+  return manage(form, active ? "Reactivated." : "Deactivated.", async (session, userId) => auth.setUserActive(await getDb(), session, userId, active));
+}
+
+export async function resetUserPasswordAction(_prev: FormState, form: FormData): Promise<FormState> {
+  return manage(form, "Password reset. Give them the new password privately.", async (session, userId) =>
+    auth.resetUserPassword(await getDb(), session, userId, field(form, "password")),
+  );
+}
+
+export async function changePasswordAction(_prev: FormState, form: FormData): Promise<FormState> {
+  const session = await getSession();
+  const next = field(form, "password");
+  if (next !== field(form, "confirm")) return { ok: false, message: "The two new passwords do not match." };
+  try {
+    await auth.changeOwnPassword(await getDb(), session, field(form, "current"), next);
+  } catch (e) {
+    return failure(e);
+  }
+  // Changing the password ends every session, so the user signs in again with the new one.
+  await clearSessionCookie();
+  redirect("/sign-in");
+}
+
 export async function addUserAction(_prev: FormState, form: FormData): Promise<FormState> {
   const session = await getSession();
   const name = field(form, "name");
