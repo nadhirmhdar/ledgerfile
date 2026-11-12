@@ -15,6 +15,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             <Link href="/" className="text-base font-semibold">LedgerFile</Link>
             <Link href="/" className="text-blue-700 underline">Engagements</Link>
             <Link href="/team" className="text-blue-700 underline">Team</Link>
+            <Link href="/account" className="text-blue-700 underline">Account</Link>
           </nav>
           <div className="flex items-center gap-3 text-sm">
             <span>

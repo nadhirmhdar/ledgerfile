@@ -85,7 +85,7 @@ export async function getOverview(tx: Tx, engagementId: string): Promise<ReviewO
     [engagementId],
   );
 
-  const users = await tx.query<{ n: number }>("select count(*)::int as n from users");
+  const users = await tx.query<{ n: number }>("select count(*)::int as n from users where active");
 
   const find = (target: string, level: Level) => {
     const s = signOffs.rows.find((r) => r.target === target && r.level === level);

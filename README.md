@@ -15,7 +15,7 @@ This repository holds the first slice of the MVP: trial balance to lead sheets.
 - Adjusting and reclassification journal entries, with numbers that are never reused. Entries flow through to lead sheets and statements.
 - A full set of financial statements with comparatives: financial position, comprehensive income, changes in equity, cash flows (derived, indirect method) and notes with a breakdown of each line. Borrowings can be split between current and non-current. Optional rounding to whole units, drill-down to lead sheets, checks that must pass before the statements are clean, and download as a Word document.
 - Review and sign-off: preparer and reviewer sign-off per lead sheet (different people, except in a firm with a single user), review points that must be cleared, automatic removal of a sign-off when its figures change, and partner lock and unlock.
-- Sign-in: firms register themselves, the first user is the administrator and adds colleagues with a role. Passwords are hashed with scrypt, accounts lock after repeated failures, and sessions expire after 12 hours.
+- Sign-in: firms register themselves, the first user is the administrator and adds colleagues with a role. Passwords are hashed with scrypt, accounts lock after repeated failures, and sessions expire after 12 hours. Users change their own password; an administrator can reset a colleague's password, change roles, and deactivate or reactivate users.
 - Tenant isolation enforced in the database with row-level security, and an append-only audit log.
 
 ## Not built yet
@@ -58,4 +58,4 @@ that is for your own machine only. Or open `/sign-up` and register a new firm.
 - Amounts are stored as integer minor units; debits positive, credits negative.
 - All sample data is invented.
 - Authentication code runs as the database owner because sign-in happens before the firm is known; all other access goes through the tenant role. The tenant role cannot read password hashes or sessions.
-- Known gaps before any public deployment: no rate limiting by IP address, open self-registration, no password reset, and account lockout can be triggered by anyone who knows an email address.
+- Known gaps before any public deployment: no rate limiting by IP address, open self-registration, no password reset by email (an administrator who forgets their password has no way back in unless another administrator resets it), and account lockout can be triggered by anyone who knows an email address.

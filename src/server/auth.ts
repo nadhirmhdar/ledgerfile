@@ -94,13 +94,17 @@ export async function setPassword(db: PGlite, userId: string, password: string):
  */
 export async function signIn(db: PGlite, email: string, password: string): Promise<string> {
   const failure = new AuthError("The email address or password is incorrect.");
-  const { rows } = await db.query<{ id: string; firmId: string; passwordHash: string | null; locked: boolean }>(
-    `select id, firm_id as "firmId", password_hash as "passwordHash", coalesce(locked_until > now(), false) as locked
+  const { rows } = await db.query<{ id: string; firmId: string; passwordHash: string | null; locked: boolean; active: boolean }>(
+    `select id, firm_id as "firmId", password_hash as "passwordHash", coalesce(locked_until > now(), false) as locked, active
      from users where lower(email) = $1`,
     [normaliseEmail(email)],
   );
   const user = rows[0];
   if (!user) {
+    await verifyPassword(password, await decoy());
+    throw failure;
+  }
+  if (!user.active) {
     await verifyPassword(password, await decoy());
     throw failure;
   }
@@ -138,7 +142,7 @@ export async function getSessionByToken(db: PGlite, token: string | undefined): 
   const { rows } = await db.query<AuthSession>(
     `select u.firm_id as "firmId", u.id as "userId", u.name, u.email, u.role, f.name as "firmName"
      from sessions s join users u on u.id = s.user_id join firms f on f.id = u.firm_id
-     where s.token_hash = $1 and s.expires_at > now()`,
+     where s.token_hash = $1 and s.expires_at > now() and u.active`,
     [hashToken(token)],
   );
   return rows[0] ?? null;
@@ -174,9 +178,94 @@ export interface TeamMember {
   name: string;
   email: string;
   role: Role;
+  active: boolean;
 }
 
 /** The firm's users, read through row-level security like any other tenant data. */
 export async function listTeam(db: PGlite, firmId: string): Promise<TeamMember[]> {
-  return withFirm(db, firmId, async (tx) => (await tx.query<TeamMember>("select id, name, email, role from users order by name")).rows);
+  return withFirm(db, firmId, async (tx) => (await tx.query<TeamMember>("select id, name, email, role, active from users order by name")).rows);
+}
+
+// --- Managing existing users -------------------------------------------------
+
+/** Confirm from the database that the acting user is an active administrator of their firm. */
+async function requireAdmin(db: PGlite, admin: AuthSession): Promise<void> {
+  const current = await db.query<{ role: string; active: boolean }>("select role, active from users where id = $1 and firm_id = $2", [admin.userId, admin.firmId]);
+  if (current.rows[0]?.role !== "admin" || !current.rows[0].active) throw new AuthError("Only an administrator can manage users.");
+}
+
+/** Load a user of the administrator's own firm; a user of any other firm is reported as not found. */
+async function targetUser(db: PGlite, admin: AuthSession, userId: string) {
+  const { rows } = await db.query<{ id: string; role: Role; active: boolean; email: string }>(
+    "select id, role, active, email from users where id = $1 and firm_id = $2",
+    [userId, admin.firmId],
+  );
+  if (!rows[0]) throw new AuthError("User not found.");
+  return rows[0];
+}
+
+/** A firm must always keep at least one active administrator, or nobody could manage it. */
+async function otherActiveAdmins(db: PGlite, firmId: string, exceptUserId: string): Promise<number> {
+  const { rows } = await db.query<{ n: number }>("select count(*)::int as n from users where firm_id = $1 and role = 'admin' and active and id <> $2", [firmId, exceptUserId]);
+  return rows[0].n;
+}
+
+async function logUserChange(db: PGlite, admin: AuthSession, action: string, userId: string, detail?: unknown) {
+  await db.query("insert into audit_log (firm_id, user_id, action, entity, entity_id, detail) values ($1, $2, $3, 'user', $4, $5)", [
+    admin.firmId,
+    admin.userId,
+    action,
+    userId,
+    detail === undefined ? null : JSON.stringify(detail),
+  ]);
+}
+
+export async function setUserRole(db: PGlite, admin: AuthSession, userId: string, role: string): Promise<void> {
+  await requireAdmin(db, admin);
+  if (!ROLES.includes(role as Role)) throw new AuthError("Choose a role.");
+  const user = await targetUser(db, admin, userId);
+  if (user.role === role) return;
+  if (user.role === "admin" && user.active && (await otherActiveAdmins(db, admin.firmId, userId)) === 0) {
+    throw new AuthError("The firm must keep at least one administrator. Make someone else an administrator first.");
+  }
+  await db.query("update users set role = $2 where id = $1", [userId, role]);
+  await logUserChange(db, admin, "set_role", userId, { from: user.role, to: role });
+}
+
+/** Deactivate or reactivate a user. A deactivated user is signed out and cannot sign in. */
+export async function setUserActive(db: PGlite, admin: AuthSession, userId: string, active: boolean): Promise<void> {
+  await requireAdmin(db, admin);
+  const user = await targetUser(db, admin, userId);
+  if (user.active === active) return;
+  if (!active) {
+    if (userId === admin.userId) throw new AuthError("You cannot deactivate your own account.");
+    if (user.role === "admin" && (await otherActiveAdmins(db, admin.firmId, userId)) === 0) {
+      throw new AuthError("The firm must keep at least one administrator.");
+    }
+  }
+  await db.query("update users set active = $2 where id = $1", [userId, active]);
+  if (!active) await db.query("delete from sessions where user_id = $1", [userId]);
+  await logUserChange(db, admin, active ? "reactivate" : "deactivate", userId);
+}
+
+/** An administrator sets a new password for a colleague who has forgotten theirs. */
+export async function resetUserPassword(db: PGlite, admin: AuthSession, userId: string, newPassword: string): Promise<void> {
+  await requireAdmin(db, admin);
+  if (newPassword.length > 200) throw new AuthError("The password is too long.");
+  await targetUser(db, admin, userId);
+  await setPassword(db, userId, newPassword);
+  await logUserChange(db, admin, "reset_password", userId);
+}
+
+/** A user changes their own password. Every session, including the current one, is ended. */
+export async function changeOwnPassword(db: PGlite, session: AuthSession, currentPassword: string, newPassword: string): Promise<void> {
+  const { rows } = await db.query<{ passwordHash: string | null }>('select password_hash as "passwordHash" from users where id = $1 and firm_id = $2 and active', [
+    session.userId,
+    session.firmId,
+  ]);
+  if (!rows[0] || !(await verifyPassword(currentPassword, rows[0].passwordHash))) throw new AuthError("Your current password is incorrect.");
+  if (newPassword.length > 200) throw new AuthError("The password is too long.");
+  if (newPassword === currentPassword) throw new AuthError("Choose a password different from your current one.");
+  await setPassword(db, session.userId, newPassword);
+  await logUserChange(db, session, "change_password", session.userId);
 }
