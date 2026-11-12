@@ -47,3 +47,14 @@ export function formatAmount(minor: number): string {
   const text = `${whole}.${frac}`;
   return minor < 0 ? `(${text})` : text;
 }
+
+/**
+ * Format for financial statements. With unitMinor 100 the amount is shown in whole
+ * currency units with no decimals; otherwise to two decimal places.
+ */
+export function formatPresentation(minor: number, unitMinor: number): string {
+  if (unitMinor <= 1) return formatAmount(minor);
+  const units = Math.round(Math.abs(minor) / unitMinor);
+  const text = units.toLocaleString("en-US");
+  return minor < 0 && units !== 0 ? `(${text})` : text;
+}

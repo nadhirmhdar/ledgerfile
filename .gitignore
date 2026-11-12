@@ -43,3 +43,6 @@ next-env.d.ts
 # local development database
 /.data/
 !.env.example
+
+# generated sample exports
+/samples/output/

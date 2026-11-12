@@ -13,15 +13,14 @@ This repository holds the first slice of the MVP: trial balance to lead sheets.
   - the preparer can change any mapping or accept all suggestions.
 - Lead sheets per group with prior-year comparison, checked to agree with the trial balance.
 - Adjusting and reclassification journal entries, with numbers that are never reused. Entries flow through to lead sheets and statements.
-- Statement of financial position and statement of comprehensive income with comparatives, drill-down to lead sheets, and checks that must pass before the statements are clean.
+- A full set of financial statements with comparatives: financial position, comprehensive income, changes in equity, cash flows (derived, indirect method) and notes with a breakdown of each line. Optional rounding to whole units, drill-down to lead sheets, checks that must pass before the statements are clean, and download as a Word document.
 - Review and sign-off: preparer and reviewer sign-off per lead sheet (different people, except in a firm with a single user), review points that must be cleared, automatic removal of a sign-off when its figures change, and partner lock and unlock.
 - Sign-in: firms register themselves, the first user is the administrator and adds colleagues with a role. Passwords are hashed with scrypt, accounts lock after repeated failures, and sessions expire after 12 hours.
 - Tenant isolation enforced in the database with row-level security, and an append-only audit log.
 
 ## Not built yet
 
-Password reset and email verification, the statement of changes in equity, cash flow statement,
-notes, rounding and Word/PDF export, the audit engine, working paper files, journal listing import, and AI features.
+Password reset and email verification, accounting policy wording and PDF export, the audit engine, working paper files, journal listing import, and AI features.
 
 ## Run it
 
