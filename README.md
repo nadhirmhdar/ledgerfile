@@ -20,7 +20,7 @@ This repository holds the first slice of the MVP: trial balance to lead sheets.
 
 ## Not built yet
 
-Password reset and email verification, accounting policy wording and PDF export, the audit engine, working paper files, journal listing import, and AI features.
+Password reset by email and email verification, PDF export, the audit engine, working paper files, journal listing import, and AI features.
 
 ## Run it
 

@@ -226,6 +226,12 @@ export default async function StatementsPage({ params, searchParams }: { params:
                 {note.paragraphs.map((p, i) => (
                   <p key={i} className="mt-1 text-sm">{p}</p>
                 ))}
+                {note.subsections?.map((sub) => (
+                  <div key={sub.title} className="mt-3 text-sm">
+                    <h4 className="font-medium">{sub.title}</h4>
+                    <p className="mt-0.5">{sub.text}</p>
+                  </div>
+                ))}
                 {note.table && (
                   <table className="mt-2 w-full text-left text-sm">
                     <thead className="border-b border-slate-300 text-slate-600">

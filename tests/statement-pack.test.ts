@@ -133,6 +133,21 @@ describe("notes", () => {
   it("starts with the framework notes and adds a breakdown for each multi-account line", () => {
     expect(pack.notes.slice(0, 3).map((x) => x.title)).toEqual(["General information", "Basis of preparation", "Significant accounting policies"]);
     expect(pack.notes[1].paragraphs[0]).toContain("IFRS for SMEs");
+    // Policies are included only for what the entity has: this one has no inventories, tax or intangibles.
+    const policies = pack.notes[2].subsections!.map((p) => p.title);
+    expect(policies).toEqual([
+      "Revenue",
+      "Property, plant and equipment",
+      "Impairment of non-financial assets",
+      "Trade and other receivables",
+      "Cash and cash equivalents",
+      "Trade and other payables",
+      "Borrowings",
+      "Provisions",
+      "Foreign currencies",
+      "Significant judgements and sources of estimation uncertainty",
+    ]);
+    expect(pack.notes[2].paragraphs[0]).toContain("Draft wording");
     expect(pack.notes[1].paragraphs[0]).toContain("AED");
     expect(pack.notes.slice(3).map((x) => [x.number, x.groupCode])).toEqual([[4, "TRADEREC"], [5, "RETAINED"], [6, "TRADEPAY"], [7, "ADMIN"]]);
     expect(pack.noteByGroup).toEqual({ TRADEREC: 4, RETAINED: 5, TRADEPAY: 6, ADMIN: 7 });
