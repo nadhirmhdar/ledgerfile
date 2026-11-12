@@ -10,7 +10,7 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "sample": "node scripts/make-sample-tb.mjs",
-    "seed": "tsx scripts/seed-demo.mts"
+    "seed": "tsx --env-file-if-exists=.env.local scripts/seed-demo.mts"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.16",

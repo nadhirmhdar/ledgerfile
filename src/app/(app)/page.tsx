@@ -2,7 +2,7 @@ import Link from "next/link";
 import { getDb, withFirm } from "@/server/db";
 import { getSession } from "@/server/session";
 import * as repo from "@/server/repo";
-import { NewClientForm, NewEngagementForm } from "./forms";
+import { NewClientForm, NewEngagementForm } from "@/app/forms";
 
 export const dynamic = "force-dynamic";
 
@@ -15,11 +15,10 @@ export default async function Home() {
 
   return (
     <main className="mx-auto w-full max-w-5xl px-4 py-8 text-slate-900">
-      <h1 className="text-2xl font-semibold">LedgerFile</h1>
-      <p className="mt-1 text-sm text-slate-600">Demo firm. Sign-in is not built yet, so everyone using this copy shares one firm.</p>
+      <h1 className="text-2xl font-semibold">Engagements</h1>
 
-      <section className="mt-8">
-        <h2 className="text-lg font-semibold">Engagements</h2>
+      <section className="mt-4">
+        <h2 className="sr-only">Engagement list</h2>
         {engagements.length === 0 ? (
           <p className="mt-2 text-sm text-slate-600">No engagements yet. Add a client, then create an engagement for it.</p>
         ) : (

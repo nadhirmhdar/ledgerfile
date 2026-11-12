@@ -43,6 +43,7 @@ export async function createEngagementAction(_prev: FormState, form: FormData): 
 }
 
 export async function uploadTrialBalanceAction(_prev: FormState, form: FormData): Promise<FormState> {
+  const session = await getSession();
   const engagementId = String(form.get("engagementId") ?? "");
   const file = form.get("file");
   if (!UUID.test(engagementId)) return { ok: false, message: "Engagement not found." };
@@ -66,7 +67,6 @@ export async function uploadTrialBalanceAction(_prev: FormState, form: FormData)
     };
   }
 
-  const session = await getSession();
   try {
     const r = await withFirm(await getDb(), session.firmId, (tx) =>
       repo.importTrialBalance(tx, session, engagementId, file.name, parsed.accounts),
@@ -101,6 +101,7 @@ export async function approveAllAction(form: FormData): Promise<void> {
 }
 
 export async function createJournalAction(_prev: FormState, form: FormData): Promise<FormState> {
+  const session = await getSession();
   const engagementId = String(form.get("engagementId") ?? "");
   const type = String(form.get("type") ?? "");
   const description = String(form.get("description") ?? "");
@@ -127,7 +128,6 @@ export async function createJournalAction(_prev: FormState, form: FormData): Pro
     lines.push({ accountId, amountMinor: (dr ?? 0) - (cr ?? 0) });
   }
 
-  const session = await getSession();
   try {
     await withFirm(await getDb(), session.firmId, (tx) => journals.createJournal(tx, session, engagementId, { type, description, lines }));
   } catch (e) {
