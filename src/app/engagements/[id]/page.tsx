@@ -8,6 +8,7 @@ import { GROUPS } from "@/domain/groups";
 import { formatAmount } from "@/domain/money";
 import { approveAllAction } from "@/app/actions";
 import { MappingSelect, UploadForm } from "@/app/forms";
+import { EngagementNav } from "./nav";
 
 export const dynamic = "force-dynamic";
 
@@ -31,7 +32,9 @@ export default async function EngagementPage({ params }: { params: Promise<{ id:
   }));
   if (!engagement) notFound();
 
-  const set = buildLeadSheets(accounts);
+  // Lead sheets show adjusted balances: trial balance plus journal entries.
+  const hasAdjustments = accounts.some((a) => a.adjustmentMinor !== 0);
+  const set = buildLeadSheets(accounts.map((a) => ({ ...a, closingMinor: a.closingMinor + a.adjustmentMinor })));
   const groups = [...GROUPS].sort((a, b) => a.sort - b.sort).map((g) => ({ code: g.code, name: g.name }));
   const toReview = accounts.filter((a) => a.groupCode && !a.approved).length;
   const total = accounts.reduce((s, a) => s + a.closingMinor, 0);
@@ -44,6 +47,8 @@ export default async function EngagementPage({ params }: { params: Promise<{ id:
         {engagement.periodStart} to {engagement.periodEnd}
         {engagement.priorEngagementId ? " · mappings carry forward from the prior year" : " · no prior-year engagement linked"}
       </p>
+
+      <EngagementNav id={id} current="tb" />
 
       <section className="mt-6 rounded border border-slate-200 bg-slate-50 p-4">
         <h2 className="text-base font-semibold">Trial balance</h2>
@@ -114,7 +119,7 @@ export default async function EngagementPage({ params }: { params: Promise<{ id:
           </section>
 
           <section className="mt-10">
-            <h2 className="text-lg font-semibold">Lead sheets</h2>
+            <h2 id="lead-sheets" className="text-lg font-semibold">Lead sheets</h2>
             <p className={`mt-1 text-sm ${set.tiesToTrialBalance ? "text-emerald-800" : "text-red-800"}`}>
               {set.tiesToTrialBalance
                 ? "Lead sheet totals agree to the trial balance."
@@ -122,7 +127,7 @@ export default async function EngagementPage({ params }: { params: Promise<{ id:
               {set.unmapped.length > 0 && ` ${set.unmapped.length} unmapped account(s) are not on any lead sheet yet.`}
             </p>
             {set.sheets.map((sheet) => (
-              <div key={sheet.groupCode} className="mt-5 overflow-x-auto rounded border border-slate-200">
+              <div key={sheet.groupCode} id={`ls-${sheet.groupCode}`} className="mt-5 overflow-x-auto rounded border border-slate-200">
                 <table className="w-full text-left text-sm">
                   <caption className="border-b border-slate-200 bg-slate-50 px-3 py-2 text-left">
                     <span className="font-semibold">{sheet.groupName}</span>
@@ -132,7 +137,9 @@ export default async function EngagementPage({ params }: { params: Promise<{ id:
                     <tr>
                       <th className="px-3 py-1.5 font-medium">Code</th>
                       <th className="py-1.5 font-medium">Account</th>
-                      <th className={`${num} font-medium`}>Closing</th>
+                      {hasAdjustments && <th className={`${num} font-medium`}>Per trial balance</th>}
+                      {hasAdjustments && <th className={`${num} font-medium`}>Adjustments</th>}
+                      <th className={`${num} font-medium`}>{hasAdjustments ? "Adjusted" : "Closing"}</th>
                       <th className={`${num} font-medium`}>Prior year</th>
                       <th className={`${num} pr-3 font-medium`}>Movement</th>
                     </tr>
@@ -142,13 +149,15 @@ export default async function EngagementPage({ params }: { params: Promise<{ id:
                       <tr key={a.code} className="border-t border-slate-100">
                         <td className="px-3 py-1.5 font-mono text-xs">{a.code}</td>
                         <td className="py-1.5">{a.name}</td>
+                        {hasAdjustments && <td className={num}>{formatAmount(a.closingMinor - (a.adjustmentMinor ?? 0))}</td>}
+                        {hasAdjustments && <td className={num}>{a.adjustmentMinor ? formatAmount(a.adjustmentMinor) : ""}</td>}
                         <td className={num}>{formatAmount(a.closingMinor)}</td>
                         <td className={num}>{a.priorMinor === null ? "" : formatAmount(a.priorMinor)}</td>
                         <td className={`${num} pr-3`}>{formatAmount(a.closingMinor - (a.priorMinor ?? 0))}</td>
                       </tr>
                     ))}
                     <tr className="border-t border-slate-300 font-semibold">
-                      <td className="px-3 py-1.5" colSpan={2}>Total</td>
+                      <td className="px-3 py-1.5" colSpan={hasAdjustments ? 4 : 2}>Total</td>
                       <td className={num}>{formatAmount(sheet.closingMinor)}</td>
                       <td className={num}>{formatAmount(sheet.priorMinor)}</td>
                       <td className={`${num} pr-3`}>

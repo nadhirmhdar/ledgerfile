@@ -27,12 +27,14 @@ export interface EngagementRow {
 
 export interface AccountRow extends MappedAccount {
   id: string;
+  /** Net effect of journal entries on this account, in ledger sign. */
+  adjustmentMinor: number;
   source: MappingSource | null;
   confidence: number | null;
   approved: boolean;
 }
 
-async function audit(tx: Tx, s: Session, action: string, entity: string, entityId: string | null, detail?: unknown) {
+export async function audit(tx: Tx, s: Session, action: string, entity: string, entityId: string | null, detail?: unknown) {
   await tx.query("insert into audit_log (firm_id, user_id, action, entity, entity_id, detail) values ($1, $2, $3, $4, $5, $6)", [
     s.firmId,
     s.userId,
@@ -108,6 +110,11 @@ export async function importTrialBalance(
   if (!engagement) throw new Error("Engagement not found.");
   if (engagement.status !== "open") throw new Error("This engagement is locked.");
 
+  const journals = await tx.query("select 1 from journal_entries where engagement_id = $1 limit 1", [engagementId]);
+  if (journals.rows.length > 0) {
+    throw new Error("This engagement has journal entries. Delete them before replacing the trial balance, then re-enter them.");
+  }
+
   const existing = await mappingsByCode(tx, engagementId);
   // Only mappings a person approved last year carry forward; unreviewed suggestions do not.
   const priorYear = engagement.priorEngagementId ? await mappingsByCode(tx, engagement.priorEngagementId, true) : new Map();
@@ -181,9 +188,11 @@ export async function listAccounts(tx: Tx, engagementId: string): Promise<Accoun
     source: MappingSource | null;
     confidence: string | null;
     approved: boolean | null;
+    adjustment: string;
   }>(
     `select a.id, a.code, a.name, a.closing_minor::text as closing, a.prior_minor::text as prior,
-            m.group_code as "groupCode", m.source, m.confidence::text as confidence, m.approved
+            m.group_code as "groupCode", m.source, m.confidence::text as confidence, m.approved,
+            coalesce((select sum(l.amount_minor) from journal_lines l where l.account_id = a.id), 0)::text as adjustment
      from accounts a left join mappings m on m.account_id = a.id
      where a.engagement_id = $1 order by a.code`,
     [engagementId],
@@ -198,6 +207,7 @@ export async function listAccounts(tx: Tx, engagementId: string): Promise<Accoun
     source: r.source,
     confidence: r.confidence === null ? null : Number(r.confidence),
     approved: r.approved ?? false,
+    adjustmentMinor: Number(r.adjustment),
   }));
 }
 

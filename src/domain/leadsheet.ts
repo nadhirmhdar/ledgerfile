@@ -5,6 +5,8 @@ export interface MappedAccount {
   name: string;
   closingMinor: number;
   priorMinor: number | null;
+  /** Journal adjustments already included in closingMinor, shown for information. */
+  adjustmentMinor?: number;
   /** null when the account has not been mapped yet. */
   groupCode: string | null;
 }

@@ -7,7 +7,9 @@ import { getSession } from "@/server/session";
 import * as repo from "@/server/repo";
 import { readGrid } from "@/server/excel";
 import { parseTrialBalance } from "@/domain/tb-parse";
-import { formatAmount } from "@/domain/money";
+import { formatAmount, parseAmount } from "@/domain/money";
+import * as journals from "@/server/journals";
+import type { JournalLineInput } from "@/domain/journal";
 
 export interface FormState {
   ok: boolean;
@@ -96,4 +98,50 @@ export async function approveAllAction(form: FormData): Promise<void> {
   const session = await getSession();
   await withFirm(await getDb(), session.firmId, (tx) => repo.approveAllMappings(tx, session, engagementId));
   revalidatePath(`/engagements/${engagementId}`);
+}
+
+export async function createJournalAction(_prev: FormState, form: FormData): Promise<FormState> {
+  const engagementId = String(form.get("engagementId") ?? "");
+  const type = String(form.get("type") ?? "");
+  const description = String(form.get("description") ?? "");
+  if (!UUID.test(engagementId)) return { ok: false, message: "Engagement not found." };
+  if (type !== "adjusting" && type !== "reclassification") return { ok: false, message: "Choose the entry type." };
+
+  let raw: unknown;
+  try {
+    raw = JSON.parse(String(form.get("lines") ?? "[]"));
+  } catch {
+    return { ok: false, message: "The entry could not be read." };
+  }
+  if (!Array.isArray(raw) || raw.length > 200) return { ok: false, message: "The entry could not be read." };
+
+  const lines: JournalLineInput[] = [];
+  for (const [i, item] of raw.entries()) {
+    const { accountId, debit, credit } = (item ?? {}) as Record<string, unknown>;
+    const dr = parseAmount(debit);
+    const cr = parseAmount(credit);
+    if (dr === null && cr === null && !accountId) continue; // an empty row
+    if (typeof accountId !== "string" || !UUID.test(accountId)) return { ok: false, message: `Line ${i + 1}: choose an account.` };
+    if (Number.isNaN(dr) || Number.isNaN(cr) || (dr ?? 0) < 0 || (cr ?? 0) < 0) return { ok: false, message: `Line ${i + 1}: enter amounts as positive numbers.` };
+    if (dr && cr) return { ok: false, message: `Line ${i + 1}: enter a debit or a credit, not both.` };
+    lines.push({ accountId, amountMinor: (dr ?? 0) - (cr ?? 0) });
+  }
+
+  const session = await getSession();
+  try {
+    await withFirm(await getDb(), session.firmId, (tx) => journals.createJournal(tx, session, engagementId, { type, description, lines }));
+  } catch (e) {
+    return { ok: false, message: e instanceof Error ? e.message : "The entry was not posted." };
+  }
+  revalidatePath(`/engagements/${engagementId}`, "layout");
+  return { ok: true, message: "Entry posted." };
+}
+
+export async function deleteJournalAction(form: FormData): Promise<void> {
+  const engagementId = String(form.get("engagementId") ?? "");
+  const journalId = String(form.get("journalId") ?? "");
+  if (!UUID.test(engagementId) || !UUID.test(journalId)) return;
+  const session = await getSession();
+  await withFirm(await getDb(), session.firmId, (tx) => journals.deleteJournal(tx, session, journalId));
+  revalidatePath(`/engagements/${engagementId}`, "layout");
 }
