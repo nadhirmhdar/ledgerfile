@@ -18,6 +18,8 @@ export interface SignOffState {
   preparerId: string | null;
   reviewerId: string | null;
   openPoints: number;
+  /** True when the firm has exactly one user, who must then be able to review their own work. */
+  solePractitioner?: boolean;
 }
 
 /** Why this user cannot sign this lead sheet at this level; null when they can. */
@@ -29,7 +31,8 @@ export function signOffBlocker(level: Level, user: { id: string; role: Role }, s
   if (!canReview(user.role)) return "Only a reviewer or partner can sign as reviewer.";
   if (state.reviewerId) return "This lead sheet is already signed as reviewed.";
   if (!state.preparerId) return "The lead sheet must be signed as prepared before it is reviewed.";
-  if (state.preparerId === user.id) return "The reviewer must be a different person from the preparer.";
+  // Two people are required wherever the firm has two people. A sole practitioner has nobody else.
+  if (state.preparerId === user.id && !state.solePractitioner) return "The reviewer must be a different person from the preparer.";
   if (state.openPoints > 0) return `Clear the ${state.openPoints} open review point(s) on this lead sheet first.`;
   return null;
 }

@@ -39,6 +39,8 @@ export interface ReviewPoint {
 
 export interface ReviewOverview {
   status: string;
+  /** The firm has exactly one user, so that user may review their own lead sheets. */
+  solePractitioner: boolean;
   lockedByName: string | null;
   lockedAt: string | null;
   leadSheets: LeadSheetReview[];
@@ -83,6 +85,8 @@ export async function getOverview(tx: Tx, engagementId: string): Promise<ReviewO
     [engagementId],
   );
 
+  const users = await tx.query<{ n: number }>("select count(*)::int as n from users");
+
   const find = (target: string, level: Level) => {
     const s = signOffs.rows.find((r) => r.target === target && r.level === level);
     return s ? { userId: s.userId, name: s.name, at: s.at } : null;
@@ -100,6 +104,7 @@ export async function getOverview(tx: Tx, engagementId: string): Promise<ReviewO
 
   return {
     ...lock.rows[0],
+    solePractitioner: users.rows[0].n === 1,
     leadSheets,
     points: points.rows.map((p) => ({ ...p, targetName: targetName(p.target) })),
     readiness: lockReadiness({
@@ -120,6 +125,7 @@ export async function signOff(tx: Tx, actor: Actor, engagementId: string, groupC
     preparerId: sheet.preparer?.userId ?? null,
     reviewerId: sheet.reviewer?.userId ?? null,
     openPoints: sheet.openPoints,
+    solePractitioner: overview!.solePractitioner,
   });
   if (blocker) throw new Error(blocker);
   await tx.query("insert into sign_offs (firm_id, engagement_id, target, level, user_id) values ($1, $2, $3, $4, $5)", [
@@ -129,7 +135,9 @@ export async function signOff(tx: Tx, actor: Actor, engagementId: string, groupC
     level,
     actor.userId,
   ]);
-  await audit(tx, actor, "sign_off", "lead_sheet", engagementId, { groupCode, level });
+  // A self-review is recorded as such, so it can be identified in the file afterwards.
+  const selfReview = level === "reviewer" && sheet.preparer?.userId === actor.userId;
+  await audit(tx, actor, "sign_off", "lead_sheet", engagementId, { groupCode, level, ...(selfReview ? { selfReview: true } : {}) });
 }
 
 /** Withdraw your own sign-off. Withdrawing the preparer's also removes the review that relied on it. */

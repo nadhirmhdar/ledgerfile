@@ -14,7 +14,7 @@ This repository holds the first slice of the MVP: trial balance to lead sheets.
 - Lead sheets per group with prior-year comparison, checked to agree with the trial balance.
 - Adjusting and reclassification journal entries, with numbers that are never reused. Entries flow through to lead sheets and statements.
 - Statement of financial position and statement of comprehensive income with comparatives, drill-down to lead sheets, and checks that must pass before the statements are clean.
-- Review and sign-off: preparer and reviewer sign-off per lead sheet (different people), review points that must be cleared, automatic removal of a sign-off when its figures change, and partner lock and unlock.
+- Review and sign-off: preparer and reviewer sign-off per lead sheet (different people, except in a firm with a single user), review points that must be cleared, automatic removal of a sign-off when its figures change, and partner lock and unlock.
 - Sign-in: firms register themselves, the first user is the administrator and adds colleagues with a role. Passwords are hashed with scrypt, accounts lock after repeated failures, and sessions expire after 12 hours.
 - Tenant isolation enforced in the database with row-level security, and an append-only audit log.
 

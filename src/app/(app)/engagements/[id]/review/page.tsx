@@ -121,7 +121,10 @@ export default async function ReviewPage({ params }: { params: Promise<{ id: str
       <section className="mt-8">
         <h2 className="text-lg font-semibold">Lead sheet sign-off</h2>
         <p className="mt-1 text-sm text-slate-600">
-          A sign-off is removed automatically if the lead sheet&apos;s figures change afterwards. The reviewer must be a different person from the preparer.
+          A sign-off is removed automatically if the lead sheet&apos;s figures change afterwards.{" "}
+          {overview.solePractitioner
+            ? "You are the firm's only user, so you may review your own lead sheets; each self-review is recorded in the audit log."
+            : "The reviewer must be a different person from the preparer."}
         </p>
         {sheets.length === 0 ? (
           <p className="mt-3 text-sm text-slate-600">Import a trial balance and map its accounts to see lead sheets here.</p>

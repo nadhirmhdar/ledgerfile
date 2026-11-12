@@ -50,6 +50,8 @@ describe("sign-off rules (pure)", () => {
     expect(signOffBlocker("reviewer", { id: "r", role: "preparer" }, state)).toContain("Only a reviewer");
     expect(signOffBlocker("reviewer", { id: "r", role: "reviewer" }, { ...state, preparerId: null })).toContain("before it is reviewed");
     expect(signOffBlocker("reviewer", { id: "p", role: "partner" }, state)).toContain("different person");
+    expect(signOffBlocker("reviewer", { id: "p", role: "partner" }, { ...state, solePractitioner: true })).toBeNull();
+    expect(signOffBlocker("reviewer", { id: "p", role: "preparer" }, { ...state, solePractitioner: true })).toContain("Only a reviewer");
     expect(signOffBlocker("reviewer", { id: "r", role: "reviewer" }, { ...state, openPoints: 2 })).toContain("2 open review point");
     expect(signOffBlocker("reviewer", { id: "r", role: "reviewer" }, state)).toBeNull();
   });
@@ -205,13 +207,43 @@ describe("other changes that invalidate sign-offs", () => {
   });
 });
 
+describe("sole practitioner", () => {
+  it("a firm with one user can prepare, review and lock alone, and the self-review is logged", async () => {
+    const solo = outsider;
+    const own = await as(solo, async (tx) => {
+      const client = await repo.createClient(tx, solo, "Solo Client");
+      const id = await repo.createEngagement(tx, solo, client, "2025-01-01", "2025-12-31");
+      await repo.importTrialBalance(tx, solo, id, "tb.xlsx", TB);
+      await repo.approveAllMappings(tx, solo, id);
+      return id;
+    });
+    expect((await as(solo, (tx) => review.getOverview(tx, own)))!.solePractitioner).toBe(true);
+    for (const code of ["CASH", "TRADEREC", "CAPITAL"]) {
+      await as(solo, (tx) => review.signOff(tx, solo, own, code, "preparer"));
+      await as(solo, (tx) => review.signOff(tx, solo, own, code, "reviewer"));
+    }
+    await as(solo, (tx) => review.lockEngagement(tx, solo, own));
+    expect((await as(solo, (tx) => review.getOverview(tx, own)))!.status).toBe("locked");
+    const log = await db.query("select 1 from audit_log where firm_id = $1 and action = 'sign_off' and detail->>'selfReview' = 'true'", [OTHER_FIRM]);
+    expect(log.rows).toHaveLength(3);
+  });
+
+  it("the exception ends as soon as the firm has a second user", async () => {
+    expect((await overview()).solePractitioner).toBe(false);
+    await as(prep, (tx) => review.signOff(tx, rev, engagement, "CASH", "preparer"));
+    await expect(as(rev, (tx) => review.signOff(tx, rev, engagement, "CASH", "reviewer"))).rejects.toThrow(/different person/);
+  });
+});
+
 describe("tenant isolation", () => {
   it("another firm sees nothing and cannot sign, raise points or lock", async () => {
     expect(await as(outsider, (tx) => review.getOverview(tx, engagement))).toBeNull();
     await expect(as(outsider, (tx) => review.signOff(tx, outsider, engagement, "CASH", "preparer"))).rejects.toThrow(/not found/);
     await expect(as(outsider, (tx) => review.addReviewPoint(tx, outsider, engagement, "CASH", "Intrusion"))).rejects.toThrow(/not found/);
     await expect(as(outsider, (tx) => review.lockEngagement(tx, outsider, engagement))).rejects.toThrow(/not found/);
-    const seen = await as(outsider, async (tx) => (await tx.query("select id from sign_offs")).rows.length + (await tx.query("select id from review_points")).rows.length);
+    const seen = await as(outsider, async (tx) => (await tx.query("select id from sign_offs where engagement_id = $1", [engagement])).rows.length +
+      (await tx.query("select id from review_points where engagement_id = $1", [engagement])).rows.length,
+    );
     expect(seen).toBe(0);
   });
 });
