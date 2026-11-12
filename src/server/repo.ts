@@ -1,0 +1,237 @@
+import type { Tx } from "./db";
+import type { TbAccount } from "../domain/tb-parse";
+import { proposeMappings, type MappingSource } from "../domain/mapping";
+import { GROUP_BY_CODE } from "../domain/groups";
+import type { MappedAccount } from "../domain/leadsheet";
+
+export interface Session {
+  firmId: string;
+  userId: string;
+}
+
+export interface ClientRow {
+  id: string;
+  name: string;
+  framework: string;
+}
+
+export interface EngagementRow {
+  id: string;
+  clientId: string;
+  clientName: string;
+  periodStart: string;
+  periodEnd: string;
+  status: string;
+  priorEngagementId: string | null;
+}
+
+export interface AccountRow extends MappedAccount {
+  id: string;
+  source: MappingSource | null;
+  confidence: number | null;
+  approved: boolean;
+}
+
+async function audit(tx: Tx, s: Session, action: string, entity: string, entityId: string | null, detail?: unknown) {
+  await tx.query("insert into audit_log (firm_id, user_id, action, entity, entity_id, detail) values ($1, $2, $3, $4, $5, $6)", [
+    s.firmId,
+    s.userId,
+    action,
+    entity,
+    entityId,
+    detail === undefined ? null : JSON.stringify(detail),
+  ]);
+}
+
+export async function listClients(tx: Tx): Promise<ClientRow[]> {
+  return (await tx.query<ClientRow>("select id, name, framework from clients order by name")).rows;
+}
+
+export async function createClient(tx: Tx, s: Session, name: string): Promise<string> {
+  const { rows } = await tx.query<{ id: string }>("insert into clients (firm_id, name) values ($1, $2) returning id", [s.firmId, name]);
+  await audit(tx, s, "create", "client", rows[0].id, { name });
+  return rows[0].id;
+}
+
+const ENGAGEMENT_SELECT = `
+  select e.id, e.client_id as "clientId", c.name as "clientName",
+         to_char(e.period_start, 'YYYY-MM-DD') as "periodStart", to_char(e.period_end, 'YYYY-MM-DD') as "periodEnd",
+         e.status, e.prior_engagement_id as "priorEngagementId"
+  from engagements e join clients c on c.id = e.client_id`;
+
+export async function listEngagements(tx: Tx): Promise<EngagementRow[]> {
+  return (await tx.query<EngagementRow>(`${ENGAGEMENT_SELECT} order by c.name, e.period_end desc`)).rows;
+}
+
+export async function getEngagement(tx: Tx, id: string): Promise<EngagementRow | null> {
+  return (await tx.query<EngagementRow>(`${ENGAGEMENT_SELECT} where e.id = $1`, [id])).rows[0] ?? null;
+}
+
+/** Create an engagement and link it to the client's most recent earlier period, for mapping carry-forward. */
+export async function createEngagement(tx: Tx, s: Session, clientId: string, periodStart: string, periodEnd: string): Promise<string> {
+  const client = await tx.query("select 1 from clients where id = $1", [clientId]);
+  if (client.rows.length === 0) throw new Error("Client not found.");
+  const prior = await tx.query<{ id: string }>(
+    "select id from engagements where client_id = $1 and period_end < $2 order by period_end desc limit 1",
+    [clientId, periodEnd],
+  );
+  const { rows } = await tx.query<{ id: string }>(
+    "insert into engagements (firm_id, client_id, period_start, period_end, prior_engagement_id) values ($1, $2, $3, $4, $5) returning id",
+    [s.firmId, clientId, periodStart, periodEnd, prior.rows[0]?.id ?? null],
+  );
+  await audit(tx, s, "create", "engagement", rows[0].id, { clientId, periodStart, periodEnd });
+  return rows[0].id;
+}
+
+async function mappingsByCode(tx: Tx, engagementId: string, approvedOnly = false) {
+  const { rows } = await tx.query<{ code: string; groupCode: string; source: MappingSource; confidence: string; approved: boolean }>(
+    `select a.code, m.group_code as "groupCode", m.source, m.confidence, m.approved
+     from mappings m join accounts a on a.id = m.account_id where a.engagement_id = $1 and (m.approved or not $2::boolean)`,
+    [engagementId, approvedOnly],
+  );
+  return new Map(rows.map((r) => [r.code, r]));
+}
+
+/**
+ * Replace the engagement's trial balance with a new import and map every account.
+ * Order of preference: a mapping already made on this engagement (so re-importing a corrected
+ * file keeps the preparer's work), then last year's mapping, then the rule-based suggestion.
+ */
+export async function importTrialBalance(
+  tx: Tx,
+  s: Session,
+  engagementId: string,
+  fileName: string,
+  accounts: TbAccount[],
+): Promise<{ imported: number; carriedForward: number; suggested: number; unmapped: number }> {
+  const engagement = await getEngagement(tx, engagementId);
+  if (!engagement) throw new Error("Engagement not found.");
+  if (engagement.status !== "open") throw new Error("This engagement is locked.");
+
+  const existing = await mappingsByCode(tx, engagementId);
+  // Only mappings a person approved last year carry forward; unreviewed suggestions do not.
+  const priorYear = engagement.priorEngagementId ? await mappingsByCode(tx, engagement.priorEngagementId, true) : new Map();
+
+  await tx.query("delete from accounts where engagement_id = $1", [engagementId]);
+  const imp = await tx.query<{ id: string }>(
+    "insert into tb_imports (firm_id, engagement_id, file_name, row_count) values ($1, $2, $3, $4) returning id",
+    [s.firmId, engagementId, fileName, accounts.length],
+  );
+
+  const idByCode = new Map<string, string>();
+  for (const a of accounts) {
+    const { rows } = await tx.query<{ id: string }>(
+      `insert into accounts (firm_id, engagement_id, tb_import_id, code, name, closing_minor, prior_minor)
+       values ($1, $2, $3, $4, $5, $6, $7) returning id`,
+      [s.firmId, engagementId, imp.rows[0].id, a.code, a.name, a.closingMinor, a.priorMinor],
+    );
+    idByCode.set(a.code, rows[0].id);
+  }
+
+  const toPropose = accounts.filter((a) => !existing.has(a.code));
+  const { suggestions, unmapped } = proposeMappings(
+    toPropose,
+    new Map([...priorYear].map(([code, m]) => [code, m.groupCode])),
+  );
+
+  const insert = (accountId: string, groupCode: string, source: string, confidence: number, approved: boolean) =>
+    tx.query("insert into mappings (firm_id, account_id, group_code, source, confidence, approved) values ($1, $2, $3, $4, $5, $6)", [
+      s.firmId,
+      accountId,
+      groupCode,
+      source,
+      confidence,
+      approved,
+    ]);
+
+  let kept = 0;
+  for (const a of accounts) {
+    const m = existing.get(a.code);
+    if (m && GROUP_BY_CODE.has(m.groupCode)) {
+      await insert(idByCode.get(a.code)!, m.groupCode, m.source, Number(m.confidence), m.approved);
+      kept++;
+    }
+  }
+  let carried = 0;
+  for (const sug of suggestions) {
+    if (!GROUP_BY_CODE.has(sug.groupCode)) continue;
+    // Prior-year mappings were approved last year, so they arrive approved; rule suggestions need review.
+    await insert(idByCode.get(sug.accountCode)!, sug.groupCode, sug.source, sug.confidence, sug.source === "prior_year");
+    if (sug.source === "prior_year") carried++;
+  }
+
+  const result = {
+    imported: accounts.length,
+    carriedForward: carried + kept,
+    suggested: suggestions.length - carried,
+    unmapped: unmapped.length,
+  };
+  await audit(tx, s, "import", "trial_balance", engagementId, { fileName, ...result });
+  return result;
+}
+
+export async function listAccounts(tx: Tx, engagementId: string): Promise<AccountRow[]> {
+  const { rows } = await tx.query<{
+    id: string;
+    code: string;
+    name: string;
+    closing: string;
+    prior: string | null;
+    groupCode: string | null;
+    source: MappingSource | null;
+    confidence: string | null;
+    approved: boolean | null;
+  }>(
+    `select a.id, a.code, a.name, a.closing_minor::text as closing, a.prior_minor::text as prior,
+            m.group_code as "groupCode", m.source, m.confidence::text as confidence, m.approved
+     from accounts a left join mappings m on m.account_id = a.id
+     where a.engagement_id = $1 order by a.code`,
+    [engagementId],
+  );
+  return rows.map((r) => ({
+    id: r.id,
+    code: r.code,
+    name: r.name,
+    closingMinor: Number(r.closing),
+    priorMinor: r.prior === null ? null : Number(r.prior),
+    groupCode: r.groupCode,
+    source: r.source,
+    confidence: r.confidence === null ? null : Number(r.confidence),
+    approved: r.approved ?? false,
+  }));
+}
+
+/** The preparer sets or changes an account's group. A manual choice is approved by definition. */
+export async function setMapping(tx: Tx, s: Session, accountId: string, groupCode: string | null): Promise<void> {
+  const account = await tx.query<{ status: string }>(
+    "select e.status from accounts a join engagements e on e.id = a.engagement_id where a.id = $1",
+    [accountId],
+  );
+  if (account.rows.length === 0) throw new Error("Account not found.");
+  if (account.rows[0].status !== "open") throw new Error("This engagement is locked.");
+  if (groupCode === null) {
+    await tx.query("delete from mappings where account_id = $1", [accountId]);
+  } else {
+    if (!GROUP_BY_CODE.has(groupCode)) throw new Error("Unknown group.");
+    await tx.query(
+      `insert into mappings (firm_id, account_id, group_code, source, confidence, approved) values ($1, $2, $3, 'manual', 1, true)
+       on conflict (account_id) do update set group_code = excluded.group_code, source = 'manual', confidence = 1, approved = true`,
+      [s.firmId, accountId, groupCode],
+    );
+  }
+  await audit(tx, s, "map", "account", accountId, { groupCode });
+}
+
+/** Accept every outstanding suggestion on the engagement as it stands. */
+export async function approveAllMappings(tx: Tx, s: Session, engagementId: string): Promise<number> {
+  const engagement = await getEngagement(tx, engagementId);
+  if (!engagement) throw new Error("Engagement not found.");
+  if (engagement.status !== "open") throw new Error("This engagement is locked.");
+  const { rows } = await tx.query(
+    `update mappings set approved = true
+     where approved = false and account_id in (select id from accounts where engagement_id = $1) returning id`,
+    [engagementId],
+  );
+  await audit(tx, s, "approve_all", "mapping", engagementId, { count: rows.length });
+  return rows.length;
+}
