@@ -30,7 +30,7 @@ export default async function JournalsPage({ params }: { params: Promise<{ id: s
       <Link href="/" className="text-sm text-blue-700 underline">All engagements</Link>
       <h1 className="mt-2 text-2xl font-semibold">{engagement.clientName}</h1>
       <p className="mt-1 text-sm text-slate-600">{engagement.periodStart} to {engagement.periodEnd}</p>
-      <EngagementNav id={id} current="journals" />
+      <EngagementNav id={id} current="journals" status={engagement.status} />
 
       {accounts.length === 0 ? (
         <p className="mt-6 text-sm text-slate-600">Import a trial balance before posting journal entries.</p>
