@@ -48,7 +48,7 @@ export default async function EngagementPage({ params }: { params: Promise<{ id:
         {engagement.priorEngagementId ? " · mappings carry forward from the prior year" : " · no prior-year engagement linked"}
       </p>
 
-      <EngagementNav id={id} current="tb" />
+      <EngagementNav id={id} current="tb" status={engagement.status} />
 
       <section className="mt-6 rounded border border-slate-200 bg-slate-50 p-4">
         <h2 className="text-base font-semibold">Trial balance</h2>

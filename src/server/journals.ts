@@ -1,5 +1,5 @@
 import type { Tx } from "./db";
-import { audit, getEngagement, type Session } from "./repo";
+import { audit, clearSignOffs, getEngagement, type Session } from "./repo";
 import { validateJournal, type JournalLineInput, type JournalType } from "../domain/journal";
 
 export interface JournalRow {
@@ -15,6 +15,12 @@ async function requireOpenEngagement(tx: Tx, engagementId: string) {
   const engagement = await getEngagement(tx, engagementId);
   if (!engagement) throw new Error("Engagement not found.");
   if (engagement.status !== "open") throw new Error("This engagement is locked.");
+}
+
+/** The lead sheets (groups) that the given accounts sit on. */
+async function groupsOfAccounts(tx: Tx, accountIds: string[]): Promise<string[]> {
+  const { rows } = await tx.query<{ g: string }>("select distinct group_code as g from mappings where account_id = any($1::uuid[])", [accountIds]);
+  return rows.map((r) => r.g);
 }
 
 export async function createJournal(
@@ -48,6 +54,7 @@ export async function createJournal(
       l.amountMinor,
     ]);
   }
+  await clearSignOffs(tx, s, engagementId, await groupsOfAccounts(tx, ids), "journal entry posted");
   await audit(tx, s, "create", "journal_entry", rows[0].id, { engagementId, number: next.rows[0].n, type: entry.type, lines: entry.lines });
   return rows[0].id;
 }
@@ -91,6 +98,8 @@ export async function deleteJournal(tx: Tx, s: Session, journalId: string): Prom
   );
   if (j.rows.length === 0) throw new Error("Journal entry not found.");
   await requireOpenEngagement(tx, j.rows[0].engagementId);
+  const affected = await tx.query<{ id: string }>("select account_id as id from journal_lines where journal_entry_id = $1", [journalId]);
+  await clearSignOffs(tx, s, j.rows[0].engagementId, await groupsOfAccounts(tx, affected.rows.map((r) => r.id)), "journal entry deleted");
   await tx.query("delete from journal_entries where id = $1", [journalId]);
   await audit(tx, s, "delete", "journal_entry", journalId, j.rows[0]);
 }

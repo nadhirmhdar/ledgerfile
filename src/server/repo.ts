@@ -45,6 +45,21 @@ export async function audit(tx: Tx, s: Session, action: string, entity: string, 
   ]);
 }
 
+/**
+ * Remove sign-offs on lead sheets whose figures have changed since they were signed.
+ * Pass the affected group codes, or "all" when the whole trial balance changed.
+ */
+export async function clearSignOffs(tx: Tx, s: Session, engagementId: string, groups: (string | null)[] | "all", reason: string): Promise<void> {
+  const codes = groups === "all" ? null : [...new Set(groups.filter((g): g is string => !!g))];
+  if (codes && codes.length === 0) return;
+  const removed = codes
+    ? await tx.query<{ target: string }>("delete from sign_offs where engagement_id = $1 and target = any($2::text[]) returning target", [engagementId, codes])
+    : await tx.query<{ target: string }>("delete from sign_offs where engagement_id = $1 returning target", [engagementId]);
+  if (removed.rows.length > 0) {
+    await audit(tx, s, "sign_offs_cleared", "engagement", engagementId, { reason, leadSheets: [...new Set(removed.rows.map((r) => r.target))] });
+  }
+}
+
 export async function listClients(tx: Tx): Promise<ClientRow[]> {
   return (await tx.query<ClientRow>("select id, name, framework from clients order by name")).rows;
 }
@@ -119,6 +134,7 @@ export async function importTrialBalance(
   // Only mappings a person approved last year carry forward; unreviewed suggestions do not.
   const priorYear = engagement.priorEngagementId ? await mappingsByCode(tx, engagement.priorEngagementId, true) : new Map();
 
+  await clearSignOffs(tx, s, engagementId, "all", "trial balance replaced");
   await tx.query("delete from accounts where engagement_id = $1", [engagementId]);
   const imp = await tx.query<{ id: string }>(
     "insert into tb_imports (firm_id, engagement_id, file_name, row_count) values ($1, $2, $3, $4) returning id",
@@ -213,8 +229,10 @@ export async function listAccounts(tx: Tx, engagementId: string): Promise<Accoun
 
 /** The preparer sets or changes an account's group. A manual choice is approved by definition. */
 export async function setMapping(tx: Tx, s: Session, accountId: string, groupCode: string | null): Promise<void> {
-  const account = await tx.query<{ status: string }>(
-    "select e.status from accounts a join engagements e on e.id = a.engagement_id where a.id = $1",
+  const account = await tx.query<{ status: string; engagementId: string; oldGroup: string | null }>(
+    `select e.status, e.id as "engagementId", m.group_code as "oldGroup"
+     from accounts a join engagements e on e.id = a.engagement_id left join mappings m on m.account_id = a.id
+     where a.id = $1`,
     [accountId],
   );
   if (account.rows.length === 0) throw new Error("Account not found.");
@@ -228,6 +246,9 @@ export async function setMapping(tx: Tx, s: Session, accountId: string, groupCod
        on conflict (account_id) do update set group_code = excluded.group_code, source = 'manual', confidence = 1, approved = true`,
       [s.firmId, accountId, groupCode],
     );
+  }
+  if (account.rows[0].oldGroup !== groupCode) {
+    await clearSignOffs(tx, s, account.rows[0].engagementId, [account.rows[0].oldGroup, groupCode], "account mapping changed");
   }
   await audit(tx, s, "map", "account", accountId, { groupCode });
 }

@@ -17,6 +17,11 @@ export interface FormState {
   details?: string[];
 }
 
+/** Log a refused change without failing the request. */
+function refused(e: unknown): void {
+  console.warn("change refused:", e instanceof Error ? e.message : "unknown error");
+}
+
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -88,7 +93,7 @@ export async function setMappingAction(form: FormData): Promise<void> {
   const groupCode = String(form.get("groupCode") ?? "");
   if (!UUID.test(engagementId) || !UUID.test(accountId)) return;
   const session = await getSession();
-  await withFirm(await getDb(), session.firmId, (tx) => repo.setMapping(tx, session, accountId, groupCode === "" ? null : groupCode));
+  await withFirm(await getDb(), session.firmId, (tx) => repo.setMapping(tx, session, accountId, groupCode === "" ? null : groupCode)).catch(refused);
   revalidatePath(`/engagements/${engagementId}`);
 }
 
@@ -96,7 +101,7 @@ export async function approveAllAction(form: FormData): Promise<void> {
   const engagementId = String(form.get("engagementId") ?? "");
   if (!UUID.test(engagementId)) return;
   const session = await getSession();
-  await withFirm(await getDb(), session.firmId, (tx) => repo.approveAllMappings(tx, session, engagementId));
+  await withFirm(await getDb(), session.firmId, (tx) => repo.approveAllMappings(tx, session, engagementId)).catch(refused);
   revalidatePath(`/engagements/${engagementId}`);
 }
 
@@ -142,6 +147,6 @@ export async function deleteJournalAction(form: FormData): Promise<void> {
   const journalId = String(form.get("journalId") ?? "");
   if (!UUID.test(engagementId) || !UUID.test(journalId)) return;
   const session = await getSession();
-  await withFirm(await getDb(), session.firmId, (tx) => journals.deleteJournal(tx, session, journalId));
+  await withFirm(await getDb(), session.firmId, (tx) => journals.deleteJournal(tx, session, journalId)).catch(refused);
   revalidatePath(`/engagements/${engagementId}`, "layout");
 }
