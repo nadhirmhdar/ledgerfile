@@ -257,6 +257,12 @@ describe("sole practitioner", () => {
     expect(log.rows).toHaveLength(3);
   });
 
+  it("deactivating a colleague does not bring the exception back", async () => {
+    await db.query("update users set active = false where firm_id = $1 and id <> $2", [FIRM, partner.userId]);
+    expect((await overview()).solePractitioner).toBe(false);
+    await db.query("update users set active = true where firm_id = $1", [FIRM]);
+  });
+
   it("the exception ends as soon as the firm has a second user", async () => {
     expect((await overview()).solePractitioner).toBe(false);
     await as(prep, (tx) => review.signOff(tx, rev, engagement, "CASH", "preparer"));

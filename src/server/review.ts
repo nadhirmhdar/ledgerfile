@@ -85,7 +85,9 @@ export async function getOverview(tx: Tx, engagementId: string): Promise<ReviewO
     [engagementId],
   );
 
-  const users = await tx.query<{ n: number }>("select count(*)::int as n from users where active");
+  // Deactivated users count too: otherwise an administrator could deactivate a colleague,
+  // review their own work, and reactivate the colleague afterwards.
+  const users = await tx.query<{ n: number }>("select count(*)::int as n from users");
 
   const find = (target: string, level: Level) => {
     const s = signOffs.rows.find((r) => r.target === target && r.level === level);
