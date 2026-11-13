@@ -28,8 +28,21 @@ const db = await openDatabase(path.join(process.cwd(), ".data", "pg"));
 // Demo sign-in for local development only. Override the password with DEMO_PASSWORD; see .env.example.
 const DEMO_EMAIL = "demo@ledgerfile.test";
 await createFirm(db, { id: DEV_FIRM_ID, name: "Demo Audit Firm" }, { id: DEV_USER_ID, email: DEMO_EMAIL, name: "Demo Admin" });
-await setPassword(db, DEV_USER_ID, process.env.DEMO_PASSWORD ?? "ledgerfile-demo-only");
-console.log(`Demo sign-in: ${DEMO_EMAIL} (password: DEMO_PASSWORD, or the default in .env.example)`);
+const demoPassword = process.env.DEMO_PASSWORD ?? "ledgerfile-demo-only";
+await setPassword(db, DEV_USER_ID, demoPassword);
+
+// One test user for each of the other roles, so sign-off between different people can be tried.
+const TEST_USERS = [
+  { id: "00000000-0000-4000-8000-000000000003", email: "partner@ledgerfile.test", name: "Test Partner", role: "partner" },
+  { id: "00000000-0000-4000-8000-000000000004", email: "reviewer@ledgerfile.test", name: "Test Reviewer", role: "reviewer" },
+  { id: "00000000-0000-4000-8000-000000000005", email: "preparer@ledgerfile.test", name: "Test Preparer", role: "preparer" },
+];
+for (const u of TEST_USERS) {
+  await db.query("insert into users (id, firm_id, email, name, role) values ($1, $2, $3, $4, $5) on conflict (id) do nothing", [u.id, DEV_FIRM_ID, u.email, u.name, u.role]);
+  await setPassword(db, u.id, demoPassword);
+}
+console.log(`Demo sign-ins: ${[DEMO_EMAIL, ...TEST_USERS.map((u) => u.email)].join(", ")}`);
+console.log("All four use the same password: DEMO_PASSWORD, or the default in .env.example");
 
 await withFirm(db, DEV_FIRM_ID, async (tx) => {
   if ((await repo.listClients(tx)).some((c) => c.name === "Falcon Trading LLC (sample)")) {

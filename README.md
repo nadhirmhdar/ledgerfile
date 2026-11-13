@@ -39,7 +39,8 @@ npm run typecheck
 npm run lint
 ```
 
-After `npm run seed`, sign in as `demo@ledgerfile.test`. The password is `DEMO_PASSWORD`, with a default in `.env.example`
+After `npm run seed`, four demo users exist in one firm, one per role: `demo@ledgerfile.test` (administrator), `partner@ledgerfile.test`,
+`reviewer@ledgerfile.test` and `preparer@ledgerfile.test`. They share one password, `DEMO_PASSWORD`, with a default in `.env.example`
 that is for your own machine only. Or open `/sign-up` and register a new firm.
 
 ## Layout
