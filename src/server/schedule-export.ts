@@ -1,5 +1,6 @@
 import type { Tx } from "./db";
 import { audit as log, getEngagement, type Session } from "./repo";
+import { areaCodesInScope } from "./audit";
 import { getSchedule, type ScheduleView } from "./test-schedules";
 import { buildScheduleWorkbook } from "./schedule-xlsx";
 
@@ -24,8 +25,10 @@ export async function exportSchedules(tx: Tx, s: Session, engagementId: string, 
   } else {
     const { rows } = await tx.query<{ id: string }>("select id from test_schedules where engagement_id = $1 order by area_code, seq", [engagementId]);
     views = [];
+    // The areas in scope come from the trial balance, so work them out once for the engagement, not once per schedule.
+    const inScope = rows.length > 0 ? await areaCodesInScope(tx, engagementId) : undefined;
     for (const r of rows) {
-      const v = await getSchedule(tx, r.id);
+      const v = await getSchedule(tx, r.id, inScope);
       if (v) views.push(v);
     }
   }

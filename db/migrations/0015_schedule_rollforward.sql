@@ -8,7 +8,8 @@ alter table test_schedules
   add column prior_work_done text,
   add foreign key (firm_id, rolled_from_id) references test_schedules (firm_id, id) on delete set null (rolled_from_id);
 
--- A prior-year schedule is brought forward at most once into the engagement that follows it.
-create unique index test_schedules_rolled_from on test_schedules (rolled_from_id) where rolled_from_id is not null;
+-- A prior-year schedule is brought forward at most once into any one engagement. Two engagements may follow the same prior year
+-- (one recreated, say), and each can bring it forward.
+create unique index test_schedules_rolled_from on test_schedules (engagement_id, rolled_from_id) where rolled_from_id is not null;
 
 alter table test_schedule_lines add column prior_amount_minor bigint;

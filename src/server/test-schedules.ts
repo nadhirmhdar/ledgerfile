@@ -287,7 +287,7 @@ export async function listSchedules(tx: Tx, engagementId: string, areaCode: stri
   }));
 }
 
-export async function getSchedule(tx: Tx, scheduleId: string): Promise<ScheduleView | null> {
+export async function getSchedule(tx: Tx, scheduleId: string, inScope?: Set<string>): Promise<ScheduleView | null> {
   if (!/^[0-9a-f-]{36}$/i.test(scheduleId)) return null;
   const found = await tx.query<Row>(`select ${COLUMNS} from test_schedules s where s.id = $1`, [scheduleId]);
   const r = found.rows[0];
@@ -355,7 +355,7 @@ export async function getSchedule(tx: Tx, scheduleId: string): Promise<ScheduleV
     auditOn: n.on,
     rolledFrom,
     priorWorkDone: r.priorWorkDone,
-    areaInScope: (await areaCodesInScope(tx, r.engagementId)).has(r.areaCode),
+    areaInScope: (inScope ?? (await areaCodesInScope(tx, r.engagementId))).has(r.areaCode),
     comparatives: lines.rows.some((l) => l.priorAmountMinor !== null) ? comparativeTotals(lines.rows) : null,
     files: files.rows,
   };
@@ -438,12 +438,13 @@ export async function saveLines(
 }
 
 /** Add a pasted or uploaded listing to the schedule, after the lines already there, or in place of them. */
-export async function importLines(tx: Tx, s: Session, scheduleId: string, lines: ListingLine[], mode: "append" | "replace" | "match"): Promise<{ imported: number; replaced: number; matched?: number; added?: number }> {
+export async function importLines(tx: Tx, s: Session, scheduleId: string, lines: ListingLine[], mode: "append" | "replace" | "match"): Promise<{ imported: number; replaced: number; matched?: number; added?: number; ticksCleared?: number }> {
   const row = await loadForEdit(tx, scheduleId);
   if (lines.length === 0) throw new Error("There are no lines to import.");
   const checked = lines.map((l, i) => checkLine({ description: l.description, docRef: l.docRef, amountMinor: l.amountMinor }, i + 1));
   const existing = await lineCount(tx, scheduleId);
-  if ((mode === "replace" ? 0 : existing) + checked.length > MAX_SCHEDULE_LINES) throw new Error(`A schedule holds at most ${MAX_SCHEDULE_LINES.toLocaleString("en-US")} lines.`);
+  // A matched import puts lines against ones already there, so only what it adds counts, and that is checked in importMatched.
+  if (mode !== "match" && (mode === "replace" ? 0 : existing) + checked.length > MAX_SCHEDULE_LINES) throw new Error(`A schedule holds at most ${MAX_SCHEDULE_LINES.toLocaleString("en-US")} lines.`);
   if (mode === "match") return importMatched(tx, s, scheduleId, row, checked);
   let replaced = 0;
   if (mode === "replace") {
@@ -464,16 +465,28 @@ export async function importLines(tx: Tx, s: Session, scheduleId: string, lines:
  * exact description), so the comparative stays with the right line. Lines with no match are added with no comparative; lines
  * nothing was imported against keep their comparative and a zero current amount.
  */
-async function importMatched(tx: Tx, s: Session, scheduleId: string, row: Row, checked: LineInput[]): Promise<{ imported: number; replaced: number; matched: number; added: number }> {
-  const existing = await tx.query<{ id: string; docRef: string | null; description: string }>(
-    'select id, doc_ref as "docRef", description from test_schedule_lines where schedule_id = $1 order by position, id',
+async function importMatched(tx: Tx, s: Session, scheduleId: string, row: Row, checked: LineInput[]): Promise<{ imported: number; replaced: number; matched: number; added: number; ticksCleared: number }> {
+  const existing = await tx.query<{ id: string; docRef: string | null; description: string; amountMinor: number; tested: boolean; tickmarks: string[] }>(
+    'select id, doc_ref as "docRef", description, amount_minor::float8 as "amountMinor", tested, tickmarks from test_schedule_lines where schedule_id = $1 order by position, id',
     [scheduleId],
   );
   const result = matchListing(existing.rows, checked.map((l) => ({ description: l.description, docRef: l.docRef, amountMinor: l.amountMinor })));
   if (existing.rows.length + result.unmatchedImported.length > MAX_SCHEDULE_LINES) throw new Error(`A schedule holds at most ${MAX_SCHEDULE_LINES.toLocaleString("en-US")} lines.`);
+  // Ticks say what was tested at an amount. When a matched line's amount changes, the ticks no longer describe it, so they are
+  // cleared (the evidence link and remarks stay); a line whose amount is unchanged keeps them.
+  const byId = new Map(existing.rows.map((e) => [e.id, e]));
+  let ticksCleared = 0;
   for (const m of result.matches) {
     const l = checked[m.importedIndex];
-    await tx.query("update test_schedule_lines set amount_minor = $2, doc_ref = coalesce(doc_ref, $3) where id = $1", [m.existingId, l.amountMinor, l.docRef]);
+    const before = byId.get(m.existingId)!;
+    const changed = before.amountMinor !== l.amountMinor;
+    const ticked = before.tested || before.tickmarks.length > 0;
+    if (changed && ticked) {
+      ticksCleared++;
+      await tx.query("update test_schedule_lines set amount_minor = $2, doc_ref = coalesce(doc_ref, $3), tested = false, tickmarks = '{}' where id = $1", [m.existingId, l.amountMinor, l.docRef]);
+    } else {
+      await tx.query("update test_schedule_lines set amount_minor = $2, doc_ref = coalesce(doc_ref, $3) where id = $1", [m.existingId, l.amountMinor, l.docRef]);
+    }
   }
   let position = (await tx.query<{ p: number }>("select coalesce(max(position), 0)::int as p from test_schedule_lines where schedule_id = $1", [scheduleId])).rows[0].p;
   for (const i of result.unmatchedImported) {
@@ -491,8 +504,9 @@ async function importMatched(tx: Tx, s: Session, scheduleId: string, row: Row, c
     matchedByDescription: result.byDescription,
     added: result.unmatchedImported.length,
     notMatched: result.unmatchedExisting.length,
+    ticksCleared,
   });
-  return { imported: checked.length, replaced: 0, matched: result.matches.length, added: result.unmatchedImported.length };
+  return { imported: checked.length, replaced: 0, matched: result.matches.length, added: result.unmatchedImported.length, ticksCleared };
 }
 
 /**

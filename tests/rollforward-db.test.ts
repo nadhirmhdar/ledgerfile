@@ -172,7 +172,7 @@ describe("rolling schedules forward", () => {
         "match",
       ),
     );
-    expect(result).toEqual({ imported: 3, replaced: 0, matched: 2, added: 1 });
+    expect(result).toEqual({ imported: 3, replaced: 0, matched: 2, added: 1, ticksCleared: 0 });
     const v = await view(c5);
     expect(v.lines.map((l) => [l.description, l.amountMinor, l.priorAmountMinor])).toEqual([
       ["Trade receivables", 0, 20_000_000],
@@ -188,6 +188,47 @@ describe("rolling schedules forward", () => {
     const a = v.lines[1];
     await as(prep, (tx) => schedules.saveLines(tx, prep, c5, { rows: [{ id: a.id, description: a.description, docRef: a.docRef, amountMinor: 1_250_00, tested: true }] }));
     expect((await view(c5)).lines[1]).toMatchObject({ amountMinor: 1_250_00, priorAmountMinor: 1_000_00, tested: true });
+  });
+
+  it("clears tested and tickmarks on a matched line whose amount changes, and keeps them where it does not", async () => {
+    const c5 = ((await listAll(e2025)).rows as { id: string; area: string }[]).find((r) => r.area === "C5")!.id;
+    const before = await view(c5);
+    const a = before.lines.find((l) => l.description.startsWith("Customer A"))!; // amount 1,250.00, tested
+    const b = before.lines.find((l) => l.description.startsWith("Customer B"))!;
+    const file = await as(prep, (tx) => papers.addWorkingPaper(tx, prep, store, e2025, { targetKind: "engagement", target: null, fileName: "b-statement.pdf", data: new TextEncoder().encode("%PDF b"), description: "" }));
+    await as(prep, (tx) =>
+      schedules.saveLines(tx, prep, c5, {
+        rows: [
+          { id: a.id, description: a.description, docRef: a.docRef, amountMinor: a.amountMinor, tested: true, tickmarks: ["doc"] },
+          { id: b.id, description: b.description, docRef: b.docRef, amountMinor: b.amountMinor, tested: true, tickmarks: ["gl", "recalc"], workingPaperId: file, remarks: "Agreed to statement." },
+        ],
+      }),
+    );
+    // A corrected listing: A is unchanged, B has a new amount, and the two unticked lines are corrected too.
+    const result = await as(prep, (tx) =>
+      schedules.importLines(
+        tx,
+        prep,
+        c5,
+        [
+          { description: "Customer A", docRef: "C-1", amountMinor: a.amountMinor },
+          { description: "Customer B", docRef: "C-2", amountMinor: 1_900_00 },
+          { description: "Customer C (invented)", docRef: null, amountMinor: 2_500_00 },
+        ],
+        "match",
+      ),
+    );
+    expect(result).toMatchObject({ imported: 3, matched: 3, added: 0, ticksCleared: 1 });
+    const after = await view(c5);
+    expect(after.lines.find((l) => l.id === a.id)).toMatchObject({ amountMinor: a.amountMinor, tested: true, tickmarks: ["doc"] });
+    // B changed amount: ticks are cleared, the evidence link and the remarks are kept.
+    expect(after.lines.find((l) => l.id === b.id)).toMatchObject({ amountMinor: 1_900_00, tested: false, tickmarks: [], workingPaperId: file, remarks: "Agreed to statement." });
+    // C was never ticked, so there was nothing to clear.
+    expect(after.lines.find((l) => l.description.startsWith("Customer C"))).toMatchObject({ amountMinor: 2_500_00, tested: false });
+    const log = await db.query("select detail from audit_log where entity_id = $1 and action = 'import_lines' order by id desc limit 1", [c5]);
+    expect((log.rows[0] as { detail: { ticksCleared: number } }).detail.ticksCleared).toBe(1);
+    // Importing the same listing again changes nothing, so clears nothing.
+    expect(await as(prep, (tx) => schedules.importLines(tx, prep, c5, [{ description: "Customer B", docRef: "C-2", amountMinor: 1_900_00 }], "match"))).toMatchObject({ matched: 1, ticksCleared: 0 });
   });
 
   it("keeps a brought-forward schedule when last year's schedule is deleted, and brings nothing again", async () => {
@@ -236,5 +277,55 @@ describe("rolling schedules forward", () => {
     await as(rev2, (tx) => schedules.reviewSchedule(tx, rev2, c5));
     await expect(as(prep, (tx) => schedules.importLines(tx, prep, c5, [{ description: "Customer A", docRef: "C-1", amountMinor: 1 }], "match"))).rejects.toThrow(/has been reviewed/);
     await as(rev, (tx) => schedules.unreviewSchedule(tx, rev, c5));
+  });
+
+  it("does not count matched lines against the line limit, only what an import adds", async () => {
+    const c = await as(partner, (tx) => repo.createClient(tx, partner, "Big Listing Co"));
+    const make = (start: string, end: string) =>
+      as(partner, async (tx) => {
+        const id = await repo.createEngagement(tx, partner, c, start, end);
+        await repo.importTrialBalance(tx, partner, id, "tb.xlsx", TB_2025);
+        await repo.approveAllMappings(tx, partner, id);
+        await audit.setAuditEnabled(tx, partner, id, true);
+        return id;
+      });
+    const lastYear = await make("2023-01-01", "2023-12-31");
+    const thisYear = await make("2024-01-01", "2024-12-31");
+    const big = Array.from({ length: 1_200 }, (_, i) => ({ description: `Supplier ${i}`, docRef: `S-${i}`, amountMinor: 100 + i }));
+    const old = await as(prep, (tx) => schedules.createSchedule(tx, prep, lastYear, { areaCode: "C8", groupCode: null, title: "Big payables listing" }));
+    await as(prep, (tx) => schedules.importLines(tx, prep, old, big, "append"));
+    await roll(thisYear);
+    const next = ((await listAll(thisYear)).rows as { id: string }[])[0].id;
+    expect((await view(next)).lines).toHaveLength(1_200);
+
+    // More than half the limit, every line matched, nothing added: allowed.
+    expect(await as(prep, (tx) => schedules.importLines(tx, prep, next, big, "match"))).toMatchObject({ matched: 1_200, added: 0 });
+    // Matched lines plus enough new ones to pass the limit: refused, and nothing is changed.
+    const tooMany = [...big, ...Array.from({ length: 900 }, (_, i) => ({ description: `New supplier ${i}`, docRef: `N-${i}`, amountMinor: 1 }))];
+    await expect(as(prep, (tx) => schedules.importLines(tx, prep, next, tooMany, "match"))).rejects.toThrow(/at most 2,000 lines/);
+    expect((await view(next)).lines).toHaveLength(1_200);
+    // Exactly to the limit is fine.
+    const upToLimit = [...big, ...Array.from({ length: 800 }, (_, i) => ({ description: `New supplier ${i}`, docRef: `N-${i}`, amountMinor: 1 }))];
+    expect(await as(prep, (tx) => schedules.importLines(tx, prep, next, upToLimit, "match"))).toMatchObject({ matched: 1_200, added: 800 });
+    expect((await view(next)).lines).toHaveLength(2_000);
+  }, 60_000);
+
+  it("lets two engagements linked to the same prior year each bring its schedules forward, each only once", async () => {
+    // A second engagement for the same client, ending earlier in 2025, is also linked to last year's engagement.
+    const e2025b = await as(partner, async (tx) => {
+      const id = await repo.createEngagement(tx, partner, client, "2025-01-01", "2025-11-30");
+      await repo.importTrialBalance(tx, partner, id, "tb.xlsx", TB_2025);
+      await repo.approveAllMappings(tx, partner, id);
+      await audit.setAuditEnabled(tx, partner, id, true);
+      return id;
+    });
+    expect((await as(prep, (tx) => repo.getEngagement(tx, e2025b)))!.priorEngagementId).toBe(e2024);
+    const first = await roll(e2025b);
+    expect(first.created).toBeGreaterThanOrEqual(1);
+    expect(await roll(e2025b)).toMatchObject({ created: 0, alreadyBrought: first.created });
+    // The first engagement still has its own, and bringing forward there is still idempotent.
+    expect(await roll(e2025)).toMatchObject({ created: 0 });
+    const both = await db.query("select engagement_id, rolled_from_id from test_schedules where rolled_from_id = $1", [s24c5]);
+    expect(new Set((both.rows as { engagement_id: string }[]).map((r) => r.engagement_id))).toEqual(new Set([e2025, e2025b]));
   });
 });

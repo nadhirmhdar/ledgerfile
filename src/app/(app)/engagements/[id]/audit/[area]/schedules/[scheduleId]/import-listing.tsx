@@ -14,7 +14,7 @@ const input = "w-full rounded border border-slate-300 bg-white px-2 py-1.5 text-
  * Bring in a client's listing by pasting it or uploading a file. It is read and shown first, with what could not be read,
  * and only saved when the user confirms. The preview is kept here, so nothing is lost between the two steps.
  */
-export function ImportListing({ scheduleId, balanceMinor, existingLines, broughtForward }: { scheduleId: string; balanceMinor: number | null; existingLines: ExistingLine[]; broughtForward: boolean }) {
+export function ImportListing({ scheduleId, balanceMinor, existingLines, broughtForward }: { scheduleId: string; balanceMinor: number | null; existingLines: (ExistingLine & { amountMinor: number; ticked: boolean })[]; broughtForward: boolean }) {
   const router = useRouter();
   const form = useRef<HTMLFormElement>(null);
   const [preview, setPreview] = useState<ListingPreview | null>(null);
@@ -44,6 +44,8 @@ export function ImportListing({ scheduleId, balanceMinor, existingLines, brought
   const total = preview?.totalMinor ?? 0;
   const existing = existingLines.length;
   const match = preview && broughtForward && mode === "match" ? matchListing(existingLines, preview.lines) : null;
+  // Matched lines that are ticked and whose amount would change lose their ticks.
+  const ticksToClear = match && preview ? match.matches.filter((m) => { const e = existingLines.find((x) => x.id === m.existingId); return !!e && e.ticked && e.amountMinor !== preview.lines[m.importedIndex].amountMinor; }).length : 0;
   return (
     <details className="mt-4 rounded border border-slate-200 p-3">
       <summary className="cursor-pointer text-sm font-medium">Import a listing from the client</summary>
@@ -93,6 +95,7 @@ export function ImportListing({ scheduleId, balanceMinor, existingLines, brought
               {match && (
                 <p role="note" className="mt-2 rounded border border-slate-300 bg-slate-50 px-3 py-2 text-xs">
                   {match.matches.length} matched to last year&apos;s lines ({match.byReference} by reference, {match.byDescription} by description). {match.unmatchedImported.length} imported line(s) have no match and will be added with no comparative. {match.unmatchedExisting.length} of last year&apos;s line(s) have nothing imported against them and keep their comparative with a zero amount.
+                  {ticksToClear > 0 && <span className="mt-1 block font-medium text-amber-950">{ticksToClear} matched line(s) are tested or ticked and would change amount: their tested box and tickmarks will be cleared, because they no longer describe the new amount. Evidence links and remarks stay.</span>}
                 </p>
               )}
               <fieldset className="mt-2 flex flex-wrap items-center gap-4 text-sm">

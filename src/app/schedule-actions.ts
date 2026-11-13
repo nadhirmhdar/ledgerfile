@@ -123,7 +123,7 @@ export async function importLinesAction(scheduleId: string, lines: ListingLine[]
   const r = await run((tx, s) => schedules.importLines(tx, s, scheduleId, lines, mode === "replace" ? "replace" : mode === "match" ? "match" : "append"));
   if (!r.ok) return r;
   if (engagement.result) refresh(engagement.result.engagementId);
-  if (r.result.matched !== undefined) return { ok: true, message: `Imported ${r.result.imported.toLocaleString("en-US")} line(s): ${r.result.matched.toLocaleString("en-US")} put against last year's lines, ${(r.result.added ?? 0).toLocaleString("en-US")} added as new.` };
+  if (r.result.matched !== undefined) return { ok: true, message: `Imported ${r.result.imported.toLocaleString("en-US")} line(s): ${r.result.matched.toLocaleString("en-US")} put against last year's lines, ${(r.result.added ?? 0).toLocaleString("en-US")} added as new.${r.result.ticksCleared ? ` ${r.result.ticksCleared} line(s) changed amount and had their tickmarks cleared.` : ""}` };
   return { ok: true, message: `Imported ${r.result.imported.toLocaleString("en-US")} line(s)${r.result.replaced > 0 ? `, replacing ${r.result.replaced.toLocaleString("en-US")}` : ""}.` };
 }
 

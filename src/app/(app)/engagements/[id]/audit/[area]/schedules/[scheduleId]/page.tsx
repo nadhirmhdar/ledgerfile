@@ -113,7 +113,7 @@ export default async function SchedulePage({ params }: { params: Promise<{ id: s
 
       <section className="mt-6">
         <h3 className="font-semibold">Lines</h3>
-        {schedule.editable && <ImportListing scheduleId={schedule.id} balanceMinor={schedule.balanceMinor} existingLines={schedule.lines.map((l) => ({ id: l.id, docRef: l.docRef, description: l.description }))} broughtForward={schedule.lines.some((l) => l.priorAmountMinor !== null)} />}
+        {schedule.editable && <ImportListing scheduleId={schedule.id} balanceMinor={schedule.balanceMinor} existingLines={schedule.lines.map((l) => ({ id: l.id, docRef: l.docRef, description: l.description, amountMinor: l.amountMinor, ticked: l.tested || l.tickmarks.length > 0 }))} broughtForward={schedule.lines.some((l) => l.priorAmountMinor !== null)} />}
         <div className="mt-3">
           <LinesTable
             key={schedule.lines.map((l) => l.id).join(",")}
