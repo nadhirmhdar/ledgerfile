@@ -223,7 +223,10 @@ export default async function AuditPage({ params }: { params: Promise<{ id: stri
                 {approval.state === "current" && `Approved by ${approval.approvedBy} on ${approval.approvedAt}.`}
                 {approval.state === "lapsed" &&
                   `Approved by ${approval.approvedBy} on ${approval.approvedAt}, but materiality, a risk rating or the areas in scope have changed since. It needs approving again.`}
-                {approval.state === "none" && "Not yet approved. The methodology expects approval before fieldwork starts; the engagement cannot be locked without it."}
+                {approval.state === "none" &&
+                  (open
+                    ? "Not yet approved. The methodology expects approval before fieldwork starts; the engagement cannot be locked without it."
+                    : "No approval was recorded before this engagement was locked.")}
               </p>
               <p className="mt-1 text-sm text-slate-600">
                 The approval covers materiality and the risk ratings above, as recorded here. It lapses by itself if any of them changes.
