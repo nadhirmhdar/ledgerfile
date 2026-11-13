@@ -23,7 +23,55 @@ interface Area {
   procedures: Procedure[];
 }
 
-export function buildLibrary(): { status: string; areas: Area[] } {
+const CHECKLIST_SOURCES = ["docs/methodology-A-D-E-acceptance-completion-reporting.md", "docs/methodology-B-planning.md"];
+const STAGE_ORDER = ["A", "B", "D", "E"];
+
+interface ChecklistItem {
+  id: string;
+  text: string;
+  evidence: string;
+  reference: string;
+}
+interface Checklist {
+  code: string;
+  title: string;
+  /** A acceptance, B planning, D completion, E reporting. */
+  stage: string;
+  /** True for sections that apply only in some circumstances, such as first-year audits. */
+  optional: boolean;
+  items: ChecklistItem[];
+}
+
+/** The acceptance, planning, completion and reporting checklists. */
+function buildChecklists(): Checklist[] {
+  const lists = new Map<string, Checklist>();
+  for (const file of CHECKLIST_SOURCES) {
+    let list: Checklist | null = null;
+    for (const line of readFileSync(file, "utf8").split(/\r?\n/)) {
+      const heading = line.match(/^## ([ABDE]\d+) (.+)$/);
+      if (heading) {
+        const optional = /\((if applicable|first-year audits)\)\s*$/.test(heading[2]);
+        list = { code: heading[1], title: heading[2].trim(), stage: heading[1][0], optional, items: [] };
+        lists.set(list.code, list);
+        continue;
+      }
+      if (/^#{1,2} /.test(line)) {
+        list = null;
+        continue;
+      }
+      if (!list || !/^\| [ABDE]\d+\.\d+ \|/.test(line)) continue;
+      const [id, text, evidence, reference] = line.split("|").slice(1, -1).map((c) => c.trim());
+      if (!id.startsWith(list.code + ".")) throw new Error(`${file}: ${id} is listed under ${list.code}`);
+      if (!text || !evidence || !reference) throw new Error(`${file}: ${id} has an empty column`);
+      list.items.push({ id, text, evidence, reference });
+    }
+  }
+  return [...lists.values()]
+    .filter((l) => l.items.length > 0)
+    .sort((a, b) => STAGE_ORDER.indexOf(a.stage) - STAGE_ORDER.indexOf(b.stage) || Number(a.code.slice(1)) - Number(b.code.slice(1)));
+}
+
+export function buildLibrary(): { status: string; areas: Area[]; checklists: Checklist[] } {
   const areas = new Map<string, Area>();
   for (const file of SOURCES) {
     let area: Area | null = null;
@@ -62,7 +110,8 @@ export function buildLibrary(): { status: string; areas: Area[] } {
   }
 
   const list = [...areas.values()].filter((a) => a.procedures.length > 0).sort((a, b) => Number(a.code.slice(1)) - Number(b.code.slice(1)));
-  const ids = list.flatMap((a) => a.procedures.map((p) => p.id));
+  const checklists = buildChecklists();
+  const ids = [...list.flatMap((a) => a.procedures.map((p) => p.id)), ...checklists.flatMap((c) => c.items.map((i) => i.id))];
   const duplicate = ids.find((id, i) => ids.indexOf(id) !== i);
   if (duplicate) throw new Error(`Procedure ${duplicate} appears twice.`);
 
@@ -70,5 +119,6 @@ export function buildLibrary(): { status: string; areas: Area[] } {
     // Shown wherever the content is used, until a qualified person has reviewed and approved it.
     status: "AI draft v0.1: not reviewed, not approved for use on any engagement",
     areas: list,
+    checklists,
   };
 }

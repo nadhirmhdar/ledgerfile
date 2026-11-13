@@ -4,6 +4,10 @@
 
 References are at standard level and from memory; paragraph numbers are for the reviewer to add. ISA 240 and ISA 570 have recently been revised, so confirm which version applies to the periods being audited.
 
+**Notes for the methodology reviewer** (not part of the checklists)
+- B3.01: the product does not yet flag movements automatically; the threshold is applied by the auditor.
+- B8.08: the product does not yet record a separate partner approval of the risk assessment.
+
 Planning items are checklists and forms, not tiered programmes. Every step applies to every engagement unless marked "if applicable".
 
 ---
@@ -54,7 +58,7 @@ Performance materiality: proposed 50-75% of overall materiality (lower end for f
 
 | ID | Step | Evidence expected | Reference |
 |---|---|---|---|
-| B3.01 | Compare each statement line with the prior year and, where available, with budget. The system flags movements above a threshold set from performance materiality. | Variance schedule | ISA 315, ISA 520 |
+| B3.01 | Compare each statement line with the prior year and, where available, with budget. Investigate movements above a threshold set from performance materiality. | Variance schedule | ISA 315, ISA 520 |
 | B3.02 | Compute key ratios: gross margin, debtor days, creditor days, inventory days, current ratio, gearing. Compare with the prior year. | Ratio schedule | ISA 315 |
 | B3.03 | Obtain management's explanations for flagged movements, and note which are unexpected or inconsistent with your understanding of the business. | Explanations | ISA 315 |
 | B3.04 | Carry unexplained or unusual movements into the risk assessment (B8) as potential risks. | Link to B8 | ISA 315 |
@@ -108,10 +112,10 @@ Performance materiality: proposed 50-75% of overall materiality (lower end for f
 | B8.02 | For each area and relevant assertion, rate inherent risk as low, moderate or high, considering likelihood and size of misstatement and the inherent risk factors: complexity, subjectivity, change, uncertainty, and susceptibility to bias or fraud. | Risk matrix | ISA 315 |
 | B8.03 | Flag as significant those risks at the upper end of the scale, all fraud risks, and significant related-party transactions outside the normal course of business. | Significant risk register | ISA 315, ISA 240, ISA 550 |
 | B8.04 | Decide for each area whether to rely on controls. If so, add tests of controls; if not, record that the approach is fully substantive. | Approach per area | ISA 330 |
-| B8.05 | Confirm that every material area has substantive procedures regardless of the assessed risk. | System check | ISA 330 |
+| B8.05 | Confirm that every material area has substantive procedures regardless of the assessed risk. | Review of the programmes loaded | ISA 330 |
 | B8.06 | Apply the scoping rule to small areas and record the scoping conclusions. | Scoping conclusions | ISA 315, ISA 330 |
 | B8.07 | Record the strategy: scope, timing, team, deadlines, and use of experts or service-organisation reports. | Strategy memo | ISA 300 |
-| B8.08 | Partner approves the risk assessment and strategy before fieldwork starts. The system then builds the programmes. | Partner sign-off | ISA 220, ISA 300 |
+| B8.08 | Partner approves the risk assessment and strategy before fieldwork starts. | Partner sign-off | ISA 220, ISA 300 |
 | B8.09 | During the audit, revise the assessment if evidence contradicts it, and record the change and its effect on procedures. | Revision log | ISA 315 |
 
 ## B9 Opening balances (first-year audits)

@@ -4,11 +4,11 @@ import { getDb, withFirm } from "@/server/db";
 import { getSession } from "@/server/session";
 import * as repo from "@/server/repo";
 import * as audit from "@/server/audit";
-import { ASSERTIONS, BENCHMARKS, computeMateriality, LIBRARY_STATUS, PERFORMANCE_RANGE, RISK_LEVELS, TRIVIAL_MAX, type Benchmark } from "@/domain/audit";
+import { ASSERTIONS, BENCHMARKS, computeMateriality, STAGES, LIBRARY_STATUS, PERFORMANCE_RANGE, RISK_LEVELS, TRIVIAL_MAX, type Benchmark } from "@/domain/audit";
 import { canReview } from "@/domain/signoff";
 import { formatAmount } from "@/domain/money";
 import { ActionForm } from "@/app/action-form";
-import { setAreaRisksAction, setAuditEnabledAction, setMaterialityAction } from "@/app/audit-actions";
+import { addMisstatementAction, setAreaRisksAction, setAuditEnabledAction, setMaterialityAction, setMisstatementCorrectedAction } from "@/app/audit-actions";
 import { EngagementNav } from "../nav";
 
 export const dynamic = "force-dynamic";
@@ -210,12 +210,124 @@ export default async function AuditPage({ params }: { params: Promise<{ id: stri
             ))}
           </section>
 
+          <section className="mt-10">
+            <h2 className="text-lg font-semibold">Checklists</h2>
+            <p className="mt-1 text-sm text-slate-600">
+              Every step applies to every audit, except in the checklists marked optional. Only a reviewer or partner can mark a required step not applicable, and a step that is the partner&apos;s sign-off can be completed only by a partner. File assembly and archiving, which follow the report, are not included yet.
+            </p>
+            <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {STAGES.map((stage) => (
+                <div key={stage.code} className="rounded border border-slate-200 p-4">
+                  <h3 className="font-semibold">{stage.label}</h3>
+                  <ul className="mt-2 space-y-1 text-sm">
+                    {overview.checklists
+                      .filter((c) => c.stage === stage.code)
+                      .map((c) => (
+                        <li key={c.code} className="flex justify-between gap-3">
+                          <Link href={`/engagements/${id}/audit/${c.code}`} className="text-blue-700 underline">
+                            {c.code} {c.title}
+                          </Link>
+                          <span className={`whitespace-nowrap tabular-nums ${c.steps > 0 && c.completed === c.steps ? "text-emerald-800" : "text-slate-600"}`}>
+                            {c.completed} / {c.steps}
+                          </span>
+                        </li>
+                      ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section className="mt-10">
+            <h2 className="text-lg font-semibold">Summary of misstatements</h2>
+            <p className="mt-1 text-sm text-slate-600">
+              Record every misstatement found, other than those clearly trivial{m ? ` (below ${formatAmount(m.trivialMinor)})` : ""}. Amounts are the effect on profit before tax.
+            </p>
+            {overview.misstatements.items.length > 0 && (
+              <div className="mt-3 overflow-x-auto">
+                <table className="w-full text-left text-sm">
+                  <thead className="border-b border-slate-300 text-slate-600">
+                    <tr>
+                      <th className="py-2 font-medium">Misstatement</th>
+                      <th className="py-2 pl-4 font-medium">Type</th>
+                      <th className="py-2 pl-4 text-right font-medium">Profit overstated / (understated)</th>
+                      <th className="py-2 pl-4 font-medium">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {overview.misstatements.items.map((x) => (
+                      <tr key={x.id} className="border-b border-slate-200 align-top">
+                        <td className="py-2">
+                          {x.description}
+                          <div className="text-xs text-slate-600">{x.recordedBy} on {x.recordedAt}</div>
+                        </td>
+                        <td className="py-2 pl-4 capitalize">{x.kind}</td>
+                        <td className="py-2 pl-4 text-right tabular-nums whitespace-nowrap">{formatAmount(x.amountMinor)}</td>
+                        <td className="py-2 pl-4">
+                          {x.corrected ? "Corrected" : "Uncorrected"}
+                          {open && reviewer && (
+                            <ActionForm action={setMisstatementCorrectedAction} fields={{ misstatementId: x.id, corrected: String(!x.corrected) }} className="mt-1">
+                              <button className={small}>{x.corrected ? "Mark uncorrected" : "Mark corrected"}</button>
+                            </ActionForm>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                    <tr className="font-semibold">
+                      <td className="py-2" colSpan={2}>Uncorrected, net</td>
+                      <td className="py-2 pl-4 text-right tabular-nums whitespace-nowrap">{formatAmount(overview.misstatements.uncorrectedNetMinor)}</td>
+                      <td className="py-2 pl-4 font-normal text-slate-600">ignoring direction: {formatAmount(overview.misstatements.uncorrectedGrossMinor)}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            )}
+            {m ? (
+              <p className={`mt-3 rounded border px-3 py-2 text-sm ${overview.misstatements.exceedsMateriality ? "border-red-300 bg-red-50" : "border-slate-200 bg-slate-50"}`}>
+                {overview.misstatements.exceedsMateriality
+                  ? `The net uncorrected misstatements reach overall materiality of ${formatAmount(m.overallMinor)}. The engagement cannot be locked until they are corrected; modified opinions are not yet supported.`
+                  : `The net uncorrected misstatements are below overall materiality of ${formatAmount(m.overallMinor)}. Consider also their nature, any offsetting, and items from prior periods.`}
+              </p>
+            ) : (
+              <p className="mt-3 text-sm text-slate-600">Set materiality to compare the uncorrected misstatements against it.</p>
+            )}
+            {open && (
+              <ActionForm action={addMisstatementAction} fields={{ engagementId: id }} className="mt-4 rounded border border-slate-200 bg-slate-50 p-4">
+                <h3 className="text-base font-semibold">Record a misstatement</h3>
+                <div className="mt-3 flex flex-wrap items-end gap-3">
+                  <label className={`${label} min-w-64 flex-1`}>
+                    Description
+                    <input name="description" required minLength={5} maxLength={1000} className={input} />
+                  </label>
+                  <label className={label}>
+                    Type
+                    <select name="kind" defaultValue="factual" className={input}>
+                      <option value="factual">Factual</option>
+                      <option value="judgemental">Judgemental</option>
+                      <option value="projected">Projected</option>
+                    </select>
+                  </label>
+                  <label className={label}>
+                    Amount
+                    <input name="amount" inputMode="decimal" required className={`${input} w-36 text-right`} />
+                  </label>
+                  <label className={label}>
+                    Effect on profit
+                    <select name="direction" defaultValue="overstated" className={input}>
+                      <option value="overstated">Profit overstated</option>
+                      <option value="understated">Profit understated</option>
+                    </select>
+                  </label>
+                  <button className={primary}>Record</button>
+                </div>
+              </ActionForm>
+            )}
+          </section>
           </>
           )}
 
           <p className="mt-8 text-xs text-slate-600">
-            Not yet in the product: the planning checklists (understanding the entity, fraud, laws and regulations, going concern), the sampling calculator,
-            the misstatement summary, completion checklists and the auditor&apos;s report.
+            Not yet in the product: the sampling calculator, modified audit opinions, the auditor&apos;s report, and partner approval of the risk assessment.
           </p>
         </>
       )}

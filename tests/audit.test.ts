@@ -7,7 +7,7 @@ import * as review from "../src/server/review";
 import * as journals from "../src/server/journals";
 import library from "../src/domain/methodology-library.json";
 import { buildLibrary } from "../scripts/methodology-parser";
-import { AREAS, AREA_BY_CODE, areasInScope, assertionsOf, computeMateriality, isAssessed, selectProcedures } from "../src/domain/audit";
+import { CHECKLISTS, AREAS, AREA_BY_CODE, areasInScope, assertionsOf, computeMateriality, isAssessed, selectProcedures } from "../src/domain/audit";
 import { GROUP_BY_CODE } from "../src/domain/groups";
 
 describe("methodology library", () => {
@@ -28,9 +28,25 @@ describe("methodology library", () => {
     expect(buildLibrary()).toEqual(library);
   });
 
-  it("carries no notes addressed to the methodology reviewer in procedure wording", () => {
-    const wording = AREAS.flatMap((a) => [a.objective, ...a.procedures.flatMap((p) => [p.text, p.evidence])]).join(" ");
-    expect(wording).not.toMatch(/reviewer (to|should) confirm|proposed as firm policy|build plan/i);
+  it("loads the acceptance, planning, completion and reporting checklists", () => {
+    expect(CHECKLISTS.map((c) => c.code)).toEqual([
+      "A1", "A2", "A3",
+      "B1", "B2", "B3", "B4", "B5", "B6", "B7", "B8", "B9", "B10", "B11",
+      "D1", "D2", "D3", "D4", "D5", "D6", "D7", "D8", "D9",
+      "E1", "E2", "E3",
+    ]);
+    // Archiving, and facts found after the report, come after the lock, so they are not loaded.
+    expect(CHECKLISTS.flatMap((c) => c.items.map((i) => i.id))).not.toContain("D3.06");
+    expect(CHECKLISTS.filter((c) => c.optional).map((c) => c.code)).toEqual(["B9", "B10", "B11", "E2", "E3"]);
+    expect(CHECKLISTS.every((c) => c.items.length > 0)).toBe(true);
+  });
+
+  it("carries no notes addressed to the methodology reviewer, or product descriptions, in the wording", () => {
+    const wording = [
+      ...AREAS.flatMap((a) => [a.objective, ...a.procedures.flatMap((p) => [p.text, p.evidence])]),
+      ...CHECKLISTS.flatMap((c) => c.items.flatMap((i) => [i.text, i.evidence])),
+    ].join(" ");
+    expect(wording).not.toMatch(/reviewer (to|should) |proposed as firm policy|build plan|the system|system check|not drafted yet/i);
   });
 
   it("covers every statement group with some area", () => {
@@ -256,6 +272,69 @@ describe("the audit on an engagement", () => {
     const o = await overview();
     expect(o.notApplicable).toBe(2);
     expect((await as(prep, (tx) => review.getOverview(tx, engagement)))!.auditNotApplicable).toBe(2);
+  });
+
+  it("loaded every checklist step when the audit was turned on", async () => {
+    const o = await overview();
+    expect(o.checklists.find((c) => c.code === "A1")).toMatchObject({ steps: 7, completed: 0, stage: "A", optional: false });
+    expect(o.checklists.reduce((n, c) => n + c.steps, 0)).toBe(CHECKLISTS.reduce((n, c) => n + c.items.length, 0));
+    const steps = await as(prep, (tx) => audit.listProcedures(tx, engagement, "B4"));
+    expect(steps.map((p) => p.templateId)).toEqual(["B4.01", "B4.02", "B4.03", "B4.04", "B4.05", "B4.06", "B4.07", "B4.08"]);
+    expect(steps[0].body).toContain("team discussion");
+  });
+
+  it("lets anyone set aside an optional checklist step, but only a reviewer a required one", async () => {
+    const reason = { status: "na", workDone: "Not relevant to this engagement.", conclusion: "" };
+    const [firstYear] = await as(prep, (tx) => audit.listProcedures(tx, engagement, "B9"));
+    await as(prep, (tx) => audit.updateProcedure(tx, prep, firstYear.id, reason));
+    const [fraud] = await as(prep, (tx) => audit.listProcedures(tx, engagement, "B4"));
+    await expect(as(prep, (tx) => audit.updateProcedure(tx, prep, fraud.id, reason))).rejects.toThrow(/Only a reviewer or partner can mark a required checklist step/);
+    await as(prep, (tx) => audit.updateProcedure(tx, prep, fraud.id, { status: "done", workDone: "Discussion held with the partner on 3 March.", conclusion: "Revenue cut-off identified as the main fraud risk." }));
+    expect((await overview()).checklists.find((c) => c.code === "B4")!.completed).toBe(1);
+  });
+
+  it("lets only a partner complete a step that is the partner's sign-off", async () => {
+    const steps = await as(prep, (tx) => audit.listProcedures(tx, engagement, "A1"));
+    const signOff = steps.find((p) => p.templateId === "A1.07")!;
+    expect(signOff.evidence).toBe("Partner sign-off");
+    const done = { status: "done", workDone: "Acceptance considered and approved.", conclusion: "Accept the engagement." };
+    await expect(as(prep, (tx) => audit.updateProcedure(tx, prep, signOff.id, done))).rejects.toThrow(/only a partner can complete it/);
+    await expect(as(rev, (tx) => audit.updateProcedure(tx, rev, signOff.id, done))).rejects.toThrow(/only a partner can complete it/);
+    await as(partner, (tx) => audit.updateProcedure(tx, partner, signOff.id, done));
+    expect((await as(prep, (tx) => audit.listProcedures(tx, engagement, "A1"))).find((p) => p.templateId === "A1.07")).toMatchObject({ status: "done", performedByName: "partner 3" });
+  });
+
+  it("accumulates misstatements and blocks the lock when the uncorrected net reaches materiality", async () => {
+    await expect(as(prep, (tx) => audit.addMisstatement(tx, prep, engagement, { description: "x", kind: "factual", amountMinor: 100 }))).rejects.toThrow(/Describe/);
+    await expect(as(prep, (tx) => audit.addMisstatement(tx, prep, engagement, { description: "Cut-off error", kind: "guess", amountMinor: 100 }))).rejects.toThrow(/factual, judgemental or projected/);
+    await expect(as(prep, (tx) => audit.addMisstatement(tx, prep, engagement, { description: "Cut-off error", kind: "factual", amountMinor: 0 }))).rejects.toThrow(/amount/);
+
+    // Overall materiality is 15,000.00. An overstatement of 20,000.00 and an understatement of 4,000.00.
+    const big = await as(prep, (tx) => audit.addMisstatement(tx, prep, engagement, { description: "Sales invoiced before delivery", kind: "factual", amountMinor: 2000000 }));
+    await as(prep, (tx) => audit.addMisstatement(tx, prep, engagement, { description: "Accrual not booked", kind: "judgemental", amountMinor: -400000 }));
+    let m = (await overview()).misstatements;
+    expect(m).toMatchObject({ uncorrectedNetMinor: 1600000, uncorrectedGrossMinor: 2400000, exceedsMateriality: true });
+    expect(m.items.map((i) => i.recordedBy)).toEqual(["preparer 1", "preparer 1"]);
+    expect((await overview()).blockers.some((b) => b.includes("uncorrected misstatements reach overall materiality"))).toBe(true);
+
+    // A preparer cannot clear the blocker by declaring the item corrected.
+    await expect(as(prep, (tx) => audit.setMisstatementCorrected(tx, prep, big, true))).rejects.toThrow(/Only a reviewer or partner can mark a misstatement as corrected/);
+    await as(rev, (tx) => audit.setMisstatementCorrected(tx, rev, big, true));
+    m = (await overview()).misstatements;
+    expect(m).toMatchObject({ uncorrectedNetMinor: -400000, uncorrectedGrossMinor: 400000, exceedsMateriality: false });
+    expect(m.items).toHaveLength(2);
+await expect(as(outsider, (tx) => audit.setMisstatementCorrected(tx, outsider, big, false))).rejects.toThrow(/not found/);
+
+    // Two material items in opposite directions net to nothing, but still block.
+    const over = await as(prep, (tx) => audit.addMisstatement(tx, prep, engagement, { description: "Revenue overstated", kind: "factual", amountMinor: 1600000 }));
+    const under = await as(prep, (tx) => audit.addMisstatement(tx, prep, engagement, { description: "Expense overstated", kind: "factual", amountMinor: -1600000 }));
+    m = (await overview()).misstatements;
+    expect(m.uncorrectedNetMinor).toBe(-400000);
+    expect(m.exceedsMateriality).toBe(true);
+    await as(rev, (tx) => audit.setMisstatementCorrected(tx, rev, over, true));
+    await as(rev, (tx) => audit.setMisstatementCorrected(tx, rev, under, true));
+    expect((await overview()).misstatements.exceedsMateriality).toBe(false);
+    await expect(as(prep, (tx) => tx.query("delete from misstatements"))).rejects.toThrow(/permission denied/);
   });
 
   it("is invisible and closed to another firm, and frozen once locked", async () => {

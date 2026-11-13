@@ -6,13 +6,21 @@ References are at standard level and from memory; paragraph numbers are for the 
 
 ---
 
+**Notes for the methodology reviewer** (not part of the checklists)
+- A1.01: add the local anti-money-laundering identification requirements.
+- A3.03 and D5.01: the product does not yet generate the engagement letter or the representation letter; draft templates are in the templates document.
+- D7.01: the framework disclosure checklist itself is not drafted yet.
+- E1.05: list the matters UAE law requires the auditor to report on.
+- E4.01: the proposed limit for final assembly is 60 days after the report date. The product does not yet track it.
+- E4.04: set the retention period from professional standards and local law.
+
 # Section A: Acceptance
 
 ## A1 Client acceptance and continuance
 
 | ID | Step | Evidence expected | Reference |
 |---|---|---|---|
-| A1.01 | For a new client, identify the owners, the beneficial owners and management, and verify their identity as anti-money-laundering rules require. Reviewer to add the local requirements. | Identity and ownership records | ISQM 1, ISA 250 |
+| A1.01 | For a new client, identify the owners, the beneficial owners and management, and verify their identity as anti-money-laundering rules require. | Identity and ownership records | ISQM 1, ISA 250 |
 | A1.02 | Consider the integrity of the owners and management, from inquiries, public information and, for continuing clients, past experience. | Assessment | ISA 220, ISQM 1 |
 | A1.03 | For a new client, communicate with the previous auditor, with the client's permission, to ask whether there are reasons not to accept. | Communication and reply | IESBA Code, ISA 510 |
 | A1.04 | Confirm the firm has the competence, time and resources to perform the engagement, including any industry or specialist knowledge. | Resource assessment | ISA 220 |
@@ -38,7 +46,7 @@ Where the firm also prepares the client's accounts or tax computations, which is
 |---|---|---|---|
 | A3.01 | Confirm the reporting framework is acceptable. | Note | ISA 210 |
 | A3.02 | Obtain management's agreement that it is responsible for preparing the financial statements, for internal control, and for giving the auditor access to information and people. | Covered in the signed letter | ISA 210 |
-| A3.03 | Issue an engagement letter covering: objective and scope, auditor's and management's responsibilities, the framework, the expected form of the report, and fee and practical arrangements. The system generates it from a firm template. | Signed engagement letter | ISA 210 |
+| A3.03 | Issue an engagement letter covering: objective and scope, auditor's and management's responsibilities, the framework, the expected form of the report, and fee and practical arrangements. | Signed engagement letter | ISA 210 |
 | A3.04 | For a continuing client, consider whether the terms need revising or the client needs reminding of them. | Note | ISA 210 |
 | A3.05 | If management imposes a scope limitation that would lead to a disclaimer of opinion, do not accept the engagement unless law requires it. | Note, if applicable | ISA 210 |
 
@@ -50,7 +58,7 @@ Where the firm also prepares the client's accounts or tax computations, which is
 
 | ID | Step | Evidence expected | Reference |
 |---|---|---|---|
-| D1.01 | Accumulate all misstatements identified, other than those clearly trivial. The system collects them from each area, separated into factual, judgemental and projected. | Misstatement schedule | ISA 450 |
+| D1.01 | Accumulate all misstatements identified, other than those clearly trivial, separated into factual, judgemental and projected. | Misstatement schedule | ISA 450 |
 | D1.02 | Consider whether the nature or pattern of misstatements suggests that others may exist, and whether the strategy or materiality needs revising. | Assessment | ISA 450 |
 | D1.03 | Communicate all accumulated misstatements to management promptly and ask for them to be corrected. | Communication record | ISA 450 |
 | D1.04 | Record the misstatements corrected, with the journal entries posted. | Adjusted misstatements | ISA 450 |
@@ -91,7 +99,7 @@ Where the firm also prepares the client's accounts or tax computations, which is
 
 | ID | Step | Evidence expected | Reference |
 |---|---|---|---|
-| D5.01 | Obtain a representation letter from management with appropriate responsibility, addressed to the auditor. The system assembles it from the engagement's findings. | Signed letter | ISA 580 |
+| D5.01 | Obtain a representation letter from management with appropriate responsibility, addressed to the auditor. | Signed letter | ISA 580 |
 | D5.02 | Confirm it covers management's responsibility for the statements, and that all information and access was provided and all transactions recorded. | Letter content check | ISA 580 |
 | D5.03 | Confirm it includes the specific representations required by other standards: fraud, laws and regulations, related parties, subsequent events, going concern, litigation and claims, estimates, and uncorrected misstatements, with the list attached. | Letter content check | ISA 580 and others |
 | D5.04 | Confirm it is dated as near as practicable to, and not after, the date of the auditor's report. | Date check | ISA 580 |
@@ -111,17 +119,17 @@ Where the firm also prepares the client's accounts or tax computations, which is
 
 | ID | Step | Evidence expected | Reference |
 |---|---|---|---|
-| D7.01 | Complete the framework disclosure checklist against the final statements. Not drafted yet: it will be generated from the statement template so that each required disclosure links to its note. | Completed checklist | ISA 700, ISA 330 |
-| D7.02 | Check the statements for internal consistency: casting, cross-references, notes to face, and comparatives. Largely automated by the validation checks. | System check results | ISA 330 |
+| D7.01 | Complete the framework disclosure checklist against the final statements. | Completed checklist | ISA 700, ISA 330 |
+| D7.02 | Check the statements for internal consistency: casting, cross-references, notes to face, and comparatives. | Record of the checks performed | ISA 330 |
 | D7.03 | Evaluate overall presentation: whether the statements, including policies and terminology, are understandable and achieve fair presentation. | Conclusion | ISA 700 |
 
 ## D8 Completion checklist and partner sign-off
 
 | ID | Step | Evidence expected | Reference |
 |---|---|---|---|
-| D8.01 | Confirm all planned procedures are complete, or changes to the plan are recorded with reasons. | System check | ISA 300, ISA 230 |
-| D8.02 | Confirm all review points are cleared and all working papers reviewed by someone other than the preparer. | System check | ISA 220 |
-| D8.03 | Confirm each significant risk has a documented response and conclusion. | System check | ISA 330 |
+| D8.01 | Confirm all planned procedures are complete, or changes to the plan are recorded with reasons. | Review of the audit programmes | ISA 300, ISA 230 |
+| D8.02 | Confirm all review points are cleared and all working papers reviewed by someone other than the preparer. | Review of the sign-off record | ISA 220 |
+| D8.03 | Confirm each significant risk has a documented response and conclusion. | Review of the risk assessment and programmes | ISA 330 |
 | D8.04 | Confirm significant matters, the judgements made and the conclusions reached are summarised for the partner. | Completion memo | ISA 230 |
 | D8.05 | Record consultations on difficult or contentious matters and how conclusions were implemented. | Consultation record, if applicable | ISA 220 |
 | D8.06 | Reconfirm independence. | Confirmation | ISA 220 |
@@ -147,9 +155,9 @@ Where the firm also prepares the client's accounts or tax computations, which is
 |---|---|---|---|
 | E1.01 | Conclude whether sufficient appropriate evidence has been obtained and whether uncorrected misstatements are material, individually or together. | Conclusion | ISA 700, ISA 330, ISA 450 |
 | E1.02 | Evaluate whether the statements are prepared, in all material respects, under the framework: policies disclosed and appropriate, estimates reasonable, information relevant and understandable, disclosures adequate. | Evaluation | ISA 700 |
-| E1.03 | Select the opinion. The system summarises open matters and uncorrected misstatements against materiality; the partner selects the opinion. | Opinion decision | ISA 700, ISA 705 |
+| E1.03 | Select the opinion, considering open matters and uncorrected misstatements against materiality. The partner makes the decision. | Opinion decision | ISA 700, ISA 705 |
 | E1.04 | Generate the report and confirm it contains every required element: title; addressee; opinion; basis for opinion; going-concern section where required; responsibilities of management and those charged with governance; auditor's responsibilities; other reporting responsibilities required by law; name and signature; address; date. | Report with element checklist | ISA 700 |
-| E1.05 | Add any matters that local law requires the auditor to report on. Reviewer to list the UAE requirements. | Legal reporting section | ISA 700, local law |
+| E1.05 | Add any matters that local law requires the auditor to report on. | Legal reporting section | ISA 700, local law |
 | E1.06 | Date the report no earlier than the date on which sufficient evidence was obtained, including evidence that the statements have been approved by those with authority. | Approval evidence; date check | ISA 700 |
 
 **Report wording is not drafted.** The illustrative reports in the ISAs are copyright material. The product's report templates should be written once the licensing position is confirmed, then reviewed against the standard and local law.
@@ -178,7 +186,7 @@ Where the firm also prepares the client's accounts or tax computations, which is
 
 | ID | Step | Evidence expected | Reference |
 |---|---|---|---|
-| E4.01 | Complete the assembly of the final file promptly after the report date. The system starts a countdown at the report date; proposed limit 60 days. | System timestamp | ISA 230, ISQM 1 |
+| E4.01 | Complete the assembly of the final file promptly after the report date, and within the firm's limit. | Date of final assembly | ISA 230, ISQM 1 |
 | E4.02 | During assembly, make administrative changes only: removing superseded drafts, sorting, cross-referencing, signing off completion checklists. | Change log | ISA 230 |
 | E4.03 | After assembly, lock the file. Nothing may be deleted. Any later addition records who made it, when, and why. | Lock record; addition log | ISA 230 |
-| E4.04 | Retain the file for the firm's retention period. Reviewer to set this from professional standards and local law. | Retention setting | ISQM 1, local law |
+| E4.04 | Retain the file for the firm's retention period. | Retention record | ISQM 1, local law |

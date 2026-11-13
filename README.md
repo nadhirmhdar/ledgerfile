@@ -14,7 +14,7 @@ This repository holds the first slice of the MVP: trial balance to lead sheets.
 - Lead sheets per group with prior-year comparison, checked to agree with the trial balance.
 - Adjusting and reclassification journal entries, with numbers that are never reused. Entries flow through to lead sheets and statements.
 - A full set of financial statements with comparatives: financial position, comprehensive income, changes in equity, cash flows (derived, indirect method) and notes with a breakdown of each line. Borrowings can be split between current and non-current. Optional rounding to whole units, drill-down to lead sheets, checks that must pass before the statements are clean, and download as a Word document.
-- Audit (first slice): a materiality calculator with revision history, risk assessment by area and assertion, and audit programmes loaded from the methodology library according to the risks assessed. Each procedure records work done and a conclusion, and unfinished audit work holds up the lock. **The methodology content is an unreviewed AI draft** and says so on screen.
+- Audit (first slice): a materiality calculator with revision history, risk assessment by area and assertion, and audit programmes loaded from the methodology library according to the risks assessed. Checklists for acceptance, planning, completion and reporting load when the audit is turned on, and a summary of misstatements is compared with materiality. Each procedure records work done and a conclusion, and unfinished audit work holds up the lock. **The methodology content is an unreviewed AI draft** and says so on screen.
 - Review and sign-off: preparer and reviewer sign-off per lead sheet (different people, except in a firm that has only ever had one user), review points that must be cleared, automatic removal of a sign-off when its figures change, and partner lock and unlock.
 - Role restrictions: only a partner-level user adds clients, only a reviewer or above opens engagements, and a journal can be deleted by its author or a reviewer. Everyone can do the day-to-day engagement work.
 - Sign-in: firms register themselves, the first user is the administrator and adds colleagues with a role. Passwords are hashed with scrypt, accounts lock after repeated failures, and sessions expire after 12 hours. Users change their own password; an administrator can reset a colleague's password, change roles, and deactivate or reactivate users.
@@ -22,7 +22,7 @@ This repository holds the first slice of the MVP: trial balance to lead sheets.
 
 ## Not built yet
 
-Password reset by email and email verification, PDF export, the rest of the audit engine (planning checklists, sampling, misstatement summary, completion, auditor's report), working paper files, journal listing import, and AI features.
+Password reset by email and email verification, PDF export, the rest of the audit engine (sampling, modified opinions, auditor's report), working paper files, journal listing import, and AI features.
 
 ## Run it
 
