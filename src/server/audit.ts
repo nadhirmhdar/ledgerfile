@@ -2,6 +2,7 @@ import type { Tx } from "./db";
 import { audit as log, getEngagement, isSolePractitioner, listAccounts, type Session } from "./repo";
 import { canLock, canReview } from "../domain/signoff";
 import { buildStatements } from "../domain/statements";
+import { compareYears, unexplainedMovements, type ExplanationRecord } from "../domain/analytics";
 import {
   AREA_BY_CODE,
   CHECKLIST_BY_CODE,
@@ -296,6 +297,9 @@ export async function getAuditOverview(tx: Tx, engagementId: string): Promise<Au
     if (unreviewed > 0) blockers.push(`Audit: ${unreviewed} completed procedure(s) and checklist step(s) have not been reviewed.`);
     const untested = await tx.query<{ n: number }>("select count(*)::int as n from journal_tests where engagement_id = $1 and tested_at is null", [engagementId]);
     if (untested.rows[0].n > 0) blockers.push(`Audit: ${untested.rows[0].n} journal entry(ies) selected for testing have no conclusion.`);
+    const explained = await tx.query<ExplanationRecord>('select line_key as "lineKey", current_minor::float8 as "currentMinor", prior_minor::float8 as "priorMinor" from analytical_explanations where engagement_id = $1', [engagementId]);
+    const unexplained = unexplainedMovements(compareYears(statements, materiality), explained.rows).length;
+    if (unexplained > 0) blockers.push(`Audit: ${unexplained} significant movement(s) in the analytical review have no explanation.`);
     if (misstatements.exceedsMateriality) blockers.push("Audit: uncorrected misstatements reach overall materiality. Have them corrected; modified opinions are not yet supported.");
   }
 

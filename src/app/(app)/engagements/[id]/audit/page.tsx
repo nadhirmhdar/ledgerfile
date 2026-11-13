@@ -72,8 +72,9 @@ export default async function AuditPage({ params }: { params: Promise<{ id: stri
 
           {overview.enabled && (
           <>
-          <p className="mt-4 text-sm">
+          <p className="mt-4 flex flex-wrap gap-x-6 gap-y-1 text-sm">
             <Link href={`/engagements/${id}/audit/letters`} className="text-blue-700 underline">Engagement letter and representation letter</Link>
+            <Link href={`/engagements/${id}/audit/analytics`} className="text-blue-700 underline">Analytical review and ratios</Link>
           </p>
           <section className="mt-8">
             <h2 className="text-lg font-semibold">Materiality</h2>
