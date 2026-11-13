@@ -2117,5 +2117,1093 @@
         }
       ]
     }
+  ],
+  "checklists": [
+    {
+      "code": "A1",
+      "title": "Client acceptance and continuance",
+      "stage": "A",
+      "optional": false,
+      "items": [
+        {
+          "id": "A1.01",
+          "text": "For a new client, identify the owners, the beneficial owners and management, and verify their identity as anti-money-laundering rules require.",
+          "evidence": "Identity and ownership records",
+          "reference": "ISQM 1, ISA 250"
+        },
+        {
+          "id": "A1.02",
+          "text": "Consider the integrity of the owners and management, from inquiries, public information and, for continuing clients, past experience.",
+          "evidence": "Assessment",
+          "reference": "ISA 220, ISQM 1"
+        },
+        {
+          "id": "A1.03",
+          "text": "For a new client, communicate with the previous auditor, with the client's permission, to ask whether there are reasons not to accept.",
+          "evidence": "Communication and reply",
+          "reference": "IESBA Code, ISA 510"
+        },
+        {
+          "id": "A1.04",
+          "text": "Confirm the firm has the competence, time and resources to perform the engagement, including any industry or specialist knowledge.",
+          "evidence": "Resource assessment",
+          "reference": "ISA 220"
+        },
+        {
+          "id": "A1.05",
+          "text": "Consider engagement risks: financial difficulty, disputes with previous auditors, unusual pressure on timing or fees, limitations on scope.",
+          "evidence": "Risk notes",
+          "reference": "ISA 220"
+        },
+        {
+          "id": "A1.06",
+          "text": "For a continuing client, consider matters arising from the previous audit: disagreements, unpaid fees, scope limitations, changes in ownership or business.",
+          "evidence": "Continuance notes",
+          "reference": "ISA 220"
+        },
+        {
+          "id": "A1.07",
+          "text": "Partner concludes on acceptance or continuance before any work starts.",
+          "evidence": "Partner sign-off",
+          "reference": "ISA 220"
+        }
+      ]
+    },
+    {
+      "code": "A2",
+      "title": "Independence and ethics",
+      "stage": "A",
+      "optional": false,
+      "items": [
+        {
+          "id": "A2.01",
+          "text": "Identify threats to independence: financial interests, business or family relationships, long association, fee dependence, gifts, and employment relationships with the client.",
+          "evidence": "Threats checklist",
+          "reference": "IESBA Code"
+        },
+        {
+          "id": "A2.02",
+          "text": "List non-audit services provided to the client, such as bookkeeping, tax, valuation or advisory. Evaluate the self-review and management threats they create and whether each service is permitted.",
+          "evidence": "Services list and evaluation",
+          "reference": "IESBA Code"
+        },
+        {
+          "id": "A2.03",
+          "text": "Record the safeguards applied to each threat, or conclude that the engagement or the service must be declined.",
+          "evidence": "Safeguards",
+          "reference": "IESBA Code"
+        },
+        {
+          "id": "A2.04",
+          "text": "Obtain independence confirmation from each team member.",
+          "evidence": "Confirmations",
+          "reference": "ISA 220"
+        },
+        {
+          "id": "A2.05",
+          "text": "Partner concludes on compliance with independence requirements. Reconfirm at completion.",
+          "evidence": "Partner sign-off",
+          "reference": "ISA 220"
+        }
+      ]
+    },
+    {
+      "code": "A3",
+      "title": "Engagement letter and preconditions",
+      "stage": "A",
+      "optional": false,
+      "items": [
+        {
+          "id": "A3.01",
+          "text": "Confirm the reporting framework is acceptable.",
+          "evidence": "Note",
+          "reference": "ISA 210"
+        },
+        {
+          "id": "A3.02",
+          "text": "Obtain management's agreement that it is responsible for preparing the financial statements, for internal control, and for giving the auditor access to information and people.",
+          "evidence": "Covered in the signed letter",
+          "reference": "ISA 210"
+        },
+        {
+          "id": "A3.03",
+          "text": "Issue an engagement letter covering: objective and scope, auditor's and management's responsibilities, the framework, the expected form of the report, and fee and practical arrangements.",
+          "evidence": "Signed engagement letter",
+          "reference": "ISA 210"
+        },
+        {
+          "id": "A3.04",
+          "text": "For a continuing client, consider whether the terms need revising or the client needs reminding of them.",
+          "evidence": "Note",
+          "reference": "ISA 210"
+        },
+        {
+          "id": "A3.05",
+          "text": "If management imposes a scope limitation that would lead to a disclaimer of opinion, do not accept the engagement unless law requires it.",
+          "evidence": "Note, if applicable",
+          "reference": "ISA 210"
+        }
+      ]
+    },
+    {
+      "code": "B1",
+      "title": "Understanding the entity, its environment and its controls",
+      "stage": "B",
+      "optional": false,
+      "items": [
+        {
+          "id": "B1.01",
+          "text": "Record the entity's legal form, licence activities, ownership, management, and those charged with governance. Note whether owners and managers are the same people.",
+          "evidence": "Entity profile; trade licence; ownership chart",
+          "reference": "ISA 315"
+        },
+        {
+          "id": "B1.02",
+          "text": "Describe what the business sells, to whom, how it is paid, its main suppliers, its financing, and any significant changes in the year.",
+          "evidence": "Business description, updated each year",
+          "reference": "ISA 315"
+        },
+        {
+          "id": "B1.03",
+          "text": "Identify the reporting framework and the significant accounting policies. Note any changes in policy and any areas needing judgement or estimates.",
+          "evidence": "Policy summary; list of estimates",
+          "reference": "ISA 315, ISA 540"
+        },
+        {
+          "id": "B1.04",
+          "text": "Identify external factors: industry conditions, regulation, licensing requirements, tax status, and economic conditions affecting the entity.",
+          "evidence": "Notes on external factors",
+          "reference": "ISA 315, ISA 250"
+        },
+        {
+          "id": "B1.05",
+          "text": "Understand how management measures performance, and any targets, bonuses or loan covenants that could create pressure to misstate results.",
+          "evidence": "Notes; covenant terms",
+          "reference": "ISA 315, ISA 240"
+        },
+        {
+          "id": "B1.06",
+          "text": "Understand the control environment: the owner-manager's attitude to controls and record-keeping, competence of accounting staff, and segregation of duties.",
+          "evidence": "Control environment assessment",
+          "reference": "ISA 315"
+        },
+        {
+          "id": "B1.07",
+          "text": "Document the accounting system: software used, who can post entries, who can change master data, and how journal entries are initiated and approved.",
+          "evidence": "System notes",
+          "reference": "ISA 315, ISA 240"
+        },
+        {
+          "id": "B1.08",
+          "text": "For each significant transaction cycle (sales, purchases, payroll, cash, inventory if relevant), document how transactions flow from initiation to the ledger, and identify the controls that address risks in that flow.",
+          "evidence": "Cycle narratives or flowcharts",
+          "reference": "ISA 315"
+        },
+        {
+          "id": "B1.09",
+          "text": "For controls addressing significant risks, and controls over journal entries, evaluate their design and confirm by inspection or observation that they are in place.",
+          "evidence": "Design and implementation record",
+          "reference": "ISA 315"
+        },
+        {
+          "id": "B1.10",
+          "text": "Understand the entity's use of IT: applications relevant to financial reporting, access controls, backups, and any spreadsheets used for key calculations.",
+          "evidence": "IT summary",
+          "reference": "ISA 315"
+        },
+        {
+          "id": "B1.11",
+          "text": "Record the sources used: inquiries (who, when), observation, and documents inspected.",
+          "evidence": "Source log",
+          "reference": "ISA 315, ISA 230"
+        }
+      ]
+    },
+    {
+      "code": "B2",
+      "title": "Materiality",
+      "stage": "B",
+      "optional": false,
+      "items": [
+        {
+          "id": "B2.01",
+          "text": "Select the benchmark that users focus on most, and record why.",
+          "evidence": "Benchmark and rationale",
+          "reference": "ISA 320"
+        },
+        {
+          "id": "B2.02",
+          "text": "Apply a percentage to the benchmark to set overall materiality. Record the reason for the percentage chosen.",
+          "evidence": "Calculation",
+          "reference": "ISA 320"
+        },
+        {
+          "id": "B2.03",
+          "text": "Set performance materiality below overall materiality, reflecting the expected level of misstatement, the control environment and past experience.",
+          "evidence": "Calculation and rationale",
+          "reference": "ISA 320"
+        },
+        {
+          "id": "B2.04",
+          "text": "Set the amount below which misstatements are clearly trivial and need not be accumulated.",
+          "evidence": "Threshold",
+          "reference": "ISA 450"
+        },
+        {
+          "id": "B2.05",
+          "text": "Consider whether any item needs a lower, specific materiality, such as related-party transactions or directors' remuneration.",
+          "evidence": "Specific materiality, if any",
+          "reference": "ISA 320"
+        },
+        {
+          "id": "B2.06",
+          "text": "At completion, reassess materiality against the final figures and revise if the benchmark has moved significantly. Consider the effect on work already done.",
+          "evidence": "Reassessment note",
+          "reference": "ISA 320"
+        }
+      ]
+    },
+    {
+      "code": "B3",
+      "title": "Preliminary analytical review",
+      "stage": "B",
+      "optional": false,
+      "items": [
+        {
+          "id": "B3.01",
+          "text": "Compare each statement line with the prior year and, where available, with budget. Investigate movements above a threshold set from performance materiality.",
+          "evidence": "Variance schedule",
+          "reference": "ISA 315, ISA 520"
+        },
+        {
+          "id": "B3.02",
+          "text": "Compute key ratios: gross margin, debtor days, creditor days, inventory days, current ratio, gearing. Compare with the prior year.",
+          "evidence": "Ratio schedule",
+          "reference": "ISA 315"
+        },
+        {
+          "id": "B3.03",
+          "text": "Obtain management's explanations for flagged movements, and note which are unexpected or inconsistent with your understanding of the business.",
+          "evidence": "Explanations",
+          "reference": "ISA 315"
+        },
+        {
+          "id": "B3.04",
+          "text": "Carry unexplained or unusual movements into the risk assessment (B8) as potential risks.",
+          "evidence": "Link to B8",
+          "reference": "ISA 315"
+        }
+      ]
+    },
+    {
+      "code": "B4",
+      "title": "Fraud risk",
+      "stage": "B",
+      "optional": false,
+      "items": [
+        {
+          "id": "B4.01",
+          "text": "Hold a team discussion, led by the partner, on how and where the financial statements could be misstated through fraud, setting aside beliefs about management's honesty. On a single-person engagement, the partner documents this consideration.",
+          "evidence": "Discussion record: attendees, date, matters raised",
+          "reference": "ISA 240, ISA 315"
+        },
+        {
+          "id": "B4.02",
+          "text": "Ask management about their assessment of fraud risk, their process for addressing it, and any actual, suspected or alleged fraud.",
+          "evidence": "Inquiry record",
+          "reference": "ISA 240"
+        },
+        {
+          "id": "B4.03",
+          "text": "Ask those charged with governance, where separate from management, and other appropriate staff, the same questions.",
+          "evidence": "Inquiry record",
+          "reference": "ISA 240"
+        },
+        {
+          "id": "B4.04",
+          "text": "Consider fraud risk factors: incentives and pressures, opportunities, and attitudes. Use the factor prompt list.",
+          "evidence": "Completed factor list",
+          "reference": "ISA 240"
+        },
+        {
+          "id": "B4.05",
+          "text": "Treat revenue recognition as a presumed fraud risk. Identify which revenue streams, transactions or assertions give rise to it. If you rebut the presumption, document why.",
+          "evidence": "Assessment per revenue stream",
+          "reference": "ISA 240"
+        },
+        {
+          "id": "B4.06",
+          "text": "Treat management override of controls as a significant risk on every engagement. This loads programme C16.",
+          "evidence": "Automatic link to C16",
+          "reference": "ISA 240"
+        },
+        {
+          "id": "B4.07",
+          "text": "Plan an element of unpredictability in the nature, timing or extent of procedures. Record what it is.",
+          "evidence": "Unpredictability plan",
+          "reference": "ISA 240"
+        },
+        {
+          "id": "B4.08",
+          "text": "Record the identified fraud risks at the financial statement and assertion levels and carry them into B8 as significant risks.",
+          "evidence": "Link to B8",
+          "reference": "ISA 240"
+        }
+      ]
+    },
+    {
+      "code": "B5",
+      "title": "Laws and regulations",
+      "stage": "B",
+      "optional": false,
+      "items": [
+        {
+          "id": "B5.01",
+          "text": "Identify the laws and regulations with a direct effect on the financial statements, such as company law, tax law and the reporting framework's legal basis.",
+          "evidence": "List",
+          "reference": "ISA 250"
+        },
+        {
+          "id": "B5.02",
+          "text": "Identify other laws whose breach could have a material effect or threaten the business, such as licensing, labour, anti-money-laundering and sector rules.",
+          "evidence": "List",
+          "reference": "ISA 250"
+        },
+        {
+          "id": "B5.03",
+          "text": "Ask management how they ensure compliance and whether they know of any non-compliance, penalties or regulator correspondence.",
+          "evidence": "Inquiry record",
+          "reference": "ISA 250"
+        },
+        {
+          "id": "B5.04",
+          "text": "Inspect correspondence with licensing and regulatory authorities and the tax authority.",
+          "evidence": "Documents inspected",
+          "reference": "ISA 250"
+        },
+        {
+          "id": "B5.05",
+          "text": "Confirm that licences needed to operate are valid at the period end and the report date.",
+          "evidence": "Licence copies",
+          "reference": "ISA 250"
+        }
+      ]
+    },
+    {
+      "code": "B6",
+      "title": "Related parties: identification",
+      "stage": "B",
+      "optional": false,
+      "items": [
+        {
+          "id": "B6.01",
+          "text": "Obtain from management a list of related parties, the nature of each relationship, and the transactions with them in the period.",
+          "evidence": "Management's list",
+          "reference": "ISA 550"
+        },
+        {
+          "id": "B6.02",
+          "text": "Ask how related-party transactions are identified, authorised and recorded.",
+          "evidence": "Inquiry record",
+          "reference": "ISA 550"
+        },
+        {
+          "id": "B6.03",
+          "text": "Compare the list with the prior-year file, ownership records, licence documents and your knowledge of the owners' other businesses.",
+          "evidence": "Comparison",
+          "reference": "ISA 550"
+        },
+        {
+          "id": "B6.04",
+          "text": "Share the list with the whole team and instruct them to stay alert for unlisted related parties and for transactions outside the normal course of business.",
+          "evidence": "Team briefing note",
+          "reference": "ISA 550"
+        },
+        {
+          "id": "B6.05",
+          "text": "Assess the risk of undisclosed related parties or transactions, and carry significant ones to B8. This feeds programme C7.",
+          "evidence": "Link to B8 and C7",
+          "reference": "ISA 550"
+        }
+      ]
+    },
+    {
+      "code": "B7",
+      "title": "Going concern: preliminary assessment",
+      "stage": "B",
+      "optional": false,
+      "items": [
+        {
+          "id": "B7.01",
+          "text": "Consider whether events or conditions exist that may cast significant doubt on the entity's ability to continue. Use the indicator list: financial, operating and other.",
+          "evidence": "Completed indicator list",
+          "reference": "ISA 570"
+        },
+        {
+          "id": "B7.02",
+          "text": "Ask whether management has made an assessment, what period it covers, and obtain it. If none exists, discuss the basis for using the going-concern assumption.",
+          "evidence": "Management's assessment or inquiry record",
+          "reference": "ISA 570"
+        },
+        {
+          "id": "B7.03",
+          "text": "Where indicators exist, plan the additional procedures for completion (D4) and consider the effect on the risk assessment.",
+          "evidence": "Plan; link to D4",
+          "reference": "ISA 570"
+        }
+      ]
+    },
+    {
+      "code": "B8",
+      "title": "Risk assessment summary and audit strategy",
+      "stage": "B",
+      "optional": false,
+      "items": [
+        {
+          "id": "B8.01",
+          "text": "Identify risks at the financial statement level, those that affect many areas, such as weak record-keeping or a dominant owner-manager. Decide the overall response: staffing, supervision, timing, unpredictability.",
+          "evidence": "Overall risks and responses",
+          "reference": "ISA 315, ISA 330"
+        },
+        {
+          "id": "B8.02",
+          "text": "For each area and relevant assertion, rate inherent risk as low, moderate or high, considering likelihood and size of misstatement and the inherent risk factors: complexity, subjectivity, change, uncertainty, and susceptibility to bias or fraud.",
+          "evidence": "Risk matrix",
+          "reference": "ISA 315"
+        },
+        {
+          "id": "B8.03",
+          "text": "Flag as significant those risks at the upper end of the scale, all fraud risks, and significant related-party transactions outside the normal course of business.",
+          "evidence": "Significant risk register",
+          "reference": "ISA 315, ISA 240, ISA 550"
+        },
+        {
+          "id": "B8.04",
+          "text": "Decide for each area whether to rely on controls. If so, add tests of controls; if not, record that the approach is fully substantive.",
+          "evidence": "Approach per area",
+          "reference": "ISA 330"
+        },
+        {
+          "id": "B8.05",
+          "text": "Confirm that every material area has substantive procedures regardless of the assessed risk.",
+          "evidence": "Review of the programmes loaded",
+          "reference": "ISA 330"
+        },
+        {
+          "id": "B8.06",
+          "text": "Apply the scoping rule to small areas and record the scoping conclusions.",
+          "evidence": "Scoping conclusions",
+          "reference": "ISA 315, ISA 330"
+        },
+        {
+          "id": "B8.07",
+          "text": "Record the strategy: scope, timing, team, deadlines, and use of experts or service-organisation reports.",
+          "evidence": "Strategy memo",
+          "reference": "ISA 300"
+        },
+        {
+          "id": "B8.08",
+          "text": "Partner approves the risk assessment and strategy before fieldwork starts.",
+          "evidence": "Partner sign-off",
+          "reference": "ISA 220, ISA 300"
+        },
+        {
+          "id": "B8.09",
+          "text": "During the audit, revise the assessment if evidence contradicts it, and record the change and its effect on procedures.",
+          "evidence": "Revision log",
+          "reference": "ISA 315"
+        }
+      ]
+    },
+    {
+      "code": "B9",
+      "title": "Opening balances (first-year audits)",
+      "stage": "B",
+      "optional": true,
+      "items": [
+        {
+          "id": "B9.01",
+          "text": "Read the most recent financial statements and the previous auditor's report. Note any modification.",
+          "evidence": "Prior statements and report",
+          "reference": "ISA 510"
+        },
+        {
+          "id": "B9.02",
+          "text": "Confirm that the prior year's closing balances have been correctly brought forward.",
+          "evidence": "Roll-forward check",
+          "reference": "ISA 510"
+        },
+        {
+          "id": "B9.03",
+          "text": "Confirm that accounting policies are consistent, or that changes are properly accounted for and disclosed.",
+          "evidence": "Policy comparison",
+          "reference": "ISA 510"
+        },
+        {
+          "id": "B9.04",
+          "text": "Obtain evidence on opening balances: review the previous auditor's working papers where permitted, rely on current-year procedures that also cover opening positions, or perform specific procedures on opening inventory, non-current assets and liabilities.",
+          "evidence": "Evidence per material opening balance",
+          "reference": "ISA 510"
+        },
+        {
+          "id": "B9.05",
+          "text": "If sufficient evidence on opening balances cannot be obtained, consider the effect on the opinion.",
+          "evidence": "Conclusion; link to E2",
+          "reference": "ISA 510, ISA 705"
+        }
+      ]
+    },
+    {
+      "code": "B10",
+      "title": "Service organisations (if applicable)",
+      "stage": "B",
+      "optional": true,
+      "items": [
+        {
+          "id": "B10.01",
+          "text": "Identify services outsourced that affect financial reporting, such as bookkeeping, payroll, or inventory held by a logistics provider.",
+          "evidence": "List of service organisations",
+          "reference": "ISA 402"
+        },
+        {
+          "id": "B10.02",
+          "text": "Understand the service, its significance, and the controls the entity itself applies over the provider's output.",
+          "evidence": "Notes",
+          "reference": "ISA 402"
+        },
+        {
+          "id": "B10.03",
+          "text": "Decide how to obtain evidence: from records held at the entity, from a report on the provider's controls, or by procedures at or through the provider.",
+          "evidence": "Approach",
+          "reference": "ISA 402"
+        }
+      ]
+    },
+    {
+      "code": "B11",
+      "title": "Experts (if applicable)",
+      "stage": "B",
+      "optional": true,
+      "items": [
+        {
+          "id": "B11.01",
+          "text": "Identify areas where specialist expertise is needed, such as property valuation, actuarial calculations or legal interpretation.",
+          "evidence": "List of areas",
+          "reference": "ISA 620"
+        },
+        {
+          "id": "B11.02",
+          "text": "Where management has used an expert, evaluate that expert's competence, capability and objectivity, understand the work, and assess its suitability as evidence.",
+          "evidence": "Evaluation",
+          "reference": "ISA 500"
+        },
+        {
+          "id": "B11.03",
+          "text": "Where the audit needs its own expert, evaluate competence and objectivity, agree the scope in writing, and evaluate the adequacy of the work.",
+          "evidence": "Agreement; evaluation",
+          "reference": "ISA 620"
+        }
+      ]
+    },
+    {
+      "code": "D1",
+      "title": "Summary of misstatements",
+      "stage": "D",
+      "optional": false,
+      "items": [
+        {
+          "id": "D1.01",
+          "text": "Accumulate all misstatements identified, other than those clearly trivial, separated into factual, judgemental and projected.",
+          "evidence": "Misstatement schedule",
+          "reference": "ISA 450"
+        },
+        {
+          "id": "D1.02",
+          "text": "Consider whether the nature or pattern of misstatements suggests that others may exist, and whether the strategy or materiality needs revising.",
+          "evidence": "Assessment",
+          "reference": "ISA 450"
+        },
+        {
+          "id": "D1.03",
+          "text": "Communicate all accumulated misstatements to management promptly and ask for them to be corrected.",
+          "evidence": "Communication record",
+          "reference": "ISA 450"
+        },
+        {
+          "id": "D1.04",
+          "text": "Record the misstatements corrected, with the journal entries posted.",
+          "evidence": "Adjusted misstatements",
+          "reference": "ISA 450"
+        },
+        {
+          "id": "D1.05",
+          "text": "For uncorrected misstatements, obtain management's reasons, and evaluate whether they are material individually or together, considering size, nature, effect on key lines and ratios, and the effect of prior-period uncorrected items.",
+          "evidence": "Evaluation",
+          "reference": "ISA 450"
+        },
+        {
+          "id": "D1.06",
+          "text": "Communicate uncorrected misstatements to those charged with governance and ask for correction. Include them in the representation letter.",
+          "evidence": "Communication; link to D5, D6",
+          "reference": "ISA 450, ISA 260"
+        },
+        {
+          "id": "D1.07",
+          "text": "Conclude whether the statements as a whole are free from material misstatement. If not, see E2.",
+          "evidence": "Conclusion",
+          "reference": "ISA 450, ISA 700"
+        }
+      ]
+    },
+    {
+      "code": "D2",
+      "title": "Final analytical review",
+      "stage": "D",
+      "optional": false,
+      "items": [
+        {
+          "id": "D2.01",
+          "text": "Perform analytical procedures on the final statements to confirm they are consistent with your understanding of the entity.",
+          "evidence": "Final analytical review",
+          "reference": "ISA 520"
+        },
+        {
+          "id": "D2.02",
+          "text": "Investigate anything unexpected, and consider whether it indicates an unrecognised risk needing further work.",
+          "evidence": "Follow-up",
+          "reference": "ISA 520"
+        }
+      ]
+    },
+    {
+      "code": "D3",
+      "title": "Subsequent events",
+      "stage": "D",
+      "optional": false,
+      "items": [
+        {
+          "id": "D3.01",
+          "text": "Ask management what procedures they have to identify events after the period end, and whether any have occurred: new borrowings or guarantees, asset sales or losses, litigation, customer failures, changes in ownership.",
+          "evidence": "Inquiry record",
+          "reference": "ISA 560"
+        },
+        {
+          "id": "D3.02",
+          "text": "Read minutes of meetings held after the period end and ask about meetings not yet minuted.",
+          "evidence": "Minutes review",
+          "reference": "ISA 560"
+        },
+        {
+          "id": "D3.03",
+          "text": "Read the latest management accounts, cash position and bank statements after the period end.",
+          "evidence": "Review notes",
+          "reference": "ISA 560"
+        },
+        {
+          "id": "D3.04",
+          "text": "For each event identified, conclude whether it requires adjustment or disclosure.",
+          "evidence": "Conclusion per event",
+          "reference": "ISA 560"
+        },
+        {
+          "id": "D3.05",
+          "text": "Perform these procedures up to the date of the auditor's report. Record the date to which the review was performed.",
+          "evidence": "Dated update",
+          "reference": "ISA 560"
+        },
+        {
+          "id": "D3.06",
+          "text": "If facts become known after the report date that would have changed the report, discuss with management and follow the required steps.",
+          "evidence": "Record, if applicable",
+          "reference": "ISA 560"
+        }
+      ]
+    },
+    {
+      "code": "D4",
+      "title": "Going concern: conclusion",
+      "stage": "D",
+      "optional": false,
+      "items": [
+        {
+          "id": "D4.01",
+          "text": "Evaluate management's assessment: the period covered, the forecasts and their assumptions, and whether it includes all relevant information known to you.",
+          "evidence": "Evaluation",
+          "reference": "ISA 570"
+        },
+        {
+          "id": "D4.02",
+          "text": "Where events or conditions cast doubt, evaluate management's plans, test the cash-flow forecast and its key assumptions, and consider facts arising since the assessment.",
+          "evidence": "Forecast testing",
+          "reference": "ISA 570"
+        },
+        {
+          "id": "D4.03",
+          "text": "Where the entity depends on support from owners or related parties, obtain written confirmation of the support and evidence of the supporter's ability to provide it.",
+          "evidence": "Support letter; ability evidence",
+          "reference": "ISA 570"
+        },
+        {
+          "id": "D4.04",
+          "text": "Ask management about events or conditions beyond the period of their assessment.",
+          "evidence": "Inquiry record",
+          "reference": "ISA 570"
+        },
+        {
+          "id": "D4.05",
+          "text": "Conclude whether a material uncertainty exists and whether the going-concern basis is appropriate.",
+          "evidence": "Conclusion",
+          "reference": "ISA 570"
+        },
+        {
+          "id": "D4.06",
+          "text": "Confirm disclosures are adequate, and determine the effect on the report. See E1 and E2.",
+          "evidence": "Disclosure review",
+          "reference": "ISA 570"
+        }
+      ]
+    },
+    {
+      "code": "D5",
+      "title": "Written representations",
+      "stage": "D",
+      "optional": false,
+      "items": [
+        {
+          "id": "D5.01",
+          "text": "Obtain a representation letter from management with appropriate responsibility, addressed to the auditor.",
+          "evidence": "Signed letter",
+          "reference": "ISA 580"
+        },
+        {
+          "id": "D5.02",
+          "text": "Confirm it covers management's responsibility for the statements, and that all information and access was provided and all transactions recorded.",
+          "evidence": "Letter content check",
+          "reference": "ISA 580"
+        },
+        {
+          "id": "D5.03",
+          "text": "Confirm it includes the specific representations required by other standards: fraud, laws and regulations, related parties, subsequent events, going concern, litigation and claims, estimates, and uncorrected misstatements, with the list attached.",
+          "evidence": "Letter content check",
+          "reference": "ISA 580 and others"
+        },
+        {
+          "id": "D5.04",
+          "text": "Confirm it is dated as near as practicable to, and not after, the date of the auditor's report.",
+          "evidence": "Date check",
+          "reference": "ISA 580"
+        },
+        {
+          "id": "D5.05",
+          "text": "If management refuses, or the representations are unreliable, reconsider management's integrity and the effect on the opinion.",
+          "evidence": "Assessment, if applicable",
+          "reference": "ISA 580"
+        }
+      ]
+    },
+    {
+      "code": "D6",
+      "title": "Communication with those charged with governance",
+      "stage": "D",
+      "optional": false,
+      "items": [
+        {
+          "id": "D6.01",
+          "text": "Identify who is charged with governance. Where all of them are also managers, record that matters communicated to management need not be repeated.",
+          "evidence": "Note",
+          "reference": "ISA 260"
+        },
+        {
+          "id": "D6.02",
+          "text": "Communicate the auditor's responsibilities and the planned scope and timing, at the planning stage.",
+          "evidence": "Communication record",
+          "reference": "ISA 260"
+        },
+        {
+          "id": "D6.03",
+          "text": "Communicate significant findings: views on accounting policies, estimates and disclosures; significant difficulties; uncorrected misstatements; representations requested; and other significant matters.",
+          "evidence": "Findings letter or minuted meeting",
+          "reference": "ISA 260"
+        },
+        {
+          "id": "D6.04",
+          "text": "Communicate significant deficiencies in internal control in writing, and other deficiencies to management.",
+          "evidence": "Deficiency letter",
+          "reference": "ISA 265"
+        },
+        {
+          "id": "D6.05",
+          "text": "Communicate any identified or suspected fraud or non-compliance with law as required.",
+          "evidence": "Record, if applicable",
+          "reference": "ISA 240, ISA 250"
+        }
+      ]
+    },
+    {
+      "code": "D7",
+      "title": "Disclosure checklist",
+      "stage": "D",
+      "optional": false,
+      "items": [
+        {
+          "id": "D7.01",
+          "text": "Complete the framework disclosure checklist against the final statements.",
+          "evidence": "Completed checklist",
+          "reference": "ISA 700, ISA 330"
+        },
+        {
+          "id": "D7.02",
+          "text": "Check the statements for internal consistency: casting, cross-references, notes to face, and comparatives.",
+          "evidence": "Record of the checks performed",
+          "reference": "ISA 330"
+        },
+        {
+          "id": "D7.03",
+          "text": "Evaluate overall presentation: whether the statements, including policies and terminology, are understandable and achieve fair presentation.",
+          "evidence": "Conclusion",
+          "reference": "ISA 700"
+        }
+      ]
+    },
+    {
+      "code": "D8",
+      "title": "Completion checklist and partner sign-off",
+      "stage": "D",
+      "optional": false,
+      "items": [
+        {
+          "id": "D8.01",
+          "text": "Confirm all planned procedures are complete, or changes to the plan are recorded with reasons.",
+          "evidence": "Review of the audit programmes",
+          "reference": "ISA 300, ISA 230"
+        },
+        {
+          "id": "D8.02",
+          "text": "Confirm all review points are cleared and all working papers reviewed by someone other than the preparer.",
+          "evidence": "Review of the sign-off record",
+          "reference": "ISA 220"
+        },
+        {
+          "id": "D8.03",
+          "text": "Confirm each significant risk has a documented response and conclusion.",
+          "evidence": "Review of the risk assessment and programmes",
+          "reference": "ISA 330"
+        },
+        {
+          "id": "D8.04",
+          "text": "Confirm significant matters, the judgements made and the conclusions reached are summarised for the partner.",
+          "evidence": "Completion memo",
+          "reference": "ISA 230"
+        },
+        {
+          "id": "D8.05",
+          "text": "Record consultations on difficult or contentious matters and how conclusions were implemented.",
+          "evidence": "Consultation record, if applicable",
+          "reference": "ISA 220"
+        },
+        {
+          "id": "D8.06",
+          "text": "Reconfirm independence.",
+          "evidence": "Confirmation",
+          "reference": "ISA 220"
+        },
+        {
+          "id": "D8.07",
+          "text": "Partner confirms sufficient and appropriate involvement throughout, that sufficient appropriate evidence supports the opinion, and takes responsibility for the engagement.",
+          "evidence": "Partner sign-off",
+          "reference": "ISA 220"
+        }
+      ]
+    },
+    {
+      "code": "D9",
+      "title": "Comparatives and corresponding figures",
+      "stage": "D",
+      "optional": false,
+      "items": [
+        {
+          "id": "D9.01",
+          "text": "Confirm the comparatives agree with the prior-period statements or, if restated, that the restatement is properly accounted for and disclosed.",
+          "evidence": "Agreement check",
+          "reference": "ISA 710"
+        },
+        {
+          "id": "D9.02",
+          "text": "Confirm policies are applied consistently or changes are properly dealt with.",
+          "evidence": "Policy check",
+          "reference": "ISA 710"
+        },
+        {
+          "id": "D9.03",
+          "text": "If the prior period was audited by another auditor or not audited, determine the statement required in the report.",
+          "evidence": "Report wording note",
+          "reference": "ISA 710"
+        },
+        {
+          "id": "D9.04",
+          "text": "If the prior report was modified and the matter is unresolved, determine the effect on the current opinion.",
+          "evidence": "Assessment, if applicable",
+          "reference": "ISA 710"
+        },
+        {
+          "id": "D9.05",
+          "text": "If you become aware of a possible material misstatement in the comparatives, perform additional procedures.",
+          "evidence": "Record, if applicable",
+          "reference": "ISA 710"
+        }
+      ]
+    },
+    {
+      "code": "E1",
+      "title": "Forming the opinion and the auditor's report",
+      "stage": "E",
+      "optional": false,
+      "items": [
+        {
+          "id": "E1.01",
+          "text": "Conclude whether sufficient appropriate evidence has been obtained and whether uncorrected misstatements are material, individually or together.",
+          "evidence": "Conclusion",
+          "reference": "ISA 700, ISA 330, ISA 450"
+        },
+        {
+          "id": "E1.02",
+          "text": "Evaluate whether the statements are prepared, in all material respects, under the framework: policies disclosed and appropriate, estimates reasonable, information relevant and understandable, disclosures adequate.",
+          "evidence": "Evaluation",
+          "reference": "ISA 700"
+        },
+        {
+          "id": "E1.03",
+          "text": "Select the opinion, considering open matters and uncorrected misstatements against materiality. The partner makes the decision.",
+          "evidence": "Opinion decision",
+          "reference": "ISA 700, ISA 705"
+        },
+        {
+          "id": "E1.04",
+          "text": "Generate the report and confirm it contains every required element: title; addressee; opinion; basis for opinion; going-concern section where required; responsibilities of management and those charged with governance; auditor's responsibilities; other reporting responsibilities required by law; name and signature; address; date.",
+          "evidence": "Report with element checklist",
+          "reference": "ISA 700"
+        },
+        {
+          "id": "E1.05",
+          "text": "Add any matters that local law requires the auditor to report on.",
+          "evidence": "Legal reporting section",
+          "reference": "ISA 700, local law"
+        },
+        {
+          "id": "E1.06",
+          "text": "Date the report no earlier than the date on which sufficient evidence was obtained, including evidence that the statements have been approved by those with authority.",
+          "evidence": "Approval evidence; date check",
+          "reference": "ISA 700"
+        }
+      ]
+    },
+    {
+      "code": "E2",
+      "title": "Modified opinions and additional paragraphs (if applicable)",
+      "stage": "E",
+      "optional": true,
+      "items": [
+        {
+          "id": "E2.01",
+          "text": "Identify the cause: the statements are materially misstated, or sufficient appropriate evidence could not be obtained.",
+          "evidence": "Cause",
+          "reference": "ISA 705"
+        },
+        {
+          "id": "E2.02",
+          "text": "Judge whether the effect, or possible effect, is material only, or material and pervasive.",
+          "evidence": "Pervasiveness assessment",
+          "reference": "ISA 705"
+        },
+        {
+          "id": "E2.03",
+          "text": "Select the modification: qualified where material but not pervasive; adverse where misstatement is pervasive; disclaimer where the inability to obtain evidence is pervasive.",
+          "evidence": "Decision",
+          "reference": "ISA 705"
+        },
+        {
+          "id": "E2.04",
+          "text": "Draft the basis for modification, quantifying the effect where practicable.",
+          "evidence": "Basis paragraph",
+          "reference": "ISA 705"
+        },
+        {
+          "id": "E2.05",
+          "text": "Communicate the expected modification and its wording to those charged with governance before issuing.",
+          "evidence": "Communication record",
+          "reference": "ISA 705, ISA 260"
+        },
+        {
+          "id": "E2.06",
+          "text": "Where a material uncertainty about going concern exists and is adequately disclosed, include the required separate section. If disclosure is inadequate, modify the opinion.",
+          "evidence": "Section or modification",
+          "reference": "ISA 570"
+        },
+        {
+          "id": "E2.07",
+          "text": "Consider whether an emphasis of matter or other matter paragraph is needed, and confirm it is not used as a substitute for a modification.",
+          "evidence": "Paragraph, if applicable",
+          "reference": "ISA 706"
+        }
+      ]
+    },
+    {
+      "code": "E3",
+      "title": "Other information (if applicable)",
+      "stage": "E",
+      "optional": true,
+      "items": [
+        {
+          "id": "E3.01",
+          "text": "Determine whether the entity will issue a document containing the audited statements together with other information, such as a directors' or management report.",
+          "evidence": "Inquiry record",
+          "reference": "ISA 720"
+        },
+        {
+          "id": "E3.02",
+          "text": "Read the other information and consider whether it is materially inconsistent with the statements or with your knowledge from the audit.",
+          "evidence": "Review notes",
+          "reference": "ISA 720"
+        },
+        {
+          "id": "E3.03",
+          "text": "Resolve inconsistencies with management, and include the required section in the report.",
+          "evidence": "Resolution; report section",
+          "reference": "ISA 720"
+        }
+      ]
+    },
+    {
+      "code": "E4",
+      "title": "File assembly and archiving",
+      "stage": "E",
+      "optional": false,
+      "items": [
+        {
+          "id": "E4.01",
+          "text": "Complete the assembly of the final file promptly after the report date, and within the firm's limit.",
+          "evidence": "Date of final assembly",
+          "reference": "ISA 230, ISQM 1"
+        },
+        {
+          "id": "E4.02",
+          "text": "During assembly, make administrative changes only: removing superseded drafts, sorting, cross-referencing, signing off completion checklists.",
+          "evidence": "Change log",
+          "reference": "ISA 230"
+        },
+        {
+          "id": "E4.03",
+          "text": "After assembly, lock the file. Nothing may be deleted. Any later addition records who made it, when, and why.",
+          "evidence": "Lock record; addition log",
+          "reference": "ISA 230"
+        },
+        {
+          "id": "E4.04",
+          "text": "Retain the file for the firm's retention period.",
+          "evidence": "Retention record",
+          "reference": "ISQM 1, local law"
+        }
+      ]
+    }
   ]
 }

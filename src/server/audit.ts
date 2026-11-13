@@ -1,9 +1,12 @@
 import type { Tx } from "./db";
 import { audit as log, getEngagement, listAccounts, type Session } from "./repo";
-import { canReview } from "../domain/signoff";
+import { canLock, canReview } from "../domain/signoff";
 import { buildStatements } from "../domain/statements";
 import {
   AREA_BY_CODE,
+  CHECKLIST_BY_CODE,
+  CHECKLISTS,
+  needsPartner,
   areasInScope,
   assertionsOf,
   BENCHMARKS,
@@ -44,12 +47,45 @@ export interface AreaStatus {
   completed: number;
 }
 
+export interface ChecklistStatus {
+  code: string;
+  title: string;
+  stage: string;
+  optional: boolean;
+  steps: number;
+  completed: number;
+}
+
+export interface MisstatementRow {
+  id: string;
+  description: string;
+  kind: "factual" | "judgemental" | "projected";
+  /** Effect on profit before tax: positive when profit is overstated. */
+  amountMinor: number;
+  corrected: boolean;
+  recordedBy: string;
+  recordedAt: string;
+}
+
+export interface MisstatementSummary {
+  items: MisstatementRow[];
+  /** Net effect on profit of the uncorrected items. */
+  uncorrectedNetMinor: number;
+  /** Sum of the uncorrected items ignoring direction, to show how much offsetting there is. */
+  uncorrectedGrossMinor: number;
+  /** True when the net uncorrected effect, or any single uncorrected item, reaches overall materiality. */
+  exceedsMateriality: boolean;
+}
+
 export interface AuditOverview {
   /** Figures the materiality calculator can use as a benchmark, from the adjusted trial balance. */
   benchmarks: Record<Benchmark, number>;
   materiality: MaterialityRow | null;
   revisions: number;
   areas: AreaStatus[];
+  /** Acceptance, planning, completion and reporting checklists, loaded when the audit is turned on. */
+  checklists: ChecklistStatus[];
+  misstatements: MisstatementSummary;
   /** True when the engagement is being audited. Audit work only applies, and only blocks the lock, when it is. */
   enabled: boolean;
   /** True when the benchmark figure has changed since materiality was set. */
@@ -101,9 +137,11 @@ export async function setAuditEnabled(tx: Tx, s: Session, engagementId: string, 
   if (!canReview(s.role)) throw new Error("Only a reviewer or partner can turn the audit on or off.");
   if (!on) {
     const worked = await tx.query("select 1 from audit_procedures where engagement_id = $1 and (status <> 'open' or work_done is not null or conclusion is not null) limit 1", [engagementId]);
-    if (worked.rows.length > 0) throw new Error("Work has been recorded on this audit, so it cannot be turned off.");
+    const found = await tx.query("select 1 from misstatements where engagement_id = $1 limit 1", [engagementId]);
+    if (worked.rows.length > 0 || found.rows.length > 0) throw new Error("Work has been recorded on this audit, so it cannot be turned off.");
   }
   await tx.query("update engagements set audit_enabled = $2 where id = $1", [engagementId, on]);
+  if (on) await ensureChecklists(tx, s, engagementId);
   await log(tx, s, on ? "audit_on" : "audit_off", "engagement", engagementId);
 }
 
@@ -162,6 +200,32 @@ export async function getAuditOverview(tx: Tx, engagementId: string): Promise<Au
   }));
 
   const materiality: MaterialityRow | null = mat.rows[0] ?? null;
+  const checklists: ChecklistStatus[] = CHECKLISTS.map((c) => ({
+    code: c.code,
+    title: c.title,
+    stage: c.stage,
+    optional: c.optional,
+    steps: countOf.get(c.code)?.total ?? 0,
+    completed: countOf.get(c.code)?.completed ?? 0,
+  }));
+
+  const mis = await tx.query<MisstatementRow>(
+    `select m.id, m.description, m.kind, m.amount_minor::float8 as "amountMinor", m.corrected, u.name as "recordedBy", to_char(m.created_at, 'YYYY-MM-DD') as "recordedAt"
+     from misstatements m join users u on u.id = m.created_by where m.engagement_id = $1 order by m.created_at, m.id`,
+    [engagementId],
+  );
+  const uncorrected = mis.rows.filter((r) => !r.corrected);
+  const uncorrectedNetMinor = uncorrected.reduce((s, r) => s + r.amountMinor, 0);
+  const misstatements: MisstatementSummary = {
+    items: mis.rows,
+    uncorrectedNetMinor,
+    uncorrectedGrossMinor: uncorrected.reduce((s, r) => s + Math.abs(r.amountMinor), 0),
+    // Offsetting items must not hide a material one, so each item is tested as well as the net.
+    exceedsMateriality:
+      materiality !== null &&
+      (Math.abs(uncorrectedNetMinor) >= materiality.overallMinor || uncorrected.some((r) => Math.abs(r.amountMinor) >= materiality.overallMinor)),
+  };
+
   const enabled = await isEnabled(tx, engagementId);
   const benchmarks: Record<Benchmark, number> = { pbt: Math.abs(sci("PBT")), revenue: Math.abs(sci("REVENUE")), assets: sfp("TOTAL_ASSETS"), equity: Math.abs(sfp("TOTAL_EQUITY")) };
   const materialityStale = materiality !== null && benchmarks[materiality.benchmark] !== materiality.benchmarkAmountMinor;
@@ -173,8 +237,9 @@ export async function getAuditOverview(tx: Tx, engagementId: string): Promise<Au
     if (unassessed > 0) blockers.push(`Audit: risk has not been assessed for ${unassessed} area(s).`);
     const notLoaded = areaStatus.filter((a) => a.assessed && a.procedures === 0).length;
     if (notLoaded > 0) blockers.push(`Audit: the programme has not been loaded for ${notLoaded} area(s).`);
-    const open = areaStatus.reduce((n, a) => n + (a.procedures - a.completed), 0);
-    if (open > 0) blockers.push(`Audit: ${open} procedure(s) are not yet completed.`);
+    const open = counts.rows.reduce((n, c) => n + (c.total - c.completed), 0);
+    if (open > 0) blockers.push(`Audit: ${open} procedure(s) and checklist step(s) are not yet completed.`);
+    if (misstatements.exceedsMateriality) blockers.push("Audit: uncorrected misstatements reach overall materiality. Have them corrected; modified opinions are not yet supported.");
   }
 
   return {
@@ -182,6 +247,8 @@ export async function getAuditOverview(tx: Tx, engagementId: string): Promise<Au
     materiality,
     revisions: mat.rows[0]?.n ?? 0,
     areas: areaStatus,
+    checklists,
+    misstatements,
     enabled,
     materialityStale,
     notApplicable: counts.rows.reduce((n, c) => n + c.na, 0),
@@ -254,6 +321,51 @@ async function syncProgramme(tx: Tx, s: Session, engagementId: string, area: Are
   return { added, removed };
 }
 
+/** Load every checklist step that is not on the engagement yet. Steps already there are left as they are. */
+async function ensureChecklists(tx: Tx, s: Session, engagementId: string): Promise<void> {
+  const existing = await tx.query<{ t: string }>('select template_id as t from audit_procedures where engagement_id = $1', [engagementId]);
+  const have = new Set(existing.rows.map((r) => r.t));
+  for (const list of CHECKLISTS) {
+    for (const item of list.items) {
+      if (have.has(item.id)) continue;
+      await tx.query(
+        "insert into audit_procedures (firm_id, engagement_id, area_code, template_id, tier, assertions, body, evidence, reference) values ($1, $2, $3, $4, 'core', '', $5, $6, $7)",
+        [s.firmId, engagementId, list.code, item.id, item.text, item.evidence, item.reference],
+      );
+    }
+  }
+}
+
+const KINDS = ["factual", "judgemental", "projected"];
+
+/** Record a misstatement found during the audit. amountMinor is its effect on profit: positive when profit is overstated. */
+export async function addMisstatement(tx: Tx, s: Session, engagementId: string, input: { description: string; kind: string; amountMinor: number }): Promise<string> {
+  await requireAudit(tx, engagementId);
+  const description = input.description.trim();
+  if (description.length < 5) throw new Error("Describe the misstatement.");
+  if (description.length > 1000) throw new Error("The description is too long.");
+  if (!KINDS.includes(input.kind)) throw new Error("Choose whether the misstatement is factual, judgemental or projected.");
+  if (!Number.isInteger(input.amountMinor) || input.amountMinor === 0) throw new Error("Enter the amount of the misstatement.");
+  const { rows } = await tx.query<{ id: string }>(
+    "insert into misstatements (firm_id, engagement_id, description, kind, amount_minor, created_by) values ($1, $2, $3, $4, $5, $6) returning id",
+    [s.firmId, engagementId, description, input.kind, input.amountMinor, s.userId],
+  );
+  await log(tx, s, "add", "misstatement", rows[0].id, { engagementId, kind: input.kind, amountMinor: input.amountMinor });
+  return rows[0].id;
+}
+
+/** Mark a misstatement as corrected by the client, or as still uncorrected. */
+export async function setMisstatementCorrected(tx: Tx, s: Session, misstatementId: string, corrected: boolean): Promise<string> {
+  const { rows } = await tx.query<{ engagementId: string }>('select engagement_id as "engagementId" from misstatements where id = $1', [misstatementId]);
+  if (rows.length === 0) throw new Error("Misstatement not found.");
+  await requireAudit(tx, rows[0].engagementId);
+  // Whether the client has really corrected an item decides whether the lock is held up, so a reviewer confirms it.
+  if (!canReview(s.role)) throw new Error("Only a reviewer or partner can mark a misstatement as corrected.");
+  await tx.query("update misstatements set corrected = $2 where id = $1", [misstatementId, corrected]);
+  await log(tx, s, corrected ? "corrected" : "uncorrected", "misstatement", misstatementId, { engagementId: rows[0].engagementId });
+  return rows[0].engagementId;
+}
+
 /** Record the risk assessment for one area and load its programme. */
 export async function setAreaRisks(tx: Tx, s: Session, engagementId: string, areaCode: string, levels: Record<string, string>): Promise<{ added: number; removed: number }> {
   await requireAudit(tx, engagementId);
@@ -299,8 +411,8 @@ export async function updateProcedure(
   procedureId: string,
   input: { status: string; workDone: string; conclusion: string },
 ): Promise<string> {
-  const { rows } = await tx.query<{ engagementId: string; templateId: string; tier: string; areaCode: string }>(
-    'select engagement_id as "engagementId", template_id as "templateId", tier, area_code as "areaCode" from audit_procedures where id = $1',
+  const { rows } = await tx.query<{ engagementId: string; templateId: string; tier: string; areaCode: string; evidence: string }>(
+    'select engagement_id as "engagementId", template_id as "templateId", tier, area_code as "areaCode", evidence from audit_procedures where id = $1',
     [procedureId],
   );
   if (rows.length === 0) throw new Error("Procedure not found.");
@@ -312,11 +424,15 @@ export async function updateProcedure(
   if (input.status === "done") {
     if (workDone.length < 3) throw new Error("Describe the work done before marking the procedure completed.");
     if (conclusion.length < 3) throw new Error("Record the conclusion before marking the procedure completed.");
+    if (needsPartner(rows[0].evidence) && !canLock(s.role)) throw new Error("This step is the partner's sign-off, so only a partner can complete it.");
   } else if (input.status === "na") {
     if (workDone.length < 10) throw new Error("Explain under work done why the procedure does not apply.");
     // Setting aside a response to a significant risk is a judgement for a reviewer, not the preparer.
     const significant = rows[0].tier === "significant" || AREA_BY_CODE.get(rows[0].areaCode)?.fixedRisk === "significant";
     if (significant && !canReview(s.role)) throw new Error("Only a reviewer or partner can mark a significant-risk procedure as not applicable.");
+    // Checklist steps apply to every audit. Only the optional checklists may be set aside by anyone.
+    const checklist = CHECKLIST_BY_CODE.get(rows[0].areaCode);
+    if (checklist && !checklist.optional && !canReview(s.role)) throw new Error("Only a reviewer or partner can mark a required checklist step as not applicable.");
   } else if (input.status !== "open") {
     throw new Error("Unknown status.");
   }

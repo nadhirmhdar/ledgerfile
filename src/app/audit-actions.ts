@@ -6,6 +6,7 @@ import { getSession } from "@/server/session";
 import type { Session } from "@/server/repo";
 import * as audit from "@/server/audit";
 import { ASSERTIONS } from "@/domain/audit";
+import { parseAmount } from "@/domain/money";
 import type { FormState } from "./actions";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -68,6 +69,33 @@ export async function setAreaRisksAction(_prev: FormState, form: FormData): Prom
       return `Saved. ${added} procedure(s) loaded${removed > 0 ? `, ${removed} removed` : ""}.`;
     },
     (tx, session) => audit.setAreaRisks(tx, session, engagementId, field(form, "areaCode"), levels),
+    () => engagementId,
+  );
+}
+
+export async function addMisstatementAction(_prev: FormState, form: FormData): Promise<FormState> {
+  const engagementId = field(form, "engagementId");
+  if (!UUID.test(engagementId)) return { ok: false, message: "Engagement not found." };
+  const amount = parseAmount(field(form, "amount"));
+  if (amount === null || Number.isNaN(amount) || amount <= 0) return { ok: false, message: "Enter the amount as a positive number, and choose its direction." };
+  // The direction says which way profit is wrong; the amount itself is always typed as positive.
+  const signed = field(form, "direction") === "understated" ? -amount : amount;
+  return run(
+    () => "Misstatement recorded.",
+    (tx, session) => audit.addMisstatement(tx, session, engagementId, { description: field(form, "description"), kind: field(form, "kind"), amountMinor: signed }),
+    () => engagementId,
+  );
+}
+
+export async function setMisstatementCorrectedAction(_prev: FormState, form: FormData): Promise<FormState> {
+  const misstatementId = field(form, "misstatementId");
+  if (!UUID.test(misstatementId)) return { ok: false, message: "Misstatement not found." };
+  let engagementId = "";
+  return run(
+    () => "",
+    async (tx, session) => {
+      engagementId = await audit.setMisstatementCorrected(tx, session, misstatementId, field(form, "corrected") === "true");
+    },
     () => engagementId,
   );
 }

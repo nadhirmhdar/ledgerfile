@@ -78,6 +78,42 @@ export const AREAS: Area[] = library.areas.map((a) => {
 });
 export const AREA_BY_CODE = new Map(AREAS.map((a) => [a.code, a]));
 
+// --- Checklists ---------------------------------------------------------------
+
+export type Stage = "A" | "B" | "D" | "E";
+export const STAGES: { code: Stage; label: string }[] = [
+  { code: "A", label: "Acceptance" },
+  { code: "B", label: "Planning" },
+  { code: "D", label: "Completion" },
+  { code: "E", label: "Reporting and archiving" },
+];
+
+/** A checklist for a stage of the audit other than fieldwork. Every step applies to every audit unless the checklist is optional. */
+export interface Checklist {
+  code: string;
+  title: string;
+  stage: Stage;
+  /** Applies only in some circumstances, such as a first-year audit; any user may mark its steps not applicable. */
+  optional: boolean;
+  items: { id: string; text: string; evidence: string; reference: string }[];
+}
+/**
+ * Steps performed after the auditor's report is dated: file assembly and archiving, and facts
+ * that come to light afterwards. Completing them cannot be a condition of locking the file,
+ * because the lock is part of what they describe. They are left out until the product handles
+ * the period after the report.
+ */
+const AFTER_REPORT_CHECKLISTS = new Set(["E4"]);
+const AFTER_REPORT_STEPS = new Set(["D3.06"]);
+
+export const CHECKLISTS: Checklist[] = (library.checklists as Checklist[])
+  .filter((c) => !AFTER_REPORT_CHECKLISTS.has(c.code))
+  .map((c) => ({ ...c, items: c.items.filter((i) => !AFTER_REPORT_STEPS.has(i.id)) }));
+
+/** Steps whose evidence is the partner's own sign-off can be completed only by a partner-level user. */
+export const needsPartner = (evidence: string) => /^Partner sign-off/i.test(evidence);
+export const CHECKLIST_BY_CODE = new Map(CHECKLISTS.map((c) => [c.code, c]));
+
 /** The areas an engagement must cover, given which groups have a balance in either year. */
 export function areasInScope(usedGroups: Set<string>): Area[] {
   return AREAS.filter((a) => a.always || a.groups.some((g) => usedGroups.has(g)));

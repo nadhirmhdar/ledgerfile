@@ -4,7 +4,7 @@ import { getDb, withFirm } from "@/server/db";
 import { getSession } from "@/server/session";
 import * as repo from "@/server/repo";
 import * as audit from "@/server/audit";
-import { AREA_BY_CODE, LIBRARY_STATUS } from "@/domain/audit";
+import { AREA_BY_CODE, CHECKLIST_BY_CODE, LIBRARY_STATUS } from "@/domain/audit";
 import { ActionForm } from "@/app/action-form";
 import { updateProcedureAction } from "@/app/audit-actions";
 import { EngagementNav } from "../../nav";
@@ -18,7 +18,9 @@ const small = "rounded border border-slate-400 px-2 py-1 text-xs hover:bg-slate-
 
 export default async function ProgrammePage({ params }: { params: Promise<{ id: string; area: string }> }) {
   const { id, area: areaCode } = await params;
-  const area = AREA_BY_CODE.get(areaCode);
+  // The same page serves a fieldwork programme (C areas) and a checklist (A, B, D and E sections).
+  const checklist = CHECKLIST_BY_CODE.get(areaCode);
+  const area = AREA_BY_CODE.get(areaCode) ?? (checklist ? { code: checklist.code, title: checklist.title, objective: "" } : undefined);
   if (!/^[0-9a-f-]{36}$/i.test(id) || !area) notFound();
 
   const session = await getSession();
@@ -44,23 +46,24 @@ export default async function ProgrammePage({ params }: { params: Promise<{ id: 
       <h2 className="mt-2 text-xl font-semibold">
         {area.code} {area.title}
       </h2>
-      <p className="mt-1 text-sm text-slate-700">{area.objective}</p>
+      {area.objective && <p className="mt-1 text-sm text-slate-700">{area.objective}</p>}
+      {checklist?.optional && <p className="mt-1 text-sm text-slate-700">This checklist applies only in some circumstances. Mark its steps not applicable, with the reason, if it does not apply.</p>}
       <p role="note" className="mt-3 rounded border border-amber-400 bg-amber-50 px-3 py-2 text-xs">
         Methodology content: {LIBRARY_STATUS}.
       </p>
 
       {procedures.length === 0 ? (
-        <p className="mt-6 text-sm text-slate-600">No programme is loaded for this area. Assess its risks on the audit planning page.</p>
+        <p className="mt-6 text-sm text-slate-600">{checklist ? "This checklist is loaded when the audit is turned on." : "No programme is loaded for this area. Assess its risks on the audit planning page."}</p>
       ) : (
         <>
           <p className="mt-4 text-sm font-medium">
-            {completed} of {procedures.length} procedures completed
+            {completed} of {procedures.length} {checklist ? "steps" : "procedures"} completed
           </p>
           {procedures.map((p) => (
             <section key={p.id} className={`mt-4 rounded border p-4 ${p.status === "open" ? "border-slate-300" : "border-emerald-300 bg-emerald-50"}`}>
               <div className="flex flex-wrap items-baseline justify-between gap-2">
                 <h3 className="font-semibold">
-                  {p.templateId} <span className="ml-1 text-xs font-normal text-slate-600">{TIER_LABEL[p.tier]} · Assertions: {p.assertions}</span>
+                  {p.templateId} {p.assertions && <span className="ml-1 text-xs font-normal text-slate-600">{TIER_LABEL[p.tier]} · Assertions: {p.assertions}</span>}
                 </h3>
                 <span className="text-sm">
                   {STATUS_LABEL[p.status]}
