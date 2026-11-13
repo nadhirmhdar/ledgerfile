@@ -3,7 +3,7 @@
 -- One explanation per statement line per engagement, replaced when it is edited (the audit log keeps the
 -- earlier wording). It records the current-year and prior-year amounts it was written against, in presentation
 -- sign, so that when the figures later differ the explanation is shown as needing re-confirmation and no longer
--- counts towards the lock.
+-- counts towards the lock. Re-confirming keeps the author and records who confirmed it, and when, separately.
 create table analytical_explanations (
   id uuid primary key default gen_random_uuid(),
   firm_id uuid not null references firms(id),
@@ -14,6 +14,10 @@ create table analytical_explanations (
   prior_minor bigint not null,
   written_by uuid not null references users(id),
   written_at timestamptz not null default clock_timestamp(),
+  -- Set when someone other than the writer, or the writer later, confirms it still holds after the figures changed.
+  confirmed_by uuid references users(id),
+  confirmed_at timestamptz,
+  check ((confirmed_by is null) = (confirmed_at is null)),
   unique (engagement_id, line_key),
   foreign key (firm_id, engagement_id) references engagements (firm_id, id)
 );

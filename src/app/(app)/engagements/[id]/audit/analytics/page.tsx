@@ -26,7 +26,7 @@ function ratioText(value: number | null, unit: RatioRow["unit"]): string {
   if (value === null) return "n/a";
   if (unit === "amount") return formatAmount(Math.round(value));
   if (unit === "percent") return `${value.toFixed(1)}%`;
-  if (unit === "days") return `${value.toFixed(0)} days`;
+  if (unit === "days") return `${value.toFixed(0)} ${Math.round(value) === 1 ? "day" : "days"}`;
   return `${value.toFixed(2)}x`;
 }
 
@@ -58,7 +58,7 @@ export default async function AnalyticsPage({ params }: { params: Promise<{ id: 
       <p className="mt-6 text-sm"><Link href={base} className="text-blue-700 underline">Back to audit planning</Link></p>
       <h2 className="mt-3 text-lg font-semibold">Analytical review and ratios</h2>
       <p className="mt-1 text-sm text-slate-700">
-        Year-on-year movement of every line in the statements, from the adjusted trial balance. Use it at planning to decide where to look, and again at completion to
+        Year-on-year movement of every line in the statements, from the adjusted trial balance. Borrowings are shown as one line here, so each row matches its lead sheet. Use it at planning to decide where to look, and again at completion to
         check the finished statements still make sense.
       </p>
 
@@ -119,7 +119,7 @@ export default async function AnalyticsPage({ params }: { params: Promise<{ id: 
       <section className="mt-10">
         <h3 className="font-semibold">Ratios</h3>
         <p className="mt-1 text-sm text-slate-600">
-          Worked out from the period-end balances in the statements, not from averages. Days use a {DAYS_IN_YEAR}-day year whatever the length of the period. A ratio is n/a when what it
+          Worked out from the period-end balances in the statements as issued (current portion of borrowings split out), not from averages. Days use a {DAYS_IN_YEAR}-day year whatever the length of the period. A ratio is n/a when what it
           divides by is zero or negative, or when the year has no figures.
         </p>
         <div className="mt-2 overflow-x-auto">
@@ -173,7 +173,7 @@ function RowView({ r, id, editable }: { r: AnalyticsRow; id: string; editable: b
             {e && (
               <p className="mt-1">
                 <span className="font-medium">Explanation:</span> {e.text}{" "}
-                <span className="text-xs text-slate-600">{e.writtenByName}, {e.writtenAt}</span>
+                <span className="text-xs text-slate-600">Written by {e.writtenByName} on {e.writtenAt}{e.confirmedByName && `; re-confirmed by ${e.confirmedByName} on ${e.confirmedAt}`}</span>
               </p>
             )}
             {e?.stale && (

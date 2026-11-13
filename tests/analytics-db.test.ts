@@ -99,14 +99,17 @@ describe("analytical review", () => {
     await expect(as(rev, (tx) => analytics.reconfirmExplanation(tx, rev, engagement, "TRADEREC"))).rejects.toThrow(/does not need/);
 
     await as(prep, (tx) => analytics.reconfirmExplanation(tx, prep, engagement, "REVENUE"));
-    expect((await data()).rows.find((r) => r.key === "REVENUE")!.explanation).toMatchObject({ stale: false, writtenByName: "preparer 1" });
+    // The author is kept; the re-confirmation is recorded separately.
+    expect((await data()).rows.find((r) => r.key === "REVENUE")!.explanation).toMatchObject({ stale: false, writtenByName: "reviewer 2", confirmedByName: "preparer 1" });
+    expect((await data()).rows.find((r) => r.key === "CASH")!.explanation).toMatchObject({ confirmedByName: null, confirmedAt: null });
     expect(await blocker()).toBeUndefined();
 
-    // A rewrite also settles it.
+    // A rewrite also settles it, and clears the earlier re-confirmation.
     await db.query("update accounts set closing_minor = -120000000 where engagement_id = $1 and code = '4000'", [engagement]);
     expect(await blocker()).toContain("1 significant");
     await explain(rev, "REVENUE", "Further growth from the new contracts, agreed to invoices.");
     expect(await blocker()).toBeUndefined();
+    expect((await data()).rows.find((r) => r.key === "REVENUE")!.explanation).toMatchObject({ writtenByName: "reviewer 2", confirmedByName: null });
   });
 
   it("logs every write", async () => {
@@ -151,5 +154,28 @@ describe("analytical review", () => {
     expect(d.editable).toBe(false);
     expect(d.rows.find((r) => r.key === "CASH")!.explanation).not.toBeNull();
     await db.query("update engagements set status = 'open' where id = $1", [engagement]);
+  });
+
+  it("works out the ratios from the statements as issued, with the current portion of borrowings split out", async () => {
+    const loan = [...TB.map((a) => (a.code === "1000" ? { ...a, closingMinor: 80_000_000, priorMinor: 50_000_000 } : a)), { code: "2100", name: "Bank loan", closingMinor: -30_000_000, priorMinor: -30_000_000 }];
+    const id = await newEngagement(loan, true);
+    const ratios = async () => Object.fromEntries((await as(prep, (tx) => analytics.getAnalytics(tx, id)))!.ratios.map((r) => [r.key, r]));
+    const before = await ratios();
+    expect(before.WORKCAP.current).toBe(100_000_000);
+    expect(before.DEBTEQ.current).not.toBeNull();
+
+    await as(partner, (tx) => repo.setBorrowingsCurrent(tx, partner, id, 12_000_000, 10_000_000));
+    const after = await ratios();
+    // Current liabilities now include the current portion, as in the issued statements.
+    expect(after.WORKCAP.current).toBe(100_000_000 - 12_000_000);
+    expect(after.WORKCAP.prior).toBe(69_900_000 - 10_000_000);
+    expect(after.CURRENT.current).toBeCloseTo(100_000_000 / 12_000_000, 6);
+    expect(after.QUICK.current).toBeCloseTo(100_000_000 / 12_000_000, 6);
+    // Total debt is the same however it is split.
+    expect(after.DEBTEQ.current).toBeCloseTo(before.DEBTEQ.current!, 10);
+    expect(after.DEBTEQ.prior).toBeCloseTo(before.DEBTEQ.prior!, 10);
+    // The comparison rows stay on the lead-sheet groups, so borrowings is still one row at its full amount.
+    const rows = (await as(prep, (tx) => analytics.getAnalytics(tx, id)))!.rows;
+    expect(rows.filter((r) => r.key.startsWith("BORROW")).map((r) => [r.key, r.current])).toEqual([["BORROW", 30_000_000]]);
   });
 });

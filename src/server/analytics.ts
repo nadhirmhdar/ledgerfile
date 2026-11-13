@@ -8,6 +8,9 @@ export interface ExplanationView {
   text: string;
   writtenByName: string;
   writtenAt: string;
+  /** Who confirmed it still holds after the figures changed, and when; null if no one has. The author is kept. */
+  confirmedByName: string | null;
+  confirmedAt: string | null;
   /** The figures have changed since it was written, so it must be re-confirmed or rewritten. */
   stale: boolean;
 }
@@ -36,11 +39,20 @@ interface StoredExplanation {
   priorMinor: number;
   writtenByName: string;
   writtenAt: string;
+  confirmedByName: string | null;
+  confirmedAt: string | null;
 }
 
 async function load(tx: Tx, engagementId: string) {
   const accounts = (await listAccounts(tx, engagementId)).map((a) => ({ ...a, closingMinor: a.closingMinor + a.adjustmentMinor }));
+  // The comparison uses the statements without the current/non-current split of borrowings, so each row matches its
+  // lead-sheet group. The ratios use the statements as issued, with the split, so they agree with them.
   const statements = buildStatements(accounts);
+  const split = await tx.query<{ current: number; prior: number }>(
+    'select borrowings_current_minor::float8 as current, borrowings_current_prior_minor::float8 as prior from engagements where id = $1',
+    [engagementId],
+  );
+  const issued = buildStatements(accounts, { borrowingsCurrent: { current: split.rows[0]?.current ?? 0, prior: split.rows[0]?.prior ?? 0 } });
   const mat = await tx.query<Thresholds>(
     `select performance_minor::float8 as "performanceMinor", trivial_minor::float8 as "trivialMinor" from materiality
      where engagement_id = $1 order by created_at desc, id desc limit 1`,
@@ -49,23 +61,24 @@ async function load(tx: Tx, engagementId: string) {
   const thresholds = mat.rows[0] ?? null;
   const stored = await tx.query<StoredExplanation>(
     `select e.line_key as "lineKey", e.explanation as text, e.current_minor::float8 as "currentMinor", e.prior_minor::float8 as "priorMinor",
-            u.name as "writtenByName", to_char(e.written_at, 'YYYY-MM-DD') as "writtenAt"
-     from analytical_explanations e join users u on u.id = e.written_by where e.engagement_id = $1`,
+            u.name as "writtenByName", to_char(e.written_at, 'YYYY-MM-DD') as "writtenAt",
+            c.name as "confirmedByName", to_char(e.confirmed_at, 'YYYY-MM-DD') as "confirmedAt"
+     from analytical_explanations e join users u on u.id = e.written_by left join users c on c.id = e.confirmed_by where e.engagement_id = $1`,
     [engagementId],
   );
-  return { statements, thresholds, rows: compareYears(statements, thresholds), stored: stored.rows };
+  return { statements, issued, thresholds, rows: compareYears(statements, thresholds), stored: stored.rows };
 }
 
 export async function getAnalytics(tx: Tx, engagementId: string): Promise<Analytics | null> {
   const engagement = await getEngagement(tx, engagementId);
   if (!engagement) return null;
-  const { statements, thresholds, rows, stored } = await load(tx, engagementId);
+  const { statements, issued, thresholds, rows, stored } = await load(tx, engagementId);
   const on = await tx.query<{ on: boolean }>('select audit_enabled as "on" from engagements where id = $1', [engagementId]);
   const auditOn = on.rows[0]?.on ?? false;
 
   const merged: AnalyticsRow[] = rows.map((r) => {
     const e = stored.find((x) => x.lineKey === r.key);
-    return { ...r, explanation: e ? { text: e.text, writtenByName: e.writtenByName, writtenAt: e.writtenAt, stale: !explanationStands(e, r) } : null };
+    return { ...r, explanation: e ? { text: e.text, writtenByName: e.writtenByName, writtenAt: e.writtenAt, confirmedByName: e.confirmedByName, confirmedAt: e.confirmedAt, stale: !explanationStands(e, r) } : null };
   });
   return {
     editable: engagement.status === "open" && auditOn,
@@ -73,7 +86,7 @@ export async function getAnalytics(tx: Tx, engagementId: string): Promise<Analyt
     hasComparatives: statements.hasComparatives,
     thresholds,
     rows: merged,
-    ratios: computeRatios(statements),
+    ratios: computeRatios(issued),
     unexplained: merged.filter((r) => r.flag && (!r.explanation || r.explanation.stale)).length,
   };
 }
@@ -97,7 +110,7 @@ export async function saveExplanation(tx: Tx, s: Session, engagementId: string, 
      values ($1, $2, $3, $4, $5, $6, $7)
      on conflict (engagement_id, line_key) do update
        set explanation = excluded.explanation, current_minor = excluded.current_minor, prior_minor = excluded.prior_minor,
-           written_by = excluded.written_by, written_at = clock_timestamp()`,
+           written_by = excluded.written_by, written_at = clock_timestamp(), confirmed_by = null, confirmed_at = null`,
     [s.firmId, engagementId, lineKey, explanation, row.current, row.prior, s.userId],
   );
   await log(tx, s, "analytical_explain", "engagement", engagementId, { line: lineKey, currentMinor: row.current, priorMinor: row.prior });
@@ -110,7 +123,7 @@ export async function reconfirmExplanation(tx: Tx, s: Session, engagementId: str
   if (!existing) throw new Error("There is no explanation to re-confirm.");
   if (explanationStands(existing, row)) throw new Error("This explanation already matches the current figures.");
   await tx.query(
-    "update analytical_explanations set current_minor = $3, prior_minor = $4, written_by = $5, written_at = clock_timestamp() where engagement_id = $1 and line_key = $2",
+    "update analytical_explanations set current_minor = $3, prior_minor = $4, confirmed_by = $5, confirmed_at = clock_timestamp() where engagement_id = $1 and line_key = $2",
     [engagementId, lineKey, row.current, row.prior, s.userId],
   );
   await log(tx, s, "analytical_reconfirm", "engagement", engagementId, { line: lineKey, currentMinor: row.current, priorMinor: row.prior, was: { currentMinor: existing.currentMinor, priorMinor: existing.priorMinor } });

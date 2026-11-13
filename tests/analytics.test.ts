@@ -167,6 +167,22 @@ describe("computeRatios", () => {
     expect(negative.DEBTEQ.current).toBeNull();
   });
 
+  it("measures current liabilities and debt on the statements as issued, with borrowings split", () => {
+    const accounts = [acct("CASH", 60_000_00, 40_000_00), acct("BORROW", -30_000_00, -20_000_00), acct("TRADEPAY", -10_000_00, -10_000_00), acct("CAPITAL", -20_000_00, -10_000_00)];
+    const plain = Object.fromEntries(computeRatios(buildStatements(accounts)).map((r) => [r.key, r]));
+    const split = Object.fromEntries(computeRatios(buildStatements(accounts, { borrowingsCurrent: { current: 8_000_00, prior: 5_000_00 } })).map((r) => [r.key, r]));
+    expect(plain.WORKCAP.current).toBe(50_000_00);
+    expect(split.WORKCAP.current).toBe(60_000_00 - 18_000_00);
+    expect(split.WORKCAP.prior).toBe(40_000_00 - 15_000_00);
+    expect(split.CURRENT.current).toBeCloseTo(60 / 18, 6);
+    // Total debt does not depend on the split.
+    expect(split.DEBTEQ.current).toBeCloseTo(plain.DEBTEQ.current!, 10);
+    expect(split.DEBTEQ.prior).toBeCloseTo(plain.DEBTEQ.prior!, 10);
+    // A split of all the borrowings leaves the non-current line empty, and debt is still the whole.
+    const all = Object.fromEntries(computeRatios(buildStatements(accounts, { borrowingsCurrent: { current: 30_000_00, prior: 20_000_00 } })).map((r) => [r.key, r]));
+    expect(all.DEBTEQ.current).toBeCloseTo(plain.DEBTEQ.current!, 10);
+  });
+
   it("is n/a for the prior year when there is none, and working capital is n/a when there are no current items", () => {
     const noPrior = ratios(full.map((a) => ({ ...a, priorMinor: null })));
     expect(noPrior.CURRENT.current).not.toBeNull();

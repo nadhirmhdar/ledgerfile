@@ -173,7 +173,8 @@ function balances(statements: Statements, year: "current" | "prior"): Balances {
     inventories: get("INVENT"),
     receivables: get("TRADEREC"),
     payables: get("TRADEPAY"),
-    borrowings: get("BORROW"),
+    // Total borrowings, whichever way the statements split them between current and non-current.
+    borrowings: get("BORROW") + get("BORROW_CUR"),
     equity: get("TOTAL_EQUITY"),
     revenue: get("REVENUE"),
     costOfSales: get("COS"),
