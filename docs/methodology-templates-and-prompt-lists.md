@@ -145,6 +145,8 @@ We give you this letter in connection with your audit of the financial statement
 **[If the Company depends on owner or related-party support]**
 19. {Supporter name} has confirmed that it will provide the financial support the Company needs for at least twelve months from the date of approval of the financial statements, and we are satisfied that it is able to do so.
 
+**Specific matters**
+
 **[If inventory is material]**
 20. Inventories are stated at the lower of cost and {the framework's measure}. Adequate allowance has been made for slow-moving, damaged and obsolete items. Goods held on behalf of others are excluded.
 

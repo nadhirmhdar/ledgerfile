@@ -70,6 +70,9 @@ export default async function AuditPage({ params }: { params: Promise<{ id: stri
 
           {overview.enabled && (
           <>
+          <p className="mt-4 text-sm">
+            <Link href={`/engagements/${id}/audit/letters`} className="text-blue-700 underline">Engagement letter and representation letter</Link>
+          </p>
           <section className="mt-8">
             <h2 className="text-lg font-semibold">Materiality</h2>
             {m ? (
