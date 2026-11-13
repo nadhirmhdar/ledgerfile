@@ -110,6 +110,33 @@ export async function setMisstatementCorrectedAction(_prev: FormState, form: For
   );
 }
 
+export async function reviewProcedureAction(_prev: FormState, form: FormData): Promise<FormState> {
+  const procedureId = field(form, "procedureId");
+  if (!UUID.test(procedureId)) return { ok: false, message: "Procedure not found." };
+  const withdraw = field(form, "withdraw") === "true";
+  let engagementId = "";
+  return run(
+    () => (withdraw ? "Review withdrawn." : "Reviewed."),
+    async (tx, session) => {
+      engagementId = withdraw ? await audit.unreviewProcedure(tx, session, procedureId) : await audit.reviewProcedure(tx, session, procedureId);
+    },
+    () => engagementId,
+  );
+}
+
+export async function reviewAreaAction(_prev: FormState, form: FormData): Promise<FormState> {
+  const engagementId = field(form, "engagementId");
+  if (!UUID.test(engagementId)) return { ok: false, message: "Engagement not found." };
+  return run(
+    (r) => {
+      const { reviewed, skipped } = r as { reviewed: number; skipped: number };
+      return `Reviewed ${reviewed}.${skipped > 0 ? ` Skipped ${skipped} you did yourself: another reviewer needs to review those.` : ""}`;
+    },
+    (tx, session) => audit.reviewArea(tx, session, engagementId, field(form, "areaCode")),
+    () => engagementId,
+  );
+}
+
 export async function updateProcedureAction(_prev: FormState, form: FormData): Promise<FormState> {
   const procedureId = field(form, "procedureId");
   if (!UUID.test(procedureId)) return { ok: false, message: "Procedure not found." };

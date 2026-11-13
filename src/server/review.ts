@@ -1,5 +1,5 @@
 import type { Tx } from "./db";
-import { audit, getEngagement, listAccounts } from "./repo";
+import { audit, getEngagement, isSolePractitioner, listAccounts } from "./repo";
 import { getAuditOverview } from "./audit";
 import { buildLeadSheets } from "../domain/leadsheet";
 import { buildStatements } from "../domain/statements";
@@ -88,9 +88,7 @@ export async function getOverview(tx: Tx, engagementId: string): Promise<ReviewO
     [engagementId],
   );
 
-  // Deactivated users count too: otherwise an administrator could deactivate a colleague,
-  // review their own work, and reactivate the colleague afterwards.
-  const users = await tx.query<{ n: number }>("select count(*)::int as n from users");
+  const solePractitioner = await isSolePractitioner(tx);
 
   const find = (target: string, level: Level) => {
     const s = signOffs.rows.find((r) => r.target === target && r.level === level);
@@ -114,7 +112,7 @@ export async function getOverview(tx: Tx, engagementId: string): Promise<ReviewO
     status: lock.rows[0].status,
     lockedByName: lock.rows[0].lockedByName,
     lockedAt: lock.rows[0].lockedAt,
-    solePractitioner: users.rows[0].n === 1,
+    solePractitioner,
     leadSheets,
     points: points.rows.map((p) => ({ ...p, targetName: targetName(p.target) })),
     readiness: lockReadiness({
