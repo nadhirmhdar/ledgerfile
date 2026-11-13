@@ -15,6 +15,7 @@ This repository holds the first slice of the MVP: trial balance to lead sheets.
 - Adjusting and reclassification journal entries, with numbers that are never reused. Entries flow through to lead sheets and statements.
 - A full set of financial statements with comparatives: financial position, comprehensive income, changes in equity, cash flows (derived, indirect method) and notes with a breakdown of each line. Borrowings can be split between current and non-current. Optional rounding to whole units, drill-down to lead sheets, checks that must pass before the statements are clean, and download as a Word document.
 - Audit (first slice): a materiality calculator with revision history, risk assessment by area and assertion, and audit programmes loaded from the methodology library according to the risks assessed. Checklists for acceptance, planning, completion and reporting load when the audit is turned on, and a summary of misstatements is compared with materiality. Each procedure records work done and a conclusion, and unfinished audit work holds up the lock. **The methodology content is an unreviewed AI draft** and says so on screen.
+- Journal entry testing: import the client's journal listing (up to 50,000 lines), check it is complete against the trial balance, flag entries with risk characteristics (period end, weekends, round amounts, no description, unusual revenue pairings, seldom-used or unknown accounts), then select entries and record the work and conclusion on each.
 - Working papers: upload evidence files (up to 10 MB, common document types) against the engagement, a lead sheet or an audit procedure; download and removal are permission-checked and logged, and a file changed on disk is refused. A sample-size calculator sits on each fieldwork programme.
 - Review and sign-off: preparer and reviewer sign-off per lead sheet (different people, except in a firm that has only ever had one user), review points that must be cleared, automatic removal of a sign-off when its figures change, and partner lock and unlock.
 - Role restrictions: only a partner-level user adds clients, only a reviewer or above opens engagements, and a journal can be deleted by its author or a reviewer. Everyone can do the day-to-day engagement work.
@@ -23,13 +24,13 @@ This repository holds the first slice of the MVP: trial balance to lead sheets.
 
 ## Not built yet
 
-Password reset by email and email verification, PDF export, the rest of the audit engine (modified opinions, auditor's report), journal listing import, and AI features.
+Password reset by email and email verification, PDF export, the rest of the audit engine (modified opinions, auditor's report), and AI features.
 
 ## Run it
 
 ```bash
 npm install
-npm run sample   # writes synthetic trial balances to samples/
+npm run sample   # writes synthetic trial balances and a journal listing to samples/
 npm run seed     # optional: creates a demo firm and sample client (run while the dev server is stopped)
 npm run dev      # http://localhost:3000
 ```

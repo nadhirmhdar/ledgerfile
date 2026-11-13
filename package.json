@@ -9,7 +9,7 @@
     "lint": "eslint",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "sample": "node scripts/make-sample-tb.mjs",
+    "sample": "node scripts/make-sample-tb.mjs && node scripts/make-sample-journals.mjs",
     "seed": "tsx --env-file-if-exists=.env.local scripts/seed-demo.mts",
     "sample:statements": "tsx scripts/sample-statements.mts",
     "methodology": "tsx scripts/build-methodology.mts"

@@ -17,13 +17,13 @@ function plain(value: ExcelJS.CellValue): unknown {
 }
 
 /** Read the first worksheet of an .xlsx file, or a .csv file, into a grid of cells. */
-export async function readGrid(fileName: string, data: ArrayBuffer): Promise<unknown[][]> {
+export async function readGrid(fileName: string, data: ArrayBuffer, maxRows: number = MAX_ROWS): Promise<unknown[][]> {
   if (data.byteLength === 0) throw new Error("The file is empty.");
   if (data.byteLength > MAX_BYTES) throw new Error("The file is larger than 10 MB.");
   const lower = fileName.toLowerCase();
 
   if (lower.endsWith(".csv")) {
-    return parseCsv(new TextDecoder("utf-8").decode(data)).slice(0, MAX_ROWS);
+    return parseCsv(new TextDecoder("utf-8").decode(data)).slice(0, maxRows);
   }
   if (lower.endsWith(".xls")) {
     throw new Error("Old-format .xls files are not supported. Save the file as .xlsx or .csv and upload it again.");
@@ -43,7 +43,7 @@ export async function readGrid(fileName: string, data: ArrayBuffer): Promise<unk
 
   const grid: unknown[][] = [];
   const columns = Math.min(sheet.columnCount, 50);
-  const last = Math.min(sheet.rowCount, MAX_ROWS);
+  const last = Math.min(sheet.rowCount, maxRows);
   for (let r = 1; r <= last; r++) {
     const row = sheet.getRow(r);
     const cells: unknown[] = [];

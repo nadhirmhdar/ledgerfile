@@ -175,7 +175,10 @@ export default async function AuditPage({ params }: { params: Promise<{ id: stri
 
                 {area.fixedRisk ? (
                   <div className="mt-3 text-sm">
-                    <p>Treated as a significant risk on every audit, so there is nothing to rate.</p>
+                    <p>
+                      Treated as a significant risk on every audit, so there is nothing to rate.{" "}
+                      <Link href={`/engagements/${id}/audit/journals`} className="text-blue-700 underline">Import the journal listing and select entries to test</Link>.
+                    </p>
                     {open && reviewer && area.procedures === 0 && (
                       <ActionForm action={setAreaRisksAction} fields={{ engagementId: id, areaCode: area.code }} className="mt-2">
                         <button className={small}>Load programme</button>
