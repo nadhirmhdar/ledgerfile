@@ -79,6 +79,8 @@ export interface ScheduleView {
   /** The engagement is open, the audit is on and the schedule has not been reviewed. */
   editable: boolean;
   reviewed: boolean;
+  /** The audit is on for the engagement. */
+  auditOn: boolean;
   /** Files uploaded to this engagement that a line can cite as evidence. */
   files: { id: string; fileName: string }[];
 }
@@ -304,6 +306,7 @@ export async function getSchedule(tx: Tx, scheduleId: string): Promise<ScheduleV
     coverage: coverage(lines.rows, thresholdMinor),
     editable: n.status === "open" && n.on && !r.reviewedBy,
     reviewed: !!r.reviewedBy,
+    auditOn: n.on,
     files: files.rows,
   };
 }
