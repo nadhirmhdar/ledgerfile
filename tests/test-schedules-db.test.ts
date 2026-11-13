@@ -253,6 +253,13 @@ describe("test schedules", () => {
     expect(await as(me, (tx) => schedules.getSchedule(tx, id))).toMatchObject({ reviewed: true, selfReviewed: true, reviewedByName: "partner" });
     const logged = await db.query("select detail from audit_log where entity_id = $1 and action = 'schedule_review'", [id]);
     expect((logged.rows[0] as { detail: { selfReview: boolean } }).detail.selfReview).toBe(true);
+    // Work done by the sole reviewer-level user and concluded by someone else is still labelled a self-review.
+    const second = await as(me, (tx) => schedules.createSchedule(tx, me, eng, { areaCode: "C5", groupCode: "TRADEREC", title: "Shared schedule", fromTrialBalance: true }));
+    const line = (await as(me, (tx) => schedules.getSchedule(tx, second)))!.lines[0];
+    await as(me, (tx) => schedules.saveLines(tx, me, second, { rows: [{ id: line.id, description: line.description, amountMinor: line.amountMinor, tested: true }] }));
+    await as(helper, (tx) => schedules.updateHeader(tx, helper, second, { title: "Shared schedule", objective: "", workDone: "Checked.", conclusion: "Fine.", explanation: "", threshold: "performance" }));
+    await as(me, (tx) => schedules.reviewSchedule(tx, me, second));
+    expect(await as(me, (tx) => schedules.getSchedule(tx, second))).toMatchObject({ reviewed: true, selfReviewed: true, preparedByName: "preparer" });
     // Material is not set in this firm, so nothing is a key item.
     expect((await as(me, (tx) => schedules.getSchedule(tx, id)))!.coverage.keyItems).toBe(0);
   });
@@ -266,6 +273,81 @@ describe("test schedules", () => {
     expect((await view(id)).thresholdMinor).toBe(375_000);
     expect((await view(id)).coverage.keyItems).toBe(2);
     await expect(header(prep, id, { title: "Key items", threshold: "bogus" })).rejects.toThrow(/Choose a threshold/);
+  });
+
+  it("does not let a reviewer do the line testing and then review it because someone else typed the conclusion", async () => {
+    const id = await create(prep, { areaCode: "C8", groupCode: "TRADEPAY", title: "Sidestep check" });
+    const line = (await view(id)).lines[0];
+    // The reviewer ticks the line and attaches nothing else; the preparer writes the conclusion.
+    await as(rev, (tx) => schedules.saveLines(tx, rev, id, { rows: [{ id: line.id, description: line.description, amountMinor: line.amountMinor, tested: true, tickmarks: ["doc"] }] }));
+    await conclude(prep, id);
+    const v = await view(id);
+    expect(v.preparedByName).toBe("preparer 1");
+    await expect(as(rev, (tx) => schedules.reviewSchedule(tx, rev, id))).rejects.toThrow(/different person/);
+    // The preparer wrote the conclusion and the reviewer ticked the lines: a second reviewer, who only read it, may review.
+    await as(rev2, (tx) => schedules.reviewSchedule(tx, rev2, id));
+    expect(await view(id)).toMatchObject({ reviewed: true, selfReviewed: false, reviewedByName: "reviewer 3" });
+  });
+
+  it("counts an import or a change to the work done as doing the work, but not a change of title", async () => {
+    const a = await create(prep, { areaCode: "C8", groupCode: "TRADEPAY", title: "Import check" });
+    await as(rev, (tx) => schedules.importLines(tx, rev, a, [{ description: "Supplier Q", docRef: null, amountMinor: 1_00 }], "append"));
+    await conclude(prep, a);
+    await expect(as(rev, (tx) => schedules.reviewSchedule(tx, rev, a))).rejects.toThrow(/different person/);
+
+    const b = await create(prep, { areaCode: "C8", groupCode: "TRADEPAY", title: "Work done check" });
+    await conclude(prep, b);
+    await header(rev, b, { title: "Renamed by the reviewer", workDone: "Agreed the listing to the ledger.", conclusion: "Receivables are fairly stated." });
+    // Only the title changed, so the reviewer did none of the work.
+    await as(rev, (tx) => schedules.reviewSchedule(tx, rev, b));
+    await as(rev2, (tx) => schedules.unreviewSchedule(tx, rev2, b));
+    await header(rev, b, { title: "Renamed by the reviewer", workDone: "Also agreed the listing to the statements.", conclusion: "Receivables are fairly stated." });
+    await expect(as(rev, (tx) => schedules.reviewSchedule(tx, rev, b))).rejects.toThrow(/different person/);
+  });
+
+  it("lets anyone delete a schedule with no conclusion, but only a reviewer one that has a conclusion", async () => {
+    const empty = await create(prep, { areaCode: "C8", groupCode: "TRADEPAY", title: "Nothing concluded" });
+    await as(prep, (tx) => schedules.deleteSchedule(tx, prep, empty));
+    expect(await as(prep, (tx) => schedules.getSchedule(tx, empty))).toBeNull();
+
+    const done = await create(prep, { areaCode: "C8", groupCode: "TRADEPAY", title: "Concluded work" });
+    await conclude(rev, done);
+    const reference = (await view(done)).reference;
+    await expect(as(prep, (tx) => schedules.deleteSchedule(tx, prep, done))).rejects.toThrow(/Only a reviewer or partner can delete a schedule that has a conclusion/);
+    expect(await as(prep, (tx) => schedules.getSchedule(tx, done))).not.toBeNull();
+    await as(rev2, (tx) => schedules.deleteSchedule(tx, rev2, done));
+    expect(await as(prep, (tx) => schedules.getSchedule(tx, done))).toBeNull();
+    // The reference of a deleted last schedule is used again, as the code says.
+    const again = await create(prep, { areaCode: "C8", groupCode: "TRADEPAY", title: "Numbered again" });
+    expect((await view(again)).reference).toBe(reference);
+  });
+
+  it("warns about key items not tested, without stopping the review, and records the count in the log", async () => {
+    const id = await create(prep, { fromTrialBalance: false, groupCode: null, title: "Untested key items" });
+    await as(prep, (tx) => schedules.saveLines(tx, prep, id, { rows: [lineRow("Big, untested", 800_000), lineRow("Big, tested", 900_000, { tested: true }), lineRow("Small", 1_000)] }));
+    await conclude(prep, id);
+    const listed = (await as(prep, (tx) => schedules.listSchedules(tx, engagement, "C5"))).find((s) => s.id === id)!;
+    expect(listed.untestedKeyItems).toBe(1);
+    expect((await view(id)).coverage).toMatchObject({ keyItems: 2, keyItemsTested: 1 });
+    await as(rev2, (tx) => schedules.reviewSchedule(tx, rev2, id));
+    const logged = await db.query("select detail from audit_log where entity_id = $1 and action = 'schedule_review'", [id]);
+    expect((logged.rows[0] as { detail: { untestedKeyItems: number } }).detail.untestedKeyItems).toBe(1);
+    // Once the key item is ticked, there is nothing to warn about.
+    await as(rev, (tx) => schedules.unreviewSchedule(tx, rev, id));
+    const first = (await view(id)).lines[0];
+    await as(prep, (tx) => schedules.saveLines(tx, prep, id, { rows: [{ id: first.id, description: first.description, amountMinor: first.amountMinor, tested: true }] }));
+    expect((await as(prep, (tx) => schedules.listSchedules(tx, engagement, "C5"))).find((s) => s.id === id)!.untestedKeyItems).toBe(0);
+  });
+
+  it("counts an analytical review explanation as recorded work, so the audit cannot be turned off", async () => {
+    const fresh = await make(partner, true, true);
+    await as(partner, (tx) => audit.setAuditEnabled(tx, partner, fresh, false));
+    await as(partner, (tx) => audit.setAuditEnabled(tx, partner, fresh, true));
+    await db.query(
+      "insert into analytical_explanations (firm_id, engagement_id, line_key, explanation, current_minor, prior_minor, written_by) values ($1, $2, 'CASH', 'Explained.', 1, 0, $3)",
+      [FIRM, fresh, prep.userId],
+    );
+    await expect(as(partner, (tx) => audit.setAuditEnabled(tx, partner, fresh, false))).rejects.toThrow(/cannot be turned off/);
   });
 
   it("cannot be seen or changed by another firm", async () => {

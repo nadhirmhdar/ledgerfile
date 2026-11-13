@@ -44,6 +44,8 @@ export interface ScheduleSummary {
   hasConclusion: boolean;
   reviewed: boolean;
   selfReviewed: boolean;
+  /** Lines at or above the key-item threshold not marked tested. A warning, not a blocker. */
+  untestedKeyItems: number;
   /** Still needs a conclusion, a review or an explanation of a difference. */
   toFinish: boolean;
 }
@@ -98,11 +100,34 @@ interface Row {
   explanation: string | null;
   threshold: ThresholdCode;
   preparedBy: string | null;
+  contributors: string[];
   reviewedBy: string | null;
 }
 
 const COLUMNS = `s.id, s.engagement_id as "engagementId", s.area_code as "areaCode", s.group_code as "groupCode", s.reference, s.title, s.objective,
-  s.work_done as "workDone", s.conclusion, s.explanation_of_difference as explanation, s.threshold, s.prepared_by as "preparedBy", s.reviewed_by as "reviewedBy"`;
+  s.work_done as "workDone", s.conclusion, s.explanation_of_difference as explanation, s.threshold, s.prepared_by as "preparedBy", s.contributors, s.reviewed_by as "reviewedBy"`;
+
+/** Everyone whose work a reviewer must not be: who recorded the conclusion and everyone who changed the schedule. */
+const workedBy = (r: Pick<Row, "preparedBy" | "contributors">): string[] => [...new Set([r.preparedBy, ...r.contributors].filter((x): x is string => !!x))];
+/** The reviewer did some of the work (possible only where the firm has no other reviewer). */
+const selfReviewedBy = (r: Pick<Row, "preparedBy" | "contributors" | "reviewedBy">): boolean => !!r.reviewedBy && workedBy(r).includes(r.reviewedBy);
+
+/** Record that this user changed the schedule's substance. */
+async function touch(tx: Tx, scheduleId: string, userId: string) {
+  await tx.query("update test_schedules set contributors = case when $2::uuid = any(contributors) then contributors else array_append(contributors, $2::uuid) end where id = $1", [scheduleId, userId]);
+}
+
+/** Lines at or above the chosen threshold that are not marked tested. Zero when materiality has not been set. */
+async function untestedKeyItems(tx: Tx, row: Pick<Row, "id" | "engagementId" | "threshold">): Promise<number> {
+  const m = await tx.query<{ overallMinor: number; performanceMinor: number }>(
+    'select overall_minor::float8 as "overallMinor", performance_minor::float8 as "performanceMinor" from materiality where engagement_id = $1 order by created_at desc, id desc limit 1',
+    [row.engagementId],
+  );
+  const threshold = thresholdAmount(m.rows[0] ?? null, row.threshold);
+  if (threshold <= 0) return 0;
+  const { rows } = await tx.query<{ n: number }>("select count(*)::int as n from test_schedule_lines where schedule_id = $1 and not tested and abs(amount_minor) >= $2", [row.id, threshold]);
+  return rows[0].n;
+}
 
 async function load(tx: Tx, scheduleId: string): Promise<Row> {
   const { rows } = await tx.query<Row>(`select ${COLUMNS} from test_schedules s where s.id::text = $1`, [scheduleId]);
@@ -229,7 +254,7 @@ export async function listSchedules(tx: Tx, engagementId: string, areaCode: stri
     [engagementId, areaCode],
   );
   const accounts = rows.some((r) => r.groupCode) ? await adjustedAccounts(tx, engagementId) : [];
-  return rows.map((r) => {
+  return Promise.all(rows.map(async (r) => {
     const balanceMinor = r.groupCode ? presentationBalance(accounts, r.groupCode) : null;
     const state = { reference: r.reference, hasConclusion: !!r.conclusion?.trim(), reviewed: !!r.reviewedBy, balanceMinor, totalMinor: r.total, explanation: r.explanation };
     return {
@@ -242,10 +267,11 @@ export async function listSchedules(tx: Tx, engagementId: string, areaCode: stri
       differenceMinor: balanceMinor === null ? null : difference(r.total, balanceMinor),
       hasConclusion: state.hasConclusion,
       reviewed: state.reviewed,
-      selfReviewed: !!r.reviewedBy && r.reviewedBy === r.preparedBy,
+      selfReviewed: selfReviewedBy(r),
+      untestedKeyItems: await untestedKeyItems(tx, r),
       toFinish: needsFinishing(state),
     };
-  });
+  }));
 }
 
 export async function getSchedule(tx: Tx, scheduleId: string): Promise<ScheduleView | null> {
@@ -295,7 +321,7 @@ export async function getSchedule(tx: Tx, scheduleId: string): Promise<ScheduleV
     preparedAt: n.preparedAt,
     reviewedByName: n.reviewer,
     reviewedAt: n.reviewedAt,
-    selfReviewed: !!r.reviewedBy && r.reviewedBy === r.preparedBy,
+    selfReviewed: selfReviewedBy(r),
     lines: lines.rows,
     totalMinor,
     balanceMinor,
@@ -327,6 +353,8 @@ export async function updateHeader(
   const conclusion = clean(input.conclusion, 5000, "The conclusion");
   const explanation = clean(input.explanation, 3000, "The explanation of the difference");
   // Whoever records the conclusion is the preparer a reviewer must differ from. Saving the same conclusion again keeps them.
+  // Changing the work done, the conclusion or the explanation of a difference is a change of substance; the title, objective and threshold are not.
+  const substance = workDone !== row.workDone || conclusion !== row.conclusion || explanation !== row.explanation;
   const newlyConcluded = conclusion !== null && (conclusion !== row.conclusion || row.preparedBy === null);
   await tx.query(
     `update test_schedules set title = $2, objective = $3, work_done = $4, conclusion = $5, explanation_of_difference = $6, threshold = $7,
@@ -335,6 +363,7 @@ export async function updateHeader(
      where id = $1`,
     [scheduleId, title, objective, workDone, conclusion, explanation, input.threshold, s.userId, newlyConcluded],
   );
+  if (substance) await touch(tx, scheduleId, s.userId);
   await log(tx, s, "update", "test_schedule", scheduleId, { engagementId: row.engagementId, reference: row.reference, concluded: conclusion !== null });
   return row.engagementId;
 }
@@ -379,6 +408,7 @@ export async function saveLines(
       if (done.rows.length === 0) throw new Error("A line you changed is no longer on this schedule. Reload the page.");
     }
   }
+  await touch(tx, scheduleId, s.userId);
   await log(tx, s, "save_lines", "test_schedule", scheduleId, { engagementId: row.engagementId, reference: row.reference, saved: checked.length, removed });
   return { saved: checked.length, removed };
 }
@@ -399,19 +429,25 @@ export async function importLines(tx: Tx, s: Session, scheduleId: string, lines:
     position++;
     await tx.query("insert into test_schedule_lines (firm_id, schedule_id, position, description, doc_ref, amount_minor) values ($1, $2, $3, $4, $5, $6)", [s.firmId, scheduleId, position, l.description, l.docRef, l.amountMinor]);
   }
+  await touch(tx, scheduleId, s.userId);
   await log(tx, s, "import_lines", "test_schedule", scheduleId, { engagementId: row.engagementId, reference: row.reference, imported: checked.length, replaced, mode });
   return { imported: checked.length, replaced };
 }
 
-/** Sign off a schedule that has a conclusion. The shared review rule applies: a different person unless the firm has no other reviewer. */
+/**
+ * Sign off a schedule that has a conclusion. The shared review rule applies to everyone who did the work (the conclusion's writer
+ * and anyone who changed the lines or the work done): a different person from all of them, unless the firm has no other reviewer.
+ * Key items not marked tested do not stop it, but are recorded in the log and shown on the page.
+ */
 export async function reviewSchedule(tx: Tx, s: Session, scheduleId: string): Promise<string> {
   const row = await load(tx, scheduleId);
   await requireAudit(tx, row.engagementId);
-  const { selfReview } = await assertMayReview(tx, s, row.preparedBy);
+  const { selfReview } = await assertMayReview(tx, s, workedBy(row));
   if (!row.conclusion?.trim() || !row.preparedBy) throw new Error("Record the conclusion before the schedule is reviewed.");
   if (row.reviewedBy) throw new Error("This schedule has already been reviewed.");
   await tx.query("update test_schedules set reviewed_by = $2, reviewed_at = now() where id = $1", [scheduleId, s.userId]);
-  await log(tx, s, "schedule_review", "test_schedule", scheduleId, { engagementId: row.engagementId, reference: row.reference, selfReview });
+  const untested = await untestedKeyItems(tx, row);
+  await log(tx, s, "schedule_review", "test_schedule", scheduleId, { engagementId: row.engagementId, reference: row.reference, selfReview, untestedKeyItems: untested });
   return row.engagementId;
 }
 
@@ -426,9 +462,14 @@ export async function unreviewSchedule(tx: Tx, s: Session, scheduleId: string): 
   return row.engagementId;
 }
 
-/** Delete a schedule that has not been reviewed, with its lines. The reference is not reused. */
+/**
+ * Delete a schedule that has not been reviewed, with its lines. Anyone may delete one with no conclusion; a schedule that has a
+ * conclusion is someone's finished work, so only a reviewer or partner may. The number is not kept: the next schedule on the area
+ * takes one more than the highest that remains, so a deleted last schedule's reference is used again.
+ */
 export async function deleteSchedule(tx: Tx, s: Session, scheduleId: string): Promise<{ engagementId: string; areaCode: string }> {
   const row = await loadForEdit(tx, scheduleId);
+  if (row.conclusion?.trim() && !canReview(s.role)) throw new Error("Only a reviewer or partner can delete a schedule that has a conclusion.");
   const lines = await lineCount(tx, scheduleId);
   await tx.query("delete from test_schedules where id = $1", [scheduleId]);
   await log(tx, s, "delete", "test_schedule", scheduleId, { engagementId: row.engagementId, reference: row.reference, lines });

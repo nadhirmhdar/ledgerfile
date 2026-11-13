@@ -178,7 +178,8 @@ export async function setAuditEnabled(tx: Tx, s: Session, engagementId: string, 
     const journalTests = await tx.query("select 1 from journal_tests where engagement_id = $1 limit 1", [engagementId]);
     const approved = await tx.query("select 1 from risk_approvals where engagement_id = $1 limit 1", [engagementId]);
     const schedules = await tx.query("select 1 from test_schedules where engagement_id = $1 limit 1", [engagementId]);
-    if (worked.rows.length > 0 || found.rows.length > 0 || evidence.rows.length > 0 || journalTests.rows.length > 0 || approved.rows.length > 0 || schedules.rows.length > 0) throw new Error("Work has been recorded on this audit, so it cannot be turned off.");
+    const explained = await tx.query("select 1 from analytical_explanations where engagement_id = $1 limit 1", [engagementId]);
+    if (worked.rows.length > 0 || found.rows.length > 0 || evidence.rows.length > 0 || journalTests.rows.length > 0 || approved.rows.length > 0 || schedules.rows.length > 0 || explained.rows.length > 0) throw new Error("Work has been recorded on this audit, so it cannot be turned off.");
   }
   await tx.query("update engagements set audit_enabled = $2 where id = $1", [engagementId, on]);
   if (on) await ensureChecklists(tx, s, engagementId);
@@ -562,11 +563,12 @@ export async function updateProcedure(
 /**
  * The rule for who may review audit work, shared by procedures and test schedules: a reviewer or partner, and a different
  * person from the one who did the work unless the firm has no other reviewer (`canSelfReviewAudit`). Returns whether this
- * is a self-review, for the log and for showing it.
+ * is a self-review, for the log and for showing it. Work done by several people (a schedule) is passed as a list; the reviewer
+ * must differ from all of them.
  */
-export async function assertMayReview(tx: Tx, s: Session, performedBy: string | null): Promise<{ selfReview: boolean }> {
+export async function assertMayReview(tx: Tx, s: Session, performedBy: string | null | (string | null)[]): Promise<{ selfReview: boolean }> {
   if (!canReview(s.role)) throw new Error("Only a reviewer or partner can review audit work.");
-  const selfReview = performedBy !== null && performedBy === s.userId;
+  const selfReview = [performedBy].flat().includes(s.userId);
   if (selfReview && !(await canSelfReviewAudit(tx))) throw new Error("The reviewer must be a different person from the one who did the work.");
   return { selfReview };
 }

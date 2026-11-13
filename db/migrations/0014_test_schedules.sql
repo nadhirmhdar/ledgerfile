@@ -25,6 +25,9 @@ create table test_schedules (
   -- Who recorded the conclusion, and when. This is the person a reviewer must differ from.
   prepared_by uuid references users(id),
   prepared_at timestamptz,
+  -- Everyone who has changed the schedule's substance (lines, imports, work done, conclusion, explanation of difference). A
+  -- reviewer must differ from all of them, not only from whoever recorded the conclusion.
+  contributors uuid[] not null default '{}',
   reviewed_by uuid references users(id),
   reviewed_at timestamptz,
   created_by uuid not null references users(id),

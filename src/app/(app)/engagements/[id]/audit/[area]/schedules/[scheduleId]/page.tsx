@@ -91,6 +91,12 @@ export default async function SchedulePage({ params }: { params: Promise<{ id: s
         </p>
       )}
 
+      {schedule.coverage.keyItems > schedule.coverage.keyItemsTested && (
+        <p role="alert" className="mt-4 rounded border border-amber-600 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-950">
+          {schedule.coverage.keyItems - schedule.coverage.keyItemsTested} key item(s) not tested: lines at or above {money(schedule.thresholdMinor)} that are not marked tested. This does not stop the schedule being reviewed, so the reviewer should look at them.
+        </p>
+      )}
+
       <section className="mt-6">
         <h3 className="font-semibold">Lines</h3>
         {schedule.editable && <ImportListing scheduleId={schedule.id} balanceMinor={schedule.balanceMinor} existingLines={schedule.lines.length} />}
@@ -157,7 +163,7 @@ export default async function SchedulePage({ params }: { params: Promise<{ id: s
               <button className={small}>{schedule.reviewed ? "Withdraw review" : "Review this schedule"}</button>
             </ActionForm>
           )}
-          {!schedule.reviewed && (
+          {!schedule.reviewed && (reviewer || !schedule.conclusion?.trim()) && (
             <ActionForm action={deleteScheduleAction} fields={{ scheduleId: schedule.id }}>
               <button className={small}>Delete this schedule</button>
             </ActionForm>

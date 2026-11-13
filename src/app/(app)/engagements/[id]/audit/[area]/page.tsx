@@ -83,6 +83,7 @@ export default async function ProgrammePage({ params }: { params: Promise<{ id: 
                   <Link href={`/engagements/${id}/audit/${area.code}/schedules/${s.id}`} className="text-blue-700 underline">{s.reference} {s.title}</Link>
                   <span className="tabular-nums text-slate-600">{formatAmount(s.totalMinor)}</span>
                   {s.differenceMinor !== null && s.differenceMinor !== 0 && <span className="rounded bg-red-100 px-1.5 text-xs font-semibold text-red-900">Difference {formatAmount(s.differenceMinor)}</span>}
+                  {s.untestedKeyItems > 0 && <span className="rounded bg-amber-100 px-1.5 text-xs font-semibold text-amber-950">{s.untestedKeyItems} key item(s) not tested</span>}
                   <span className={s.toFinish ? "text-amber-800" : "text-emerald-800"}>
                     {!s.hasConclusion ? "No conclusion" : !s.reviewed ? "Not reviewed" : s.selfReviewed ? "Self-reviewed" : "Reviewed"}
                     {s.hasConclusion && s.differenceMinor !== null && s.differenceMinor !== 0 && s.toFinish && s.reviewed ? "; difference not explained" : ""}
