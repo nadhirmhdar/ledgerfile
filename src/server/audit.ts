@@ -7,6 +7,8 @@ import {
   CHECKLIST_BY_CODE,
   CHECKLISTS,
   needsPartner,
+  RISK_APPROVAL_STEP,
+  assessmentSnapshot,
   areasInScope,
   assertionsOf,
   BENCHMARKS,
@@ -92,8 +94,19 @@ export interface AuditOverview {
   materialityStale: boolean;
   /** Procedures marked not applicable, for the partner's attention at lock. */
   notApplicable: number;
+  /** The partner's approval of the risk assessment. */
+  approval: RiskApproval;
   /** What the audit work still needs before the engagement can be locked. Empty when the audit is off. */
   blockers: string[];
+}
+
+export interface RiskApproval {
+  /** None given; current; or lapsed, because materiality, a rating or the areas in scope changed after it was given. */
+  state: "none" | "current" | "lapsed";
+  approvedBy: string | null;
+  approvedAt: string | null;
+  /** Why the assessment cannot be approved yet; null when it can be. */
+  notReady: string | null;
 }
 
 export interface ProcedureRow {
@@ -140,7 +153,8 @@ export async function setAuditEnabled(tx: Tx, s: Session, engagementId: string, 
     const found = await tx.query("select 1 from misstatements where engagement_id = $1 limit 1", [engagementId]);
     const evidence = await tx.query("select 1 from working_papers where engagement_id = $1 and target_kind = 'procedure' limit 1", [engagementId]);
     const journalTests = await tx.query("select 1 from journal_tests where engagement_id = $1 limit 1", [engagementId]);
-    if (worked.rows.length > 0 || found.rows.length > 0 || evidence.rows.length > 0 || journalTests.rows.length > 0) throw new Error("Work has been recorded on this audit, so it cannot be turned off.");
+    const approved = await tx.query("select 1 from risk_approvals where engagement_id = $1 limit 1", [engagementId]);
+    if (worked.rows.length > 0 || found.rows.length > 0 || evidence.rows.length > 0 || journalTests.rows.length > 0 || approved.rows.length > 0) throw new Error("Work has been recorded on this audit, so it cannot be turned off.");
   }
   await tx.query("update engagements set audit_enabled = $2 where id = $1", [engagementId, on]);
   if (on) await ensureChecklists(tx, s, engagementId);
@@ -231,6 +245,24 @@ export async function getAuditOverview(tx: Tx, engagementId: string): Promise<Au
   const enabled = await isEnabled(tx, engagementId);
   const benchmarks: Record<Benchmark, number> = { pbt: Math.abs(sci("PBT")), revenue: Math.abs(sci("REVENUE")), assets: sfp("TOTAL_ASSETS"), equity: Math.abs(sfp("TOTAL_EQUITY")) };
   const materialityStale = materiality !== null && benchmarks[materiality.benchmark] !== materiality.benchmarkAmountMinor;
+  const last = await tx.query<{ snapshot: string; approvedBy: string; approvedAt: string }>(
+    `select a.snapshot, u.name as "approvedBy", to_char(a.created_at, 'YYYY-MM-DD') as "approvedAt"
+     from risk_approvals a join users u on u.id = a.approved_by where a.engagement_id = $1 order by a.created_at desc, a.id desc limit 1`,
+    [engagementId],
+  );
+  const unrated = areaStatus.filter((a) => !a.assessed).length;
+  const approval: RiskApproval = {
+    state: last.rows.length === 0 ? "none" : last.rows[0].snapshot === assessmentSnapshot({ materiality, areas: areaStatus }) ? "current" : "lapsed",
+    approvedBy: last.rows[0]?.approvedBy ?? null,
+    approvedAt: last.rows[0]?.approvedAt ?? null,
+    notReady: !materiality
+      ? "Set materiality first."
+      : materialityStale
+        ? "Revise or re-confirm materiality first: its benchmark figure has changed."
+        : unrated > 0
+          ? `Assess risk for the remaining ${unrated} area(s) first.`
+          : null,
+  };
   const blockers: string[] = [];
   if (enabled) {
     if (!materiality) blockers.push("Audit: materiality has not been set.");
@@ -239,6 +271,8 @@ export async function getAuditOverview(tx: Tx, engagementId: string): Promise<Au
     if (unassessed > 0) blockers.push(`Audit: risk has not been assessed for ${unassessed} area(s).`);
     const notLoaded = areaStatus.filter((a) => a.assessed && a.procedures === 0).length;
     if (notLoaded > 0) blockers.push(`Audit: the programme has not been loaded for ${notLoaded} area(s).`);
+    if (approval.state === "none") blockers.push("Audit: the partner has not approved the risk assessment.");
+    if (approval.state === "lapsed") blockers.push("Audit: the risk assessment has changed since the partner approved it. It needs approving again.");
     const open = counts.rows.reduce((n, c) => n + (c.total - c.completed), 0);
     if (open > 0) blockers.push(`Audit: ${open} procedure(s) and checklist step(s) are not yet completed.`);
     const untested = await tx.query<{ n: number }>("select count(*)::int as n from journal_tests where engagement_id = $1 and tested_at is null", [engagementId]);
@@ -256,6 +290,7 @@ export async function getAuditOverview(tx: Tx, engagementId: string): Promise<Au
     enabled,
     materialityStale,
     notApplicable: counts.rows.reduce((n, c) => n + c.na, 0),
+    approval,
     blockers,
   };
 }
@@ -398,6 +433,22 @@ export async function setAreaRisks(tx: Tx, s: Session, engagementId: string, are
   return change;
 }
 
+/**
+ * The partner approves the risk assessment: materiality and the rating of every area in scope, as they stand.
+ * The approval lapses by itself if any of them later changes.
+ */
+export async function approveRiskAssessment(tx: Tx, s: Session, engagementId: string): Promise<void> {
+  await requireAudit(tx, engagementId);
+  if (!canLock(s.role)) throw new Error("Only a partner can approve the risk assessment.");
+  const overview = (await getAuditOverview(tx, engagementId))!;
+  if (overview.areas.length === 0) throw new Error("Import a trial balance and map its accounts first.");
+  if (overview.approval.notReady) throw new Error(overview.approval.notReady);
+  if (overview.approval.state === "current") throw new Error("The risk assessment is already approved as it stands.");
+  const snapshot = assessmentSnapshot({ materiality: overview.materiality, areas: overview.areas });
+  await tx.query("insert into risk_approvals (firm_id, engagement_id, snapshot, approved_by) values ($1, $2, $3, $4)", [s.firmId, engagementId, snapshot, s.userId]);
+  await log(tx, s, "approve_risk_assessment", "engagement", engagementId, { reapproval: overview.approval.state === "lapsed" });
+}
+
 export async function listProcedures(tx: Tx, engagementId: string, areaCode: string): Promise<ProcedureRow[]> {
   const { rows } = await tx.query<ProcedureRow>(
     `select p.id, p.template_id as "templateId", p.tier, p.assertions, p.body, p.evidence, p.reference, p.status,
@@ -431,6 +482,9 @@ export async function updateProcedure(
     if (workDone.length < 3) throw new Error("Describe the work done before marking the procedure completed.");
     if (conclusion.length < 3) throw new Error("Record the conclusion before marking the procedure completed.");
     if (needsPartner(rows[0].evidence) && !canLock(s.role)) throw new Error("This step is the partner's sign-off, so only a partner can complete it.");
+    if (rows[0].templateId === RISK_APPROVAL_STEP && (await getAuditOverview(tx, rows[0].engagementId))!.approval.state !== "current") {
+      throw new Error("Approve the risk assessment on the audit page first. This step records that approval.");
+    }
   } else if (input.status === "na") {
     if (workDone.length < 10) throw new Error("Explain under work done why the procedure does not apply.");
     // Setting aside a response to a significant risk is a judgement for a reviewer, not the preparer.

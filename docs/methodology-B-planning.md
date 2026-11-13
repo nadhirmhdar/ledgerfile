@@ -6,7 +6,7 @@ References are at standard level and from memory; paragraph numbers are for the 
 
 **Notes for the methodology reviewer** (not part of the checklists)
 - B3.01: the product does not yet flag movements automatically; the threshold is applied by the auditor.
-- B8.08: the product does not yet record a separate partner approval of the risk assessment.
+- B8.08: the product records the partner's approval of materiality and the risk ratings, and the approval lapses if either changes. It does not stop fieldwork starting before approval; it holds up the lock instead. Decide whether that is strict enough.
 
 Planning items are checklists and forms, not tiered programmes. Every step applies to every engagement unless marked "if applicable".
 
