@@ -183,6 +183,11 @@ export default async function AuditPage({ params }: { params: Promise<{ id: stri
                     )}
                   </span>
                 </div>
+                {area.schedules > 0 && (
+                  <p className={`mt-1 text-sm ${area.schedulesToFinish > 0 ? "text-amber-800" : "text-emerald-800"}`}>
+                    {area.schedules} schedule(s), {area.schedulesToFinish} to finish
+                  </p>
+                )}
                 <p className="mt-1 text-sm text-slate-600">{area.objective}</p>
 
                 {area.fixedRisk ? (

@@ -156,6 +156,8 @@ export async function removeWorkingPaper(tx: Tx, s: Session, id: string): Promis
     const done = await tx.query("select 1 from audit_procedures where id::text = $1 and status <> 'open'", [rows[0].target]);
     if (done.rows.length > 0) throw new Error("This file supports a completed procedure. Reopen the procedure before removing it.");
   }
+  const used = await tx.query("select 1 from test_schedule_lines where working_paper_id::text = $1 limit 1", [id]);
+  if (used.rows.length > 0) throw new Error("This file is linked as evidence on a test schedule. Unlink it there before removing it.");
   if (rows[0].targetKind === "lead_sheet") {
     const signed = await tx.query("select 1 from sign_offs where engagement_id = $1 and target = $2 limit 1", [rows[0].engagementId, rows[0].target]);
     if (signed.rows.length > 0) throw new Error("This file supports a lead sheet that has been signed off. Withdraw the sign-off before removing it.");

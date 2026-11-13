@@ -9,6 +9,10 @@ import { ActionForm } from "@/app/action-form";
 import { reviewAreaAction, reviewProcedureAction, updateProcedureAction } from "@/app/audit-actions";
 import { removeWorkingPaperAction, uploadWorkingPaperAction } from "@/app/papers-actions";
 import * as papers from "@/server/working-papers";
+import { listSchedules } from "@/server/test-schedules";
+import { createScheduleAction } from "@/app/schedule-actions";
+import { GROUP_BY_CODE } from "@/domain/groups";
+import { formatAmount } from "@/domain/money";
 import { canReview } from "@/domain/signoff";
 import { SamplingCalculator } from "./sampling";
 import { FileInput } from "@/app/file-input";
@@ -29,11 +33,12 @@ export default async function ProgrammePage({ params }: { params: Promise<{ id: 
   if (!/^[0-9a-f-]{36}$/i.test(id) || !area) notFound();
 
   const session = await getSession();
-  const { engagement, procedures, files, overview } = await withFirm(await getDb(), session.firmId, async (tx) => ({
+  const { engagement, procedures, files, overview, scheduleList } = await withFirm(await getDb(), session.firmId, async (tx) => ({
     engagement: await repo.getEngagement(tx, id),
     procedures: await audit.listProcedures(tx, id, area.code),
     files: await papers.listWorkingPapers(tx, id),
     overview: await audit.getAuditOverview(tx, id),
+    scheduleList: checklist ? [] : await listSchedules(tx, id, area.code),
   }));
   if (!engagement) notFound();
 
@@ -66,6 +71,49 @@ export default async function ProgrammePage({ params }: { params: Promise<{ id: 
       <p role="note" className="mt-3 rounded border border-amber-400 bg-amber-50 px-3 py-2 text-xs">
         Methodology content: {LIBRARY_STATUS}.
       </p>
+
+      {!checklist && (
+        <section className="mt-6 rounded border border-slate-200 p-4">
+          <h3 className="font-semibold">Test schedules</h3>
+          <p className="mt-1 text-sm text-slate-600">The detailed testing for this area: a listing from the client, tickmarks and evidence against each line, the work done and a conclusion.</p>
+          {scheduleList.length > 0 ? (
+            <ul className="mt-2 space-y-1 text-sm">
+              {scheduleList.map((s) => (
+                <li key={s.id} className="flex flex-wrap items-baseline gap-x-3">
+                  <Link href={`/engagements/${id}/audit/${area.code}/schedules/${s.id}`} className="text-blue-700 underline">{s.reference} {s.title}</Link>
+                  <span className="tabular-nums text-slate-600">{formatAmount(s.totalMinor)}</span>
+                  {s.differenceMinor !== null && s.differenceMinor !== 0 && <span className="rounded bg-red-100 px-1.5 text-xs font-semibold text-red-900">Difference {formatAmount(s.differenceMinor)}</span>}
+                  {s.untestedKeyItems > 0 && <span className="rounded bg-amber-100 px-1.5 text-xs font-semibold text-amber-950">{s.untestedKeyItems} key item(s) not tested</span>}
+                  <span className={s.toFinish ? "text-amber-800" : "text-emerald-800"}>
+                    {!s.hasConclusion ? "No conclusion" : !s.reviewed ? "Not reviewed" : s.selfReviewed ? "Self-reviewed" : "Reviewed"}
+                    {s.hasConclusion && s.differenceMinor !== null && s.differenceMinor !== 0 && s.toFinish && s.reviewed ? "; difference not explained" : ""}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-2 text-sm text-slate-600">No schedules yet.</p>
+          )}
+          {open && (overview?.enabled ?? false) && (
+            <ActionForm action={createScheduleAction} fields={{ engagementId: id, areaCode: area.code }} className="mt-3">
+              <div className="flex flex-wrap items-end gap-3">
+                <label className="flex flex-col gap-1 text-xs text-slate-700">Title<input name="title" required maxLength={200} placeholder="For example: Receivables listing" className={input} /></label>
+                {(AREA_BY_CODE.get(area.code)?.groups.length ?? 0) > 0 && (
+                  <label className="flex flex-col gap-1 text-xs text-slate-700">
+                    Agrees to the balance of
+                    <select name="groupCode" className={input} defaultValue={AREA_BY_CODE.get(area.code)?.groups[0]}>
+                      <option value="">No balance to agree to</option>
+                      {AREA_BY_CODE.get(area.code)?.groups.map((g) => <option key={g} value={g}>{GROUP_BY_CODE.get(g)?.name ?? g}</option>)}
+                    </select>
+                  </label>
+                )}
+                <label className="flex items-center gap-2 text-xs text-slate-700"><input type="checkbox" name="fromTrialBalance" /> Start from the trial balance accounts</label>
+                <button className={small}>Start a schedule</button>
+              </div>
+            </ActionForm>
+          )}
+        </section>
+      )}
 
       {procedures.length === 0 ? (
         <p className="mt-6 text-sm text-slate-600">{checklist ? "This checklist is loaded when the audit is turned on." : "No programme is loaded for this area. Assess its risks on the audit planning page."}</p>

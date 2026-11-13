@@ -2,6 +2,7 @@ import type { Tx } from "./db";
 import { audit as log, canSelfReviewAudit, getEngagement, listAccounts, type Session } from "./repo";
 import { canLock, canReview } from "../domain/signoff";
 import { buildStatements } from "../domain/statements";
+import { needsFinishing, presentationBalance, scheduleBlockers, type ScheduleState } from "../domain/test-schedule";
 import { compareYears, unexplainedMovements, type ExplanationRecord } from "../domain/analytics";
 import {
   AREA_BY_CODE,
@@ -50,6 +51,9 @@ export interface AreaStatus {
   completed: number;
   /** Completed or not-applicable procedures that no reviewer has signed off yet. */
   unreviewed: number;
+  /** Test schedules on the area, and how many of them still need a conclusion, a review or an explanation of a difference. */
+  schedules: number;
+  schedulesToFinish: number;
 }
 
 export interface ChecklistStatus {
@@ -173,7 +177,9 @@ export async function setAuditEnabled(tx: Tx, s: Session, engagementId: string, 
     const evidence = await tx.query("select 1 from working_papers where engagement_id = $1 and target_kind = 'procedure' limit 1", [engagementId]);
     const journalTests = await tx.query("select 1 from journal_tests where engagement_id = $1 limit 1", [engagementId]);
     const approved = await tx.query("select 1 from risk_approvals where engagement_id = $1 limit 1", [engagementId]);
-    if (worked.rows.length > 0 || found.rows.length > 0 || evidence.rows.length > 0 || journalTests.rows.length > 0 || approved.rows.length > 0) throw new Error("Work has been recorded on this audit, so it cannot be turned off.");
+    const schedules = await tx.query("select 1 from test_schedules where engagement_id = $1 limit 1", [engagementId]);
+    const explained = await tx.query("select 1 from analytical_explanations where engagement_id = $1 limit 1", [engagementId]);
+    if (worked.rows.length > 0 || found.rows.length > 0 || evidence.rows.length > 0 || journalTests.rows.length > 0 || approved.rows.length > 0 || schedules.rows.length > 0 || explained.rows.length > 0) throw new Error("Work has been recorded on this audit, so it cannot be turned off.");
   }
   await tx.query("update engagements set audit_enabled = $2 where id = $1", [engagementId, on]);
   if (on) await ensureChecklists(tx, s, engagementId);
@@ -223,6 +229,17 @@ export async function getAuditOverview(tx: Tx, engagementId: string): Promise<Au
     [engagementId],
   );
   const countOf = new Map(counts.rows.map((c) => [c.areaCode, c]));
+  const sched = await tx.query<{ areaCode: string; groupCode: string | null; reference: string; conclusion: string | null; reviewed: boolean; explanation: string | null; total: number }>(
+    `select s.area_code as "areaCode", s.group_code as "groupCode", s.reference, s.conclusion, s.reviewed_by is not null as reviewed, s.explanation_of_difference as explanation,
+            coalesce((select sum(l.amount_minor) from test_schedule_lines l where l.schedule_id = s.id), 0)::float8 as total
+     from test_schedules s where s.engagement_id = $1`,
+    [engagementId],
+  );
+  const scheduleStates = sched.rows.map((r) => ({
+    areaCode: r.areaCode,
+    state: { reference: r.reference, hasConclusion: !!r.conclusion?.trim(), reviewed: r.reviewed, balanceMinor: r.groupCode ? presentationBalance(accounts, r.groupCode) : null, totalMinor: r.total, explanation: r.explanation } satisfies ScheduleState,
+  }));
+  const schedulesOf = (code: string) => scheduleStates.filter((x) => x.areaCode === code).map((x) => x.state);
 
   const areaStatus: AreaStatus[] = areas.map((a) => ({
     code: a.code,
@@ -235,6 +252,8 @@ export async function getAuditOverview(tx: Tx, engagementId: string): Promise<Au
     procedures: countOf.get(a.code)?.total ?? 0,
     completed: countOf.get(a.code)?.completed ?? 0,
     unreviewed: countOf.get(a.code)?.unreviewed ?? 0,
+    schedules: schedulesOf(a.code).length,
+    schedulesToFinish: schedulesOf(a.code).filter(needsFinishing).length,
   }));
 
   const materiality: MaterialityRow | null = mat.rows[0] ?? null;
@@ -305,6 +324,7 @@ export async function getAuditOverview(tx: Tx, engagementId: string): Promise<Au
     const explained = await tx.query<ExplanationRecord>('select line_key as "lineKey", current_minor::float8 as "currentMinor", prior_minor::float8 as "priorMinor" from analytical_explanations where engagement_id = $1', [engagementId]);
     const unexplained = unexplainedMovements(compareYears(statements, materiality), explained.rows).length;
     if (unexplained > 0) blockers.push(`Audit: ${unexplained} significant movement(s) in the analytical review have no explanation.`);
+    blockers.push(...scheduleBlockers(scheduleStates.map((x) => x.state)));
     if (misstatements.exceedsMateriality) blockers.push("Audit: uncorrected misstatements reach overall materiality. Have them corrected; modified opinions are not yet supported.");
   }
 
@@ -540,6 +560,19 @@ export async function updateProcedure(
   return rows[0].engagementId;
 }
 
+/**
+ * The rule for who may review audit work, shared by procedures and test schedules: a reviewer or partner, and a different
+ * person from the one who did the work unless the firm has no other reviewer (`canSelfReviewAudit`). Returns whether this
+ * is a self-review, for the log and for showing it. Work done by several people (a schedule) is passed as a list; the reviewer
+ * must differ from all of them.
+ */
+export async function assertMayReview(tx: Tx, s: Session, performedBy: string | null | (string | null)[]): Promise<{ selfReview: boolean }> {
+  if (!canReview(s.role)) throw new Error("Only a reviewer or partner can review audit work.");
+  const selfReview = [performedBy].flat().includes(s.userId);
+  if (selfReview && !(await canSelfReviewAudit(tx))) throw new Error("The reviewer must be a different person from the one who did the work.");
+  return { selfReview };
+}
+
 /** Sign off a procedure whose work is finished. A different person from the one who did the work, except for a sole practitioner. */
 export async function reviewProcedure(tx: Tx, s: Session, procedureId: string): Promise<string> {
   const { rows } = await tx.query<{ engagementId: string; templateId: string; status: string; evidence: string; performedBy: string | null; reviewed: boolean }>(
@@ -549,12 +582,11 @@ export async function reviewProcedure(tx: Tx, s: Session, procedureId: string): 
   if (rows.length === 0) throw new Error("Procedure not found.");
   const p = rows[0];
   await requireAudit(tx, p.engagementId);
-  if (!canReview(s.role)) throw new Error("Only a reviewer or partner can review audit work.");
+  // Same rule as for test schedules. Checked first, so a preparer is told they cannot review whatever the state of the work.
+  const { selfReview } = await assertMayReview(tx, s, p.performedBy);
   if (p.status === "open") throw new Error("Only completed work can be reviewed.");
   if (needsPartner(p.evidence)) throw new Error("This is the partner's own sign-off, so it needs no further review.");
   if (p.reviewed) throw new Error("This procedure has already been reviewed.");
-  const selfReview = p.performedBy === s.userId;
-  if (selfReview && !(await canSelfReviewAudit(tx))) throw new Error("The reviewer must be a different person from the one who did the work.");
   await tx.query("update audit_procedures set reviewed_by = $2, reviewed_at = now() where id = $1", [procedureId, s.userId]);
   await log(tx, s, "procedure_review", "audit_procedure", procedureId, { engagementId: p.engagementId, templateId: p.templateId, selfReview });
   return p.engagementId;
