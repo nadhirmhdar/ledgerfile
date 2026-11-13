@@ -62,6 +62,7 @@ describe("letters for an engagement", () => {
       firmName: "Al Noor Auditing",
       has: { inventory: false, receivables: true, tax: false },
       uncorrected: [],
+      exceedsMateriality: false,
     });
   });
 
@@ -84,9 +85,10 @@ describe("letters for an engagement", () => {
   });
 
   it("attach uncorrected misstatements to the representation letter, with their net effect", async () => {
+    // Each in its own transaction, so they are recorded at different times and list in that order.
+    await as(partner, (tx) => audit.addMisstatement(tx, partner, engagement, { description: "Accrual not booked", kind: "factual", amountMinor: 400000 }));
+    await as(partner, (tx) => audit.addMisstatement(tx, partner, engagement, { description: "Cut-off error on sales", kind: "factual", amountMinor: -150000 }));
     await as(partner, async (tx) => {
-      await audit.addMisstatement(tx, partner, engagement, { description: "Accrual not booked", kind: "factual", amountMinor: 400000 });
-      await audit.addMisstatement(tx, partner, engagement, { description: "Cut-off error on sales", kind: "factual", amountMinor: -150000 });
       const fixed = await audit.addMisstatement(tx, partner, engagement, { description: "Corrected item", kind: "factual", amountMinor: 999900 });
       await audit.setMisstatementCorrected(tx, partner, fixed, true);
     });
@@ -106,6 +108,22 @@ describe("letters for an engagement", () => {
       ["Cut-off error on sales", "(1,500.00)"],
       ["Net effect", "2,500.00"],
     ]);
+  });
+
+  it("warn when the uncorrected misstatements reach materiality", async () => {
+    const before = (await as(partner, (tx) => generateLetter(tx, partner, engagement, "representation", {})))!;
+    expect(before.context.exceedsMateriality).toBe(false);
+    expect(text(before.blocks)).not.toContain("reach overall materiality");
+
+    await as(partner, async (tx) => {
+      await audit.setMateriality(tx, partner, engagement, { benchmark: "revenue", percentageBp: 100, performancePct: 75, trivialPct: 5, rationale: "Revenue is what the owners watch." });
+      await audit.addMisstatement(tx, partner, engagement, { description: "Unrecorded liability", kind: "factual", amountMinor: 5000000 });
+    });
+    const after = (await as(partner, (tx) => generateLetter(tx, partner, engagement, "representation", {})))!;
+    expect(after.context.exceedsMateriality).toBe(true);
+    expect(after.blocks[1]).toMatchObject({ kind: "para", text: expect.stringContaining("reach overall materiality") });
+    // The engagement letter is unaffected.
+    expect(text((await as(partner, (tx) => generateLetter(tx, partner, engagement, "engagement", {})))!.blocks)).not.toContain("reach overall materiality");
   });
 
   it("are closed to another firm", async () => {

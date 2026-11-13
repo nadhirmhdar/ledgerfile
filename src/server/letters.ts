@@ -23,6 +23,8 @@ export interface LetterContext {
   /** Which balances the client has, to suggest the representations that apply. */
   has: { inventory: boolean; receivables: boolean; tax: boolean };
   uncorrected: { description: string; amountMinor: number }[];
+  /** True when the uncorrected misstatements reach overall materiality. */
+  exceedsMateriality: boolean;
 }
 
 /** What the letters need to know about an engagement. Null when it does not exist, is another firm's, or is not being audited. */
@@ -44,6 +46,7 @@ export async function getLetterContext(tx: Tx, engagementId: string): Promise<Le
     firmName: rows[0].firmName,
     has: { inventory: groups.has("INVENT"), receivables: groups.has("TRADEREC"), tax: groups.has("TAXEXP") || groups.has("TAXLIAB") },
     uncorrected: overview.misstatements.items.filter((m) => !m.corrected).map((m) => ({ description: m.description, amountMinor: m.amountMinor })),
+    exceedsMateriality: overview.misstatements.exceedsMateriality,
   };
 }
 
@@ -99,6 +102,7 @@ export async function generateLetter(tx: Tx, s: Session, engagementId: string, k
         "the framework's measure": context.framework === "IFRS for SMEs" ? "estimated selling price less costs to complete and sell" : undefined,
       },
       uncorrected,
+      exceedsMateriality: context.exceedsMateriality,
       ownerSupport: Boolean(supporter),
       inventory: form.inventory === "on",
       receivables: form.receivables === "on",
@@ -110,7 +114,7 @@ export async function generateLetter(tx: Tx, s: Session, engagementId: string, k
         .slice(0, MAX_SPECIFIC),
     });
   }
-  await repo.audit(tx, s, "export", `${kind}_letter`, engagementId);
+  await repo.audit(tx, s, "export", `${kind}_letter`, engagementId, kind === "representation" && context.exceedsMateriality ? { exceedsMateriality: true } : undefined);
   const title = `${context.clientName} ${kind === "engagement" ? "engagement letter" : "management representation letter"} ${context.periodEnd}`;
   return { title, blocks, context };
 }

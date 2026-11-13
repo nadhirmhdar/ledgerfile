@@ -19,13 +19,13 @@ function cell(text: string, widthPct: number, opts: { right?: boolean; bold?: bo
   });
 }
 
-function render(block: Block, first: boolean): (Paragraph | Table)[] {
+function render(block: Block, notice: boolean): (Paragraph | Table)[] {
   switch (block.kind) {
     case "heading":
       return [new Paragraph({ heading: HeadingLevel.HEADING_2, spacing: { before: 280, after: 100 }, children: [new TextRun({ text: block.text, bold: true, size: 24, color: "000000" })] })];
     case "para":
-      // The first paragraph is the notice that the wording is an unreviewed draft.
-      return [new Paragraph({ spacing: { after: 140 }, children: [new TextRun({ text: block.text, size: SIZE, italics: first, bold: first })] })];
+      // Bracketed paragraphs at the top are notices to the firm, not part of the letter.
+      return [new Paragraph({ spacing: { after: 140 }, children: [new TextRun({ text: block.text, size: SIZE, italics: notice, bold: notice })] })];
     case "bullet": {
       const left = block.level === 2 ? 1080 : 540;
       return [new Paragraph({ spacing: { after: 80 }, indent: { left, hanging: 270 }, children: [new TextRun({ text: `•\t${block.text}`, size: SIZE })] })];
@@ -58,7 +58,7 @@ export async function buildLetterDocx(title: string, blocks: Block[]): Promise<B
     creator: "LedgerFile",
     title,
     styles: { default: { document: { run: { font: "Calibri", size: SIZE } } } },
-    sections: [{ children: blocks.flatMap((b, i) => render(b, i === 0)) }],
+    sections: [{ children: blocks.flatMap((b, i) => render(b, i < 2 && b.kind === "para" && b.text.startsWith("[") && b.text.endsWith("]"))) }],
   });
   return Packer.toBuffer(doc);
 }

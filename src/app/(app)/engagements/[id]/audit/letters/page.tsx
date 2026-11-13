@@ -85,6 +85,12 @@ export default async function LettersPage({ params }: { params: Promise<{ id: st
                 ? "No uncorrected misstatements are recorded, so the letter will say there are none."
                 : `${context.uncorrected.length} uncorrected misstatement(s), net ${formatAmount(context.uncorrected.reduce((n, m) => n + m.amountMinor, 0))}, will be listed in a schedule attached to the letter.`}
             </p>
+            {context.exceedsMateriality && context.uncorrected.length > 0 && (
+              <p role="alert" className="mt-2 rounded border border-red-400 bg-red-50 px-3 py-2 text-sm">
+                These uncorrected misstatements reach overall materiality, so the letter&apos;s statement that they are immaterial would not be supportable. Have them
+                corrected before issuing it. The download carries the same warning at the top.
+              </p>
+            )}
             <form method="post" action={`${base}/letters/representation`} className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <label className={label}>Letter date<input name="date" type="date" className={input} /></label>
               <label className={label}>Date of the engagement letter<input name="engagementLetterDate" type="date" className={input} /></label>

@@ -5,6 +5,15 @@ import { buildLetterDocx } from "@/server/letters-docx";
 
 export const dynamic = "force-dynamic";
 
+/** True when an Origin header names this host. Anything that cannot be read as an address, such as "null", does not. */
+function sameHost(origin: string, host: string | null): boolean {
+  try {
+    return new URL(origin).host === host;
+  } catch {
+    return false;
+  }
+}
+
 /** Download the engagement letter or the representation letter as a Word document, filled from the form. */
 export async function POST(request: Request, { params }: { params: Promise<{ id: string; kind: string }> }) {
   const session = await getSession();
@@ -13,7 +22,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
   // The form is posted from the letters page only: refuse a post made from another site.
   const origin = request.headers.get("origin");
-  if (origin && new URL(origin).host !== (request.headers.get("x-forwarded-host") ?? request.headers.get("host"))) return new Response("Forbidden", { status: 403 });
+  if (origin && !sameHost(origin, request.headers.get("x-forwarded-host") ?? request.headers.get("host"))) return new Response("Forbidden", { status: 403 });
 
   const form: LetterForm = {};
   for (const [key, value] of await request.formData()) if (typeof value === "string") form[key] = value.slice(0, 10000);

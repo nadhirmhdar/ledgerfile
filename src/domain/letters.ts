@@ -16,6 +16,9 @@ export type Block =
   | { kind: "signature"; lines: string[] }
   | { kind: "table"; header: string[]; rows: string[][] };
 
+export const MATERIALITY_WARNING =
+  "[The uncorrected misstatements in the attachment reach overall materiality on this audit file. Paragraph 5 below says they are immaterial: do not issue this letter until they are corrected or the position is resolved.]";
+
 export const LETTER_NOTICE =
   "[Draft template wording, not yet reviewed. Check it against the standards and your firm's own terms, complete the bracketed items, and delete this paragraph before use.]";
 
@@ -189,6 +192,8 @@ export interface RepresentationLetterInput {
   tax: boolean;
   /** Extra representations specific to this audit, one per line. */
   specific: string[];
+  /** True when the uncorrected misstatements reach materiality, so the letter's statement that they are immaterial is not supportable. */
+  exceedsMateriality?: boolean;
 }
 
 export const REPRESENTATION = {
@@ -234,6 +239,7 @@ export const REPRESENTATION = {
     support:
       "{Supporter name} has confirmed that it will provide the financial support the Company needs for at least twelve months from the date of approval of the financial statements, and we are satisfied that it is able to do so.",
   },
+  specificHeading: "Specific matters",
   inventory: "Inventories are stated at the lower of cost and {the framework's measure}. Adequate allowance has been made for slow-moving, damaged and obsolete items. Goods held on behalf of others are excluded.",
   receivables: "The allowance for doubtful debts is adequate. Receivables represent valid claims against customers for sales or services made on or before {period end}.",
   tax: "We have filed all tax returns due, disclosed to you all correspondence with the tax authority, and made adequate provision for all tax liabilities, including any penalties.",
@@ -245,6 +251,7 @@ export function buildRepresentationLetter(input: RepresentationLetterInput): Blo
   const f = (text: string) => fill(text, input.values);
   const blocks: Block[] = [
     { kind: "para", text: LETTER_NOTICE },
+    ...(input.exceedsMateriality && input.uncorrected.length > 0 ? [{ kind: "para" as const, text: MATERIALITY_WARNING }] : []),
     { kind: "para", text: f("{Client legal name}") },
     { kind: "para", text: f("{Date}") },
     { kind: "para", text: f("To: {Firm name}") },
@@ -272,7 +279,7 @@ export function buildRepresentationLetter(input: RepresentationLetterInput): Blo
 
   const specific = [...(input.inventory ? [REPRESENTATION.inventory] : []), ...(input.receivables ? [REPRESENTATION.receivables] : []), ...(input.tax ? [REPRESENTATION.tax] : [])];
   if (specific.length > 0 || input.specific.length > 0) {
-    blocks.push({ kind: "heading", text: "Specific matters" });
+    blocks.push({ kind: "heading", text: REPRESENTATION.specificHeading });
     for (const t of specific) item(t);
     for (const t of input.specific) blocks.push({ kind: "numbered", text: `${++n}. ${t}` });
   }
