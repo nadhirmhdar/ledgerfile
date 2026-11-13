@@ -129,8 +129,8 @@ export async function reviewAreaAction(_prev: FormState, form: FormData): Promis
   if (!UUID.test(engagementId)) return { ok: false, message: "Engagement not found." };
   return run(
     (r) => {
-      const { reviewed, skipped } = r as { reviewed: number; skipped: number };
-      return `Reviewed ${reviewed}.${skipped > 0 ? ` Skipped ${skipped} you did yourself: another reviewer needs to review those.` : ""}`;
+      const { reviewed, skipped, selfReviewed } = r as { reviewed: number; skipped: number; selfReviewed: number };
+      return `Reviewed ${reviewed}${selfReviewed > 0 ? `, ${selfReviewed} of them your own work (self-review)` : ""}.${skipped > 0 ? ` Skipped ${skipped} you did yourself: another reviewer needs to review those.` : ""}`;
     },
     (tx, session) => audit.reviewArea(tx, session, engagementId, field(form, "areaCode")),
     () => engagementId,

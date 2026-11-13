@@ -78,7 +78,7 @@ export default async function ProgrammePage({ params }: { params: Promise<{ id: 
           {open && auditOn && reviewer && unreviewed > 0 && (
             <ActionForm action={reviewAreaAction} fields={{ engagementId: id, areaCode: area.code }} className="mt-2">
               <button className={small}>Review all {unreviewed} outstanding</button>
-              <span className="ml-2 text-xs text-slate-600">Work you did yourself is skipped.</span>
+              <span className="ml-2 text-xs text-slate-600">Your own work is skipped unless the firm has no other reviewer.</span>
             </ActionForm>
           )}
           {procedures.map((p) => (
@@ -134,7 +134,11 @@ export default async function ProgrammePage({ params }: { params: Promise<{ id: 
                   {p.partnerStep ? (
                     <span className="text-slate-700">Partner sign-off: no further review</span>
                   ) : p.reviewedAt ? (
-                    <span className="font-medium text-emerald-800">Reviewed by {p.reviewedByName} on {p.reviewedAt}</span>
+                    p.selfReviewed ? (
+                      <span className="rounded border border-amber-600 bg-amber-100 px-1.5 py-0.5 font-medium text-amber-950">Self-reviewed by {p.reviewedByName} on {p.reviewedAt}</span>
+                    ) : (
+                      <span className="font-medium text-emerald-800">Reviewed by {p.reviewedByName} on {p.reviewedAt}</span>
+                    )
                   ) : (
                     <span className="text-amber-800">Not yet reviewed</span>
                   )}
