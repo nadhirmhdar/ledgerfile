@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { parseAmount, formatAmount } from "@/domain/money";
 import { TICKMARKS } from "@/domain/tickmarks";
 import { coverage, difference, isKeyItem, scheduleTotal } from "@/domain/test-schedule";
+import { comparativeTotals, isKeyMovement, movement } from "@/domain/rollforward";
 import { saveLinesAction } from "@/app/schedule-actions";
 
 export interface LineData {
@@ -16,6 +17,7 @@ export interface LineData {
   tickmarks: string[];
   workingPaperId: string | null;
   remarks: string | null;
+  priorAmountMinor: number | null;
 }
 
 interface Row {
@@ -28,11 +30,12 @@ interface Row {
   tickmarks: string[];
   workingPaperId: string;
   remarks: string;
+  prior: number | null;
   dirty: boolean;
 }
 
 const plainAmount = (minor: number) => (minor / 100).toFixed(2);
-const toRow = (l: LineData): Row => ({ key: l.id, id: l.id, description: l.description, docRef: l.docRef ?? "", amount: plainAmount(l.amountMinor), tested: l.tested, tickmarks: l.tickmarks, workingPaperId: l.workingPaperId ?? "", remarks: l.remarks ?? "", dirty: false });
+const toRow = (l: LineData): Row => ({ key: l.id, id: l.id, description: l.description, docRef: l.docRef ?? "", amount: plainAmount(l.amountMinor), tested: l.tested, tickmarks: l.tickmarks, workingPaperId: l.workingPaperId ?? "", remarks: l.remarks ?? "", prior: l.priorAmountMinor, dirty: false });
 const cell = "w-full rounded border border-slate-300 bg-white px-1.5 py-1 text-sm text-slate-900";
 const small = "rounded border border-slate-400 px-2 py-1 text-xs hover:bg-slate-100";
 
@@ -74,6 +77,8 @@ export function LinesTable({
   const total = scheduleTotal(lines);
   const cov = coverage(lines, thresholdMinor);
   const diff = balanceMinor === null ? null : difference(total, balanceMinor);
+  const hasPrior = rows.some((r) => r.prior !== null);
+  const comp = comparativeTotals(rows.map((r, i) => ({ amountMinor: parsed[i].amountMinor, priorAmountMinor: r.prior })));
   const changes = rows.filter((r) => r.dirty || r.id === null).length + removed.length;
   const anyInvalid = rows.some((r, i) => parsed[i].invalid || r.description.trim() === "");
 
@@ -81,7 +86,7 @@ export function LinesTable({
   const toggleTick = (r: Row, code: string) => update(r.key, { tickmarks: r.tickmarks.includes(code) ? r.tickmarks.filter((c) => c !== code) : [...r.tickmarks, code] });
   const addRow = () => {
     setCounter((c) => c + 1);
-    setRows((rs) => [...rs, { key: `new-${counter}`, id: null, description: "", docRef: "", amount: "", tested: false, tickmarks: [], workingPaperId: "", remarks: "", dirty: true }]);
+    setRows((rs) => [...rs, { key: `new-${counter}`, id: null, description: "", docRef: "", amount: "", tested: false, tickmarks: [], workingPaperId: "", remarks: "", prior: null, dirty: true }]);
   };
   const remove = (r: Row) => {
     if (r.id) setRemoved((x) => [...x, r.id as string]);
@@ -112,6 +117,11 @@ export function LinesTable({
         {balanceMinor !== null && <span>Balance: <span className="tabular-nums">{formatAmount(balanceMinor)}</span></span>}
         {diff !== null && diff !== 0 && <span className="rounded bg-red-100 px-2 py-0.5 font-semibold text-red-900">Difference: {formatAmount(diff)}</span>}
         {diff === 0 && <span className="font-medium text-emerald-800">Agrees to the balance</span>}
+        {hasPrior && (
+          <span>
+            Last year: <span className="tabular-nums">{formatAmount(comp.priorMinor)}</span>, movement <span className="tabular-nums">{formatAmount(comp.movementMinor)}</span>
+          </span>
+        )}
         <span>
           Tested: <span className="tabular-nums">{formatAmount(cov.testedMinor)}</span>
           {cov.pct !== null ? ` (${cov.pct.toFixed(1)}% of the listing)` : " (no listing total)"}
@@ -129,6 +139,8 @@ export function LinesTable({
               <th className="py-2 pr-2 font-medium">Description</th>
               <th className="py-2 pr-2 font-medium">Reference</th>
               <th className="py-2 pr-2 text-right font-medium">Amount</th>
+              {hasPrior && <th className="py-2 pr-2 text-right font-medium">Last year</th>}
+              {hasPrior && <th className="py-2 pr-2 text-right font-medium">Movement</th>}
               <th className="py-2 pr-2 font-medium">Tested</th>
               <th className="py-2 pr-2 font-medium">Tickmarks</th>
               <th className="py-2 pr-2 font-medium">Evidence</th>
@@ -139,10 +151,12 @@ export function LinesTable({
           <tbody>
             {rows.map((r, i) => {
               const key = isKeyItem(parsed[i].amountMinor, thresholdMinor);
+              const keyMove = isKeyMovement(parsed[i].amountMinor, r.prior, thresholdMinor);
+              const move = movement(parsed[i].amountMinor, r.prior);
               const fileName = files.find((f) => f.id === r.workingPaperId)?.fileName;
               return (
-                <tr key={r.key} className={`border-b border-slate-100 align-top ${key ? "bg-amber-50" : ""}`}>
-                  <td className="py-1.5 pr-2 text-slate-600">{i + 1}{key && <span className="ml-1 rounded bg-amber-200 px-1 text-xs font-medium text-amber-950">Key</span>}</td>
+                <tr key={r.key} className={`border-b border-slate-100 align-top ${key || keyMove ? "bg-amber-50" : ""}`}>
+                  <td className="py-1.5 pr-2 text-slate-600">{i + 1}{key && <span className="ml-1 rounded bg-amber-200 px-1 text-xs font-medium text-amber-950">Key</span>}{keyMove && <span className="ml-1 rounded bg-amber-200 px-1 text-xs font-medium text-amber-950">Key movement</span>}</td>
                   <td className="py-1.5 pr-2">
                     {editable ? <input aria-label={`Description, line ${i + 1}`} className={cell} maxLength={500} value={r.description} onChange={(e) => update(r.key, { description: e.target.value })} /> : r.description}
                   </td>
@@ -156,6 +170,8 @@ export function LinesTable({
                       formatAmount(parsed[i].amountMinor)
                     )}
                   </td>
+                  {hasPrior && <td className="py-1.5 pr-2 text-right tabular-nums text-slate-600">{r.prior === null ? "" : formatAmount(r.prior)}</td>}
+                  {hasPrior && <td className="py-1.5 pr-2 text-right tabular-nums">{move === null ? "" : formatAmount(move)}</td>}
                   <td className="py-1.5 pr-2">
                     <input type="checkbox" aria-label={`Tested, line ${i + 1}`} disabled={!editable} checked={r.tested} onChange={(e) => update(r.key, { tested: e.target.checked })} />
                   </td>
@@ -195,7 +211,7 @@ export function LinesTable({
                 </tr>
               );
             })}
-            {rows.length === 0 && <tr><td colSpan={9} className="py-4 text-sm text-slate-600">No lines yet. Import a listing above or add a line.</td></tr>}
+            {rows.length === 0 && <tr><td colSpan={11} className="py-4 text-sm text-slate-600">No lines yet. Import a listing above or add a line.</td></tr>}
           </tbody>
         </table>
       </div>

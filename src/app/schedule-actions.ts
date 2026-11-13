@@ -120,10 +120,22 @@ export async function importLinesAction(scheduleId: string, lines: ListingLine[]
   if (!Array.isArray(lines) || lines.length > MAX_SCHEDULE_LINES + 1000) return { ok: false, message: "Too many lines to import." };
   const engagement = await run((tx) => schedules.getScheduleEngagement(tx, scheduleId));
   if (!engagement.ok) return engagement;
-  const r = await run((tx, s) => schedules.importLines(tx, s, scheduleId, lines, mode === "replace" ? "replace" : "append"));
+  const r = await run((tx, s) => schedules.importLines(tx, s, scheduleId, lines, mode === "replace" ? "replace" : mode === "match" ? "match" : "append"));
   if (!r.ok) return r;
   if (engagement.result) refresh(engagement.result.engagementId);
+  if (r.result.matched !== undefined) return { ok: true, message: `Imported ${r.result.imported.toLocaleString("en-US")} line(s): ${r.result.matched.toLocaleString("en-US")} put against last year's lines, ${(r.result.added ?? 0).toLocaleString("en-US")} added as new.${r.result.ticksCleared ? ` ${r.result.ticksCleared} line(s) changed amount and had their tickmarks cleared.` : ""}` };
   return { ok: true, message: `Imported ${r.result.imported.toLocaleString("en-US")} line(s)${r.result.replaced > 0 ? `, replacing ${r.result.replaced.toLocaleString("en-US")}` : ""}.` };
+}
+
+export async function bringForwardAction(_prev: FormState, form: FormData): Promise<FormState> {
+  const engagementId = field(form, "engagementId");
+  if (!UUID.test(engagementId)) return { ok: false, message: "Engagement not found." };
+  const r = await run((tx, s) => schedules.bringForwardSchedules(tx, s, engagementId));
+  if (!r.ok) return r;
+  refresh(engagementId);
+  const { created, alreadyBrought, lines, outOfScope } = r.result;
+  if (created === 0) return { ok: true, message: alreadyBrought > 0 ? `Nothing new: all ${alreadyBrought} schedule(s) from last year have already been brought forward.` : "Last year's engagement has no test schedules to bring forward." };
+  return { ok: true, message: `Brought forward ${created} schedule(s) with ${lines.toLocaleString("en-US")} line(s)${alreadyBrought > 0 ? `; ${alreadyBrought} already brought forward earlier` : ""}${outOfScope > 0 ? `. ${outOfScope} are for areas no longer in scope this year and are flagged` : ""}.` };
 }
 
 export async function reviewScheduleAction(_prev: FormState, form: FormData): Promise<FormState> {

@@ -192,6 +192,11 @@ async function scope(tx: Tx, engagementId: string) {
   return { accounts, areas: accounts.length === 0 ? [] : areasInScope(used) };
 }
 
+/** Codes of the areas in scope for the engagement, from its trial balance. */
+export async function areaCodesInScope(tx: Tx, engagementId: string): Promise<Set<string>> {
+  return new Set((await scope(tx, engagementId)).areas.map((a) => a.code));
+}
+
 async function risksByArea(tx: Tx, engagementId: string): Promise<Map<string, AreaRisks>> {
   const { rows } = await tx.query<{ areaCode: string; assertion: Assertion; level: RiskLevel }>(
     'select area_code as "areaCode", assertion, level from risk_assessments where engagement_id = $1',

@@ -8,6 +8,7 @@ import { ASSERTIONS, BENCHMARKS, computeMateriality, STAGES, LIBRARY_STATUS, PER
 import { canLock, canReview } from "@/domain/signoff";
 import { formatAmount } from "@/domain/money";
 import { ActionForm } from "@/app/action-form";
+import { bringForwardAction } from "@/app/schedule-actions";
 import { addMisstatementAction, approveRiskAssessmentAction, setAreaRisksAction, setAuditEnabledAction, setMaterialityAction, setMisstatementCorrectedAction } from "@/app/audit-actions";
 import { EngagementNav } from "../nav";
 
@@ -80,7 +81,14 @@ export default async function AuditPage({ params }: { params: Promise<{ id: stri
           <p className="mt-4 flex flex-wrap gap-x-6 gap-y-1 text-sm">
             <Link href={`/engagements/${id}/audit/letters`} className="text-blue-700 underline">Engagement letter and representation letter</Link>
             <Link href={`/engagements/${id}/audit/analytics`} className="text-blue-700 underline">Analytical review and ratios</Link>
+            <a href={`/engagements/${id}/audit/schedules-export`} className="text-blue-700 underline">Export all test schedules (Excel)</a>
           </p>
+          {open && engagement.priorEngagementId && (
+            <ActionForm action={bringForwardAction} fields={{ engagementId: id }} className="mt-3">
+              <button className={small}>Bring forward last year&apos;s schedules</button>
+              <span className="ml-2 text-xs text-slate-600">Copies the prior-year engagement&apos;s test schedules that have not been brought forward yet, as a starting point.</span>
+            </ActionForm>
+          )}
           <section className="mt-8">
             <h2 className="text-lg font-semibold">Materiality</h2>
             {m ? (
