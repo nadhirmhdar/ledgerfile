@@ -137,17 +137,21 @@ In the product, each procedure also records work done, exceptions, conclusion, w
 - Credit balances netted off instead of being shown as liabilities.
 - Foreign-currency balances not retranslated at the closing rate.
 
+**Notes for the methodology reviewer** (not part of the procedures)
+- C5.03: recording why confirmation was not used is proposed as firm policy. Confirm what the ISAs themselves require here.
+- C5.13: placed in Core because ISA 540 requires a review of the outcome of prior estimates as part of risk assessment. Confirm.
+
 ### Core procedures (all risk levels)
 
 | ID | Assertions | Procedure | Evidence expected | Reference |
 |---|---|---|---|---|
 | C5.01 | C, A | Obtain the customer-by-customer listing with ageing at the period end. Check its arithmetic and agree the total to the trial balance and the lead sheet. Investigate reconciling items. | Listing; reconciliation to TB | ISA 500 |
 | C5.02 | E, V, C | Compare the balance, the ageing profile and debtor days with the prior year and with your expectation from revenue and credit terms. Obtain and corroborate explanations for unexpected movements. | Analytical review with expectation, threshold and explanations | ISA 520 |
-| C5.03 | E, R | Select balances for external confirmation. Send requests under your own control and have replies come directly to you. Reconcile differences. If confirmation is not used, record why it would be ineffective and what replaces it (proposed as firm policy; the reviewer should confirm what the ISAs themselves require here). | Selection basis; requests and replies; reconciliations; control schedule | ISA 505, ISA 330 |
+| C5.03 | E, R | Select balances for external confirmation. Send requests under your own control and have replies come directly to you. Reconcile differences. If confirmation is not used, record why it would be ineffective and what replaces it. | Selection basis; requests and replies; reconciliations; control schedule | ISA 505, ISA 330 |
 | C5.04 | E, V | For selected balances not confirmed or not replied to, and as further evidence for others, trace to cash received after the period end, agreeing to bank statements and to the specific invoices settled. | Schedule of post-period receipts tied to invoices and bank | ISA 505, ISA 500 |
 | C5.05 | E, A | For selected balances with neither a reply nor later receipt, inspect the invoice, the proof of delivery or service completion, and the customer order or contract. | Copies or references of documents inspected | ISA 500 |
 | C5.06 | V | Obtain management's assessment of the allowance for doubtful debts. Understand the method, test the ageing it relies on, and consider old balances, disputes, post-period receipts and known customer difficulties. Conclude whether the allowance is reasonable under the reporting framework. | Management's calculation; your testing of ageing; your assessment per significant balance | ISA 540 |
-| C5.13 | V | Compare last year's allowance with what was actually collected or written off since, to judge the reliability of management's estimates. Core because ISA 540 requires a review of the outcome of prior estimates as part of risk assessment; reviewer to confirm. | Retrospective comparison and conclusion | ISA 540 |
+| C5.13 | V | Compare last year's allowance with what was actually collected or written off since, to judge the reliability of management's estimates. | Retrospective comparison and conclusion | ISA 540 |
 | C5.07 | CO | Select sales invoices and credit notes from either side of the period end and agree each to delivery or service evidence, to confirm it is recorded in the correct period. | Cut-off schedule with dates | ISA 500, ISA 330 |
 | C5.08 | CL, P | Review the listing for credit balances, related-party balances, staff and owner balances, and amounts due after more than one year. Confirm each is correctly classified. | Annotated listing; reclassification entries proposed | ISA 500, ISA 550 |
 | C5.09 | E, V, A | For other receivables, prepayments and deposits, obtain a breakdown, agree significant items to supporting documents and recalculate prepaid amounts. | Breakdown; documents; recalculations | ISA 500 |

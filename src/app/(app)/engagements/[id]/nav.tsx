@@ -4,6 +4,7 @@ const TABS = [
   { key: "tb", label: "Trial balance and mapping", path: "" },
   { key: "journals", label: "Journal entries", path: "/journals" },
   { key: "statements", label: "Financial statements", path: "/statements" },
+  { key: "audit", label: "Audit", path: "/audit" },
   { key: "review", label: "Review and sign-off", path: "/review" },
 ] as const;
 

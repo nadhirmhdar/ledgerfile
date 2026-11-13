@@ -1,0 +1,2121 @@
+{
+  "status": "AI draft v0.1: not reviewed, not approved for use on any engagement",
+  "areas": [
+    {
+      "code": "C1",
+      "title": "Property, plant and equipment",
+      "objective": "evidence that assets exist, are owned, are completely recorded, are carried at appropriate amounts after depreciation and impairment, and are properly disclosed.",
+      "procedures": [
+        {
+          "id": "C1.01",
+          "tier": "core",
+          "assertions": [
+            "C",
+            "A"
+          ],
+          "text": "Obtain the asset register and a movement schedule by class: opening, additions, disposals, depreciation, closing. Check arithmetic and agree to the trial balance and prior-year closing figures.",
+          "evidence": "Register; movement schedule",
+          "reference": "ISA 500"
+        },
+        {
+          "id": "C1.02",
+          "tier": "core",
+          "assertions": [
+            "E",
+            "A",
+            "R"
+          ],
+          "text": "Select additions and agree to supplier invoices, confirming the amount, the date, that the invoice is addressed to the entity, and that the item is capital in nature.",
+          "evidence": "Additions test",
+          "reference": "ISA 500"
+        },
+        {
+          "id": "C1.03",
+          "tier": "core",
+          "assertions": [
+            "E",
+            "R"
+          ],
+          "text": "Physically inspect a selection of assets from the register. For vehicles and property, inspect registration or title documents in the entity's name.",
+          "evidence": "Inspection record; title documents",
+          "reference": "ISA 500"
+        },
+        {
+          "id": "C1.04",
+          "tier": "core",
+          "assertions": [
+            "C"
+          ],
+          "text": "Review repairs and maintenance and similar expense accounts for items that should have been capitalised.",
+          "evidence": "Expense review",
+          "reference": "ISA 500"
+        },
+        {
+          "id": "C1.05",
+          "tier": "core",
+          "assertions": [
+            "E",
+            "A"
+          ],
+          "text": "Select disposals and agree to sale documents and proceeds received. Recalculate the gain or loss. Ask whether any assets were scrapped or are no longer in use.",
+          "evidence": "Disposals test",
+          "reference": "ISA 500"
+        },
+        {
+          "id": "C1.06",
+          "tier": "core",
+          "assertions": [
+            "V",
+            "A"
+          ],
+          "text": "Assess whether useful lives, residual values and depreciation methods are reasonable and consistently applied. Recalculate depreciation in total by class and compare with the charge.",
+          "evidence": "Assessment; recalculation",
+          "reference": "ISA 540, ISA 520"
+        },
+        {
+          "id": "C1.07",
+          "tier": "core",
+          "assertions": [
+            "V"
+          ],
+          "text": "Consider whether there are indicators of impairment, such as idle assets, damage, losses or a decline in the business. If so, examine management's impairment assessment.",
+          "evidence": "Indicator review",
+          "reference": "ISA 540"
+        },
+        {
+          "id": "C1.08",
+          "tier": "core",
+          "assertions": [
+            "P"
+          ],
+          "text": "Confirm disclosures: policy, reconciliation of movements by class, assets pledged, and capital commitments.",
+          "evidence": "Disclosure tie-out",
+          "reference": "ISA 330"
+        },
+        {
+          "id": "C1.09",
+          "tier": "extended",
+          "assertions": [
+            "C",
+            "E"
+          ],
+          "text": "Select assets seen on the premises and trace them to the register.",
+          "evidence": "Floor-to-register test",
+          "reference": "ISA 500"
+        },
+        {
+          "id": "C1.10",
+          "tier": "extended",
+          "assertions": [
+            "A",
+            "V"
+          ],
+          "text": "For assets constructed by the entity or built over time, test the costs capitalised and the date depreciation began. Confirm the treatment of borrowing costs follows the framework.",
+          "evidence": "Cost build-up test",
+          "reference": "ISA 500"
+        },
+        {
+          "id": "C1.11",
+          "tier": "extended",
+          "assertions": [
+            "V"
+          ],
+          "text": "Where assets are carried at a revalued amount, or impairment has been tested, evaluate the valuation: the valuer's competence and objectivity, the method, and the key assumptions.",
+          "evidence": "Valuation review; link to B11",
+          "reference": "ISA 540, ISA 500"
+        },
+        {
+          "id": "C1.12",
+          "tier": "significant",
+          "assertions": [
+            "E",
+            "A"
+          ],
+          "text": "Examine large additions near the period end and purchases from related parties: confirm delivery, existence and price.",
+          "evidence": "Evidence per item",
+          "reference": "ISA 240, ISA 550"
+        }
+      ]
+    },
+    {
+      "code": "C2",
+      "title": "Intangible assets",
+      "objective": "evidence that intangible assets meet the framework's recognition criteria, exist, are owned, and are carried at appropriate amounts after amortisation and impairment.",
+      "procedures": [
+        {
+          "id": "C2.01",
+          "tier": "core",
+          "assertions": [
+            "C",
+            "A"
+          ],
+          "text": "Obtain a movement schedule by class, check arithmetic, and agree to the trial balance and prior year.",
+          "evidence": "Schedule",
+          "reference": "ISA 500"
+        },
+        {
+          "id": "C2.02",
+          "tier": "core",
+          "assertions": [
+            "E",
+            "A",
+            "R"
+          ],
+          "text": "Agree additions to invoices, contracts or purchase agreements, and confirm the entity holds the rights.",
+          "evidence": "Additions test",
+          "reference": "ISA 500"
+        },
+        {
+          "id": "C2.03",
+          "tier": "core",
+          "assertions": [
+            "E",
+            "CL"
+          ],
+          "text": "For each class, conclude whether recognition is permitted by the framework, paying particular attention to internally generated items and development costs.",
+          "evidence": "Recognition assessment",
+          "reference": "ISA 500"
+        },
+        {
+          "id": "C2.04",
+          "tier": "core",
+          "assertions": [
+            "V",
+            "A"
+          ],
+          "text": "Assess the useful lives and recalculate amortisation.",
+          "evidence": "Recalculation",
+          "reference": "ISA 540"
+        },
+        {
+          "id": "C2.05",
+          "tier": "core",
+          "assertions": [
+            "V"
+          ],
+          "text": "Consider indicators of impairment, including whether each asset is still in use and generating benefit.",
+          "evidence": "Indicator review",
+          "reference": "ISA 540"
+        },
+        {
+          "id": "C2.06",
+          "tier": "core",
+          "assertions": [
+            "P"
+          ],
+          "text": "Confirm disclosures: policy, useful lives, movement reconciliation.",
+          "evidence": "Disclosure tie-out",
+          "reference": "ISA 330"
+        },
+        {
+          "id": "C2.07",
+          "tier": "extended",
+          "assertions": [
+            "V"
+          ],
+          "text": "For goodwill or assets acquired in a business combination, examine the purchase agreement, the allocation of the price, and the amortisation or impairment treatment.",
+          "evidence": "Acquisition review",
+          "reference": "ISA 540"
+        },
+        {
+          "id": "C2.08",
+          "tier": "significant",
+          "assertions": [
+            "E",
+            "V"
+          ],
+          "text": "Where capitalised costs are significant, test the underlying costs in detail, such as timesheets and contractor invoices, and challenge the evidence of future benefit.",
+          "evidence": "Detailed cost test",
+          "reference": "ISA 240, ISA 540"
+        }
+      ]
+    },
+    {
+      "code": "C3",
+      "title": "Investments and other financial assets",
+      "objective": "evidence that investments exist, are owned, are measured as the framework requires, and that income from them is complete.",
+      "procedures": [
+        {
+          "id": "C3.01",
+          "tier": "core",
+          "assertions": [
+            "C",
+            "A"
+          ],
+          "text": "Obtain a schedule of investments with movements. Agree to the trial balance.",
+          "evidence": "Schedule",
+          "reference": "ISA 500"
+        },
+        {
+          "id": "C3.02",
+          "tier": "core",
+          "assertions": [
+            "E",
+            "R"
+          ],
+          "text": "Inspect share certificates, registers, custodian statements or agreements, or confirm holdings directly with the custodian or investee.",
+          "evidence": "Title evidence or confirmations",
+          "reference": "ISA 500, ISA 505"
+        },
+        {
+          "id": "C3.03",
+          "tier": "core",
+          "assertions": [
+            "A"
+          ],
+          "text": "Agree purchases and sales to contracts and bank. Recalculate gains and losses.",
+          "evidence": "Transaction test",
+          "reference": "ISA 500"
+        },
+        {
+          "id": "C3.04",
+          "tier": "core",
+          "assertions": [
+            "V",
+            "CL"
+          ],
+          "text": "Conclude on classification and measurement basis under the framework. For quoted investments, agree prices to an independent source.",
+          "evidence": "Classification; price check",
+          "reference": "ISA 540"
+        },
+        {
+          "id": "C3.05",
+          "tier": "core",
+          "assertions": [
+            "V"
+          ],
+          "text": "For unquoted investments and investments in subsidiaries, associates or joint ventures, obtain the investee's latest financial statements and consider impairment.",
+          "evidence": "Impairment assessment",
+          "reference": "ISA 540"
+        },
+        {
+          "id": "C3.06",
+          "tier": "core",
+          "assertions": [
+            "C",
+            "A"
+          ],
+          "text": "Agree dividend and interest income to supporting evidence and assess completeness against holdings.",
+          "evidence": "Income test",
+          "reference": "ISA 500"
+        },
+        {
+          "id": "C3.07",
+          "tier": "core",
+          "assertions": [
+            "P"
+          ],
+          "text": "Confirm disclosures, including whether consolidated statements are required or an exemption applies.",
+          "evidence": "Disclosure tie-out",
+          "reference": "ISA 330"
+        },
+        {
+          "id": "C3.08",
+          "tier": "extended",
+          "assertions": [
+            "V"
+          ],
+          "text": "Where fair value is estimated, evaluate the method, the data and the significant assumptions, and consider developing your own estimate or range.",
+          "evidence": "Estimate evaluation",
+          "reference": "ISA 540"
+        }
+      ]
+    },
+    {
+      "code": "C4",
+      "title": "Inventories",
+      "objective": "to obtain sufficient appropriate evidence that inventories exist, are owned, are complete, are measured at the lower of cost and the framework's recoverable measure, and are properly disclosed.",
+      "procedures": [
+        {
+          "id": "C4.01",
+          "tier": "core",
+          "assertions": [
+            "C",
+            "A"
+          ],
+          "text": "Obtain the final inventory listing by item with quantity, unit cost and value. Check its arithmetic and agree the total to the trial balance.",
+          "evidence": "Listing; agreement to TB",
+          "reference": "ISA 500"
+        },
+        {
+          "id": "C4.02",
+          "tier": "core",
+          "assertions": [
+            "E",
+            "C"
+          ],
+          "text": "Where inventory is material, attend the physical count. Evaluate management's count instructions, observe that they are followed, and inspect the condition of goods. If attendance is impracticable, perform alternative procedures and record why.",
+          "evidence": "Count attendance memo",
+          "reference": "ISA 501"
+        },
+        {
+          "id": "C4.03",
+          "tier": "core",
+          "assertions": [
+            "E",
+            "C"
+          ],
+          "text": "At the count, perform test counts in both directions: from the count sheets to the floor, and from the floor to the count sheets. Record the items for later tracing.",
+          "evidence": "Test count schedule",
+          "reference": "ISA 501"
+        },
+        {
+          "id": "C4.04",
+          "tier": "core",
+          "assertions": [
+            "E",
+            "C"
+          ],
+          "text": "Trace your test counts and a selection of count sheets into the final inventory listing. Investigate differences.",
+          "evidence": "Tracing schedule",
+          "reference": "ISA 501"
+        },
+        {
+          "id": "C4.05",
+          "tier": "core",
+          "assertions": [
+            "E",
+            "C"
+          ],
+          "text": "If the count was held on a date other than the period end, test the roll-forward or roll-back of movements between the two dates.",
+          "evidence": "Roll-forward testing",
+          "reference": "ISA 501"
+        },
+        {
+          "id": "C4.06",
+          "tier": "core",
+          "assertions": [
+            "CO"
+          ],
+          "text": "Record the last goods-received and dispatch documents at the count. Confirm that purchases and sales either side are recorded in the correct period and consistent with what was counted.",
+          "evidence": "Cut-off schedule",
+          "reference": "ISA 501, ISA 500"
+        },
+        {
+          "id": "C4.07",
+          "tier": "core",
+          "assertions": [
+            "A",
+            "V"
+          ],
+          "text": "Test unit costs for a selection of items to supplier invoices, and confirm the cost formula used is permitted and applied consistently.",
+          "evidence": "Costing test",
+          "reference": "ISA 500"
+        },
+        {
+          "id": "C4.08",
+          "tier": "core",
+          "assertions": [
+            "V"
+          ],
+          "text": "Test for write-downs: compare cost with selling prices after the period end less costs to sell for a selection, and review ageing or last-movement reports for slow-moving items. Assess management's allowance.",
+          "evidence": "Recoverable-amount test; ageing review",
+          "reference": "ISA 540, ISA 500"
+        },
+        {
+          "id": "C4.09",
+          "tier": "core",
+          "assertions": [
+            "R",
+            "E"
+          ],
+          "text": "Ask about, and look for evidence of, goods held on behalf of others, consignment stock, and goods held at third-party locations. Confirm third-party holdings directly or inspect them.",
+          "evidence": "Inquiry; confirmations",
+          "reference": "ISA 501, ISA 505"
+        },
+        {
+          "id": "C4.10",
+          "tier": "core",
+          "assertions": [
+            "P"
+          ],
+          "text": "Confirm disclosures: policy, cost formula, carrying amounts by category, write-downs, and inventory pledged as security.",
+          "evidence": "Disclosure tie-out",
+          "reference": "ISA 330"
+        },
+        {
+          "id": "C4.11",
+          "tier": "extended",
+          "assertions": [
+            "A",
+            "V"
+          ],
+          "text": "For manufactured goods, test the build-up of cost: materials, labour and overheads. Confirm overhead absorption is based on normal capacity and excludes selling and administration costs.",
+          "evidence": "Cost build-up test",
+          "reference": "ISA 500, ISA 540"
+        },
+        {
+          "id": "C4.12",
+          "tier": "extended",
+          "assertions": [
+            "E",
+            "C",
+            "V"
+          ],
+          "text": "Analyse inventory days and gross margin by product line against the prior year. Investigate unexpected movements.",
+          "evidence": "Analytical review",
+          "reference": "ISA 520"
+        },
+        {
+          "id": "C4.13",
+          "tier": "extended",
+          "assertions": [
+            "V"
+          ],
+          "text": "Compare last year's write-down allowance with what was actually sold or scrapped.",
+          "evidence": "Retrospective review",
+          "reference": "ISA 540"
+        },
+        {
+          "id": "C4.14",
+          "tier": "extended",
+          "assertions": [
+            "A"
+          ],
+          "text": "Test the accuracy of the ageing or last-movement report used for the write-down assessment.",
+          "evidence": "Report accuracy test",
+          "reference": "ISA 500"
+        },
+        {
+          "id": "C4.15",
+          "tier": "significant",
+          "assertions": [
+            "E"
+          ],
+          "text": "Extend count coverage: attend all significant locations, increase test counts, and open sealed packages or check for hollow stacks on a sample basis. Consider unannounced counts.",
+          "evidence": "Extended count records",
+          "reference": "ISA 240, ISA 501"
+        },
+        {
+          "id": "C4.16",
+          "tier": "significant",
+          "assertions": [
+            "E",
+            "V"
+          ],
+          "text": "For high-value items, verify identity and quality, using an expert where the nature of the goods needs one.",
+          "evidence": "Verification record; link to B11",
+          "reference": "ISA 620"
+        },
+        {
+          "id": "C4.17",
+          "tier": "significant",
+          "assertions": [
+            "E",
+            "C"
+          ],
+          "text": "Review adjustments made to inventory records after the count and journals posted to inventory near the period end.",
+          "evidence": "Adjustment review; link to C16",
+          "reference": "ISA 240"
+        }
+      ]
+    },
+    {
+      "code": "C5",
+      "title": "Trade and other receivables",
+      "objective": "to obtain sufficient appropriate evidence that receivables exist, are owed to the entity, are complete, are recorded in the correct period, are carried at a recoverable amount, and are properly classified and disclosed.",
+      "procedures": [
+        {
+          "id": "C5.01",
+          "tier": "core",
+          "assertions": [
+            "C",
+            "A"
+          ],
+          "text": "Obtain the customer-by-customer listing with ageing at the period end. Check its arithmetic and agree the total to the trial balance and the lead sheet. Investigate reconciling items.",
+          "evidence": "Listing; reconciliation to TB",
+          "reference": "ISA 500"
+        },
+        {
+          "id": "C5.02",
+          "tier": "core",
+          "assertions": [
+            "E",
+            "V",
+            "C"
+          ],
+          "text": "Compare the balance, the ageing profile and debtor days with the prior year and with your expectation from revenue and credit terms. Obtain and corroborate explanations for unexpected movements.",
+          "evidence": "Analytical review with expectation, threshold and explanations",
+          "reference": "ISA 520"
+        },
+        {
+          "id": "C5.03",
+          "tier": "core",
+          "assertions": [
+            "E",
+            "R"
+          ],
+          "text": "Select balances for external confirmation. Send requests under your own control and have replies come directly to you. Reconcile differences. If confirmation is not used, record why it would be ineffective and what replaces it.",
+          "evidence": "Selection basis; requests and replies; reconciliations; control schedule",
+          "reference": "ISA 505, ISA 330"
+        },
+        {
+          "id": "C5.04",
+          "tier": "core",
+          "assertions": [
+            "E",
+            "V"
+          ],
+          "text": "For selected balances not confirmed or not replied to, and as further evidence for others, trace to cash received after the period end, agreeing to bank statements and to the specific invoices settled.",
+          "evidence": "Schedule of post-period receipts tied to invoices and bank",
+          "reference": "ISA 505, ISA 500"
+        },
+        {
+          "id": "C5.05",
+          "tier": "core",
+          "assertions": [
+            "E",
+            "A"
+          ],
+          "text": "For selected balances with neither a reply nor later receipt, inspect the invoice, the proof of delivery or service completion, and the customer order or contract.",
+          "evidence": "Copies or references of documents inspected",
+          "reference": "ISA 500"
+        },
+        {
+          "id": "C5.06",
+          "tier": "core",
+          "assertions": [
+            "V"
+          ],
+          "text": "Obtain management's assessment of the allowance for doubtful debts. Understand the method, test the ageing it relies on, and consider old balances, disputes, post-period receipts and known customer difficulties. Conclude whether the allowance is reasonable under the reporting framework.",
+          "evidence": "Management's calculation; your testing of ageing; your assessment per significant balance",
+          "reference": "ISA 540"
+        },
+        {
+          "id": "C5.13",
+          "tier": "core",
+          "assertions": [
+            "V"
+          ],
+          "text": "Compare last year's allowance with what was actually collected or written off since, to judge the reliability of management's estimates.",
+          "evidence": "Retrospective comparison and conclusion",
+          "reference": "ISA 540"
+        },
+        {
+          "id": "C5.07",
+          "tier": "core",
+          "assertions": [
+            "CO"
+          ],
+          "text": "Select sales invoices and credit notes from either side of the period end and agree each to delivery or service evidence, to confirm it is recorded in the correct period.",
+          "evidence": "Cut-off schedule with dates",
+          "reference": "ISA 500, ISA 330"
+        },
+        {
+          "id": "C5.08",
+          "tier": "core",
+          "assertions": [
+            "CL",
+            "P"
+          ],
+          "text": "Review the listing for credit balances, related-party balances, staff and owner balances, and amounts due after more than one year. Confirm each is correctly classified.",
+          "evidence": "Annotated listing; reclassification entries proposed",
+          "reference": "ISA 500, ISA 550"
+        },
+        {
+          "id": "C5.09",
+          "tier": "core",
+          "assertions": [
+            "E",
+            "V",
+            "A"
+          ],
+          "text": "For other receivables, prepayments and deposits, obtain a breakdown, agree significant items to supporting documents and recalculate prepaid amounts.",
+          "evidence": "Breakdown; documents; recalculations",
+          "reference": "ISA 500"
+        },
+        {
+          "id": "C5.10",
+          "tier": "core",
+          "assertions": [
+            "P"
+          ],
+          "text": "Confirm that the disclosures for receivables, the allowance and its movement, and any balances pledged as security agree to the audit evidence and meet the framework's requirements.",
+          "evidence": "Disclosure tie-out; link to D7",
+          "reference": "ISA 330, ISA 700"
+        },
+        {
+          "id": "C5.11",
+          "tier": "extended",
+          "assertions": [
+            "V",
+            "A"
+          ],
+          "text": "Test the accuracy of the ageing report by tracing a selection of invoices to their dates and confirming they fall in the right ageing band.",
+          "evidence": "Selection and results",
+          "reference": "ISA 500, ISA 540"
+        },
+        {
+          "id": "C5.12",
+          "tier": "extended",
+          "assertions": [
+            "CO",
+            "E"
+          ],
+          "text": "Review credit notes issued after the period end and consider whether they reverse sales recorded before it.",
+          "evidence": "Listing of post-period credit notes with assessment",
+          "reference": "ISA 500"
+        },
+        {
+          "id": "C5.14",
+          "tier": "extended",
+          "assertions": [
+            "A",
+            "V"
+          ],
+          "text": "For foreign-currency balances, recalculate the translation at the closing rate from an independent source.",
+          "evidence": "Recalculation; rate source",
+          "reference": "ISA 500"
+        },
+        {
+          "id": "C5.15",
+          "tier": "extended",
+          "assertions": [
+            "R",
+            "P"
+          ],
+          "text": "Inspect loan agreements, bank letters and board minutes for receivables pledged, factored or assigned.",
+          "evidence": "Documents inspected; link to C9",
+          "reference": "ISA 500"
+        },
+        {
+          "id": "C5.16",
+          "tier": "significant",
+          "assertions": [
+            "E"
+          ],
+          "text": "Extend confirmations to cover a higher proportion of the balance, and include new customers, large balances raised near the period end, and customers with unusual terms. Verify the confirmation address independently of the client's records.",
+          "evidence": "Extended selection; independent address checks",
+          "reference": "ISA 505, ISA 240"
+        },
+        {
+          "id": "C5.17",
+          "tier": "significant",
+          "assertions": [
+            "E",
+            "CO"
+          ],
+          "text": "Examine journal entries posted to receivables and revenue near the period end and after it, particularly manual entries and those posted by senior management.",
+          "evidence": "Journal selection with support; link to C16",
+          "reference": "ISA 240"
+        },
+        {
+          "id": "C5.18",
+          "tier": "significant",
+          "assertions": [
+            "E",
+            "V"
+          ],
+          "text": "For customers with large or old balances, obtain evidence that the customer is real and able to pay, such as trade licence details, correspondence, and payment history.",
+          "evidence": "Evidence per customer",
+          "reference": "ISA 240, ISA 500"
+        },
+        {
+          "id": "C5.19",
+          "tier": "significant",
+          "assertions": [
+            "E",
+            "CO"
+          ],
+          "text": "Inspect significant contracts and side correspondence for terms that affect when revenue and the receivable should be recognised, such as rights of return or bill-and-hold arrangements.",
+          "evidence": "Contract review notes",
+          "reference": "ISA 240, ISA 500"
+        }
+      ]
+    },
+    {
+      "code": "C6",
+      "title": "Cash and bank",
+      "objective": "evidence that cash and bank balances exist, are owned, are complete, and that restrictions and bank facilities are disclosed.",
+      "procedures": [
+        {
+          "id": "C6.01",
+          "tier": "core",
+          "assertions": [
+            "E",
+            "C",
+            "R"
+          ],
+          "text": "Send confirmation requests, under your control, to every bank the entity dealt with in the period, including accounts with nil balances and accounts closed in the year. Request balances, loans, facilities, security, guarantees and signatories.",
+          "evidence": "Confirmation requests and replies",
+          "reference": "ISA 505"
+        },
+        {
+          "id": "C6.02",
+          "tier": "core",
+          "assertions": [
+            "E",
+            "A"
+          ],
+          "text": "Obtain the bank reconciliation for every account at the period end. Check arithmetic, agree the bank balance to the confirmation and statement, and the book balance to the ledger.",
+          "evidence": "Reconciliations",
+          "reference": "ISA 500"
+        },
+        {
+          "id": "C6.03",
+          "tier": "core",
+          "assertions": [
+            "E",
+            "CO"
+          ],
+          "text": "Trace reconciling items to bank statements after the period end. Investigate items that did not clear promptly and any old items.",
+          "evidence": "Clearance schedule",
+          "reference": "ISA 500"
+        },
+        {
+          "id": "C6.04",
+          "tier": "core",
+          "assertions": [
+            "C"
+          ],
+          "text": "Compare the confirmation replies with the ledger for accounts, loans, guarantees or security not recorded or disclosed.",
+          "evidence": "Comparison",
+          "reference": "ISA 505"
+        },
+        {
+          "id": "C6.05",
+          "tier": "core",
+          "assertions": [
+            "E"
+          ],
+          "text": "Where cash in hand is material, count it at or near the period end in the custodian's presence, and reconcile to the ledger. Otherwise review the balance for reasonableness.",
+          "evidence": "Count sheet",
+          "reference": "ISA 500"
+        },
+        {
+          "id": "C6.06",
+          "tier": "core",
+          "assertions": [
+            "A"
+          ],
+          "text": "Recalculate the translation of foreign-currency balances at the closing rate.",
+          "evidence": "Recalculation",
+          "reference": "ISA 500"
+        },
+        {
+          "id": "C6.07",
+          "tier": "core",
+          "assertions": [
+            "CL",
+            "P"
+          ],
+          "text": "Confirm that overdrafts are shown as liabilities unless offset is permitted, restricted balances and deposits with long maturities are properly classified, and disclosures are complete.",
+          "evidence": "Classification review",
+          "reference": "ISA 330"
+        },
+        {
+          "id": "C6.08",
+          "tier": "extended",
+          "assertions": [
+            "CO",
+            "E"
+          ],
+          "text": "Review large or unusual receipts and payments in the weeks either side of the period end, including transfers between accounts, to confirm they are recorded in the correct period and not recorded twice.",
+          "evidence": "Review schedule",
+          "reference": "ISA 500"
+        },
+        {
+          "id": "C6.09",
+          "tier": "extended",
+          "assertions": [
+            "E",
+            "A"
+          ],
+          "text": "Review reconciliations for other months for unusual items, and confirm they are prepared and reviewed regularly.",
+          "evidence": "Review notes",
+          "reference": "ISA 500"
+        },
+        {
+          "id": "C6.10",
+          "tier": "significant",
+          "assertions": [
+            "E"
+          ],
+          "text": "Obtain bank statements directly from the bank, or view them through online banking in the client's presence, to confirm the authenticity of statements provided.",
+          "evidence": "Record of direct access",
+          "reference": "ISA 240, ISA 500"
+        },
+        {
+          "id": "C6.11",
+          "tier": "significant",
+          "assertions": [
+            "E",
+            "C"
+          ],
+          "text": "Scan bank statements for the whole period for transactions with the owners, related parties or unusual counterparties, and trace them to the ledger.",
+          "evidence": "Scan results; link to C7",
+          "reference": "ISA 240, ISA 550"
+        }
+      ]
+    },
+    {
+      "code": "C7",
+      "title": "Related-party balances and transactions",
+      "objective": "to obtain sufficient appropriate evidence that related-party relationships and transactions have been identified, accounted for and disclosed as the framework requires, and that they do not conceal fraud or misstate the financial statements.",
+      "procedures": [
+        {
+          "id": "C7.01",
+          "tier": "core",
+          "assertions": [
+            "C"
+          ],
+          "text": "Starting from the list in B6, remain alert throughout the audit for unlisted related parties. Review bank confirmations, legal correspondence, minutes, significant contracts and the customer and supplier lists for names connected to the owners.",
+          "evidence": "Review notes",
+          "reference": "ISA 550"
+        },
+        {
+          "id": "C7.02",
+          "tier": "core",
+          "assertions": [
+            "C",
+            "A"
+          ],
+          "text": "Obtain a schedule of all related-party transactions and balances by party and type. Agree it to the ledger.",
+          "evidence": "Schedule; agreement to ledger",
+          "reference": "ISA 550"
+        },
+        {
+          "id": "C7.03",
+          "tier": "core",
+          "assertions": [
+            "E",
+            "A",
+            "R"
+          ],
+          "text": "Confirm balances directly with each related party, or agree to the counterparty's records where you also audit it. Reconcile differences.",
+          "evidence": "Confirmations; reconciliations",
+          "reference": "ISA 505, ISA 550"
+        },
+        {
+          "id": "C7.04",
+          "tier": "core",
+          "assertions": [
+            "A",
+            "V"
+          ],
+          "text": "For significant transactions, inspect agreements and supporting documents. Understand the terms, including pricing, interest, repayment and security.",
+          "evidence": "Documents; terms summary",
+          "reference": "ISA 550"
+        },
+        {
+          "id": "C7.05",
+          "tier": "core",
+          "assertions": [
+            "V"
+          ],
+          "text": "Assess the recoverability of amounts due from related parties, considering the counterparty's financial position and payment history.",
+          "evidence": "Recoverability assessment",
+          "reference": "ISA 540, ISA 550"
+        },
+        {
+          "id": "C7.06",
+          "tier": "core",
+          "assertions": [
+            "CL",
+            "P"
+          ],
+          "text": "Confirm that owner current accounts, loans and trading balances are correctly classified between current and non-current, and between liabilities and equity.",
+          "evidence": "Classification review",
+          "reference": "ISA 500"
+        },
+        {
+          "id": "C7.07",
+          "tier": "core",
+          "assertions": [
+            "E",
+            "A"
+          ],
+          "text": "Review expense accounts, particularly travel, vehicle, rent and personal-type costs, for owner's personal expenditure charged to the business.",
+          "evidence": "Review notes; proposed adjustments",
+          "reference": "ISA 550, ISA 240"
+        },
+        {
+          "id": "C7.08",
+          "tier": "core",
+          "assertions": [
+            "C",
+            "P"
+          ],
+          "text": "Obtain details of key management personnel compensation and agree to payroll and other records.",
+          "evidence": "Compensation schedule",
+          "reference": "ISA 550"
+        },
+        {
+          "id": "C7.09",
+          "tier": "core",
+          "assertions": [
+            "P"
+          ],
+          "text": "Confirm that disclosures are complete: relationships, transactions, balances, terms, and key management compensation. If the statements say transactions were at arm's length, obtain evidence for that claim.",
+          "evidence": "Disclosure tie-out",
+          "reference": "ISA 550"
+        },
+        {
+          "id": "C7.10",
+          "tier": "core",
+          "assertions": [
+            "C"
+          ],
+          "text": "Obtain written representations that management has disclosed all related parties and transactions and accounted for them properly. Carried to D5.",
+          "evidence": "Representation; link to D5",
+          "reference": "ISA 550, ISA 580"
+        },
+        {
+          "id": "C7.11",
+          "tier": "extended",
+          "assertions": [
+            "A",
+            "V"
+          ],
+          "text": "Compare the pricing and terms of related-party transactions with those of similar transactions with unrelated parties. Note the tax implications for C15.",
+          "evidence": "Comparison; link to C15",
+          "reference": "ISA 550"
+        },
+        {
+          "id": "C7.12",
+          "tier": "extended",
+          "assertions": [
+            "C"
+          ],
+          "text": "Search the ledger and bank payments for transactions with newly identified or suspected related parties.",
+          "evidence": "Search results",
+          "reference": "ISA 550"
+        },
+        {
+          "id": "C7.13",
+          "tier": "significant",
+          "assertions": [
+            "E",
+            "A"
+          ],
+          "text": "For significant transactions outside the normal course of business, inspect the contracts, evaluate the business rationale, confirm the terms are consistent with management's explanations, and confirm authorisation and approval.",
+          "evidence": "Evaluation per transaction",
+          "reference": "ISA 550, ISA 240"
+        },
+        {
+          "id": "C7.14",
+          "tier": "significant",
+          "assertions": [
+            "C"
+          ],
+          "text": "If a related party or significant transaction is found that management did not disclose, tell the team at once, ask management to identify all transactions with that party, ask why it was missed, perform substantive procedures on it, and reconsider the risk assessment and the reliability of management's representations.",
+          "evidence": "Record of actions",
+          "reference": "ISA 550"
+        }
+      ]
+    },
+    {
+      "code": "C8",
+      "title": "Trade and other payables, accruals",
+      "objective": "evidence that all liabilities at the period end are recorded, at the correct amounts, in the correct period, and properly classified.",
+      "procedures": [
+        {
+          "id": "C8.01",
+          "tier": "core",
+          "assertions": [
+            "C",
+            "A"
+          ],
+          "text": "Obtain the supplier-by-supplier listing with ageing. Check arithmetic and agree to the trial balance.",
+          "evidence": "Listing",
+          "reference": "ISA 500"
+        },
+        {
+          "id": "C8.02",
+          "tier": "core",
+          "assertions": [
+            "C",
+            "E"
+          ],
+          "text": "Compare the balance, creditor days and the list of major suppliers with the prior year and with purchases. Investigate suppliers with unexpectedly low or nil balances.",
+          "evidence": "Analytical review",
+          "reference": "ISA 520"
+        },
+        {
+          "id": "C8.03",
+          "tier": "core",
+          "assertions": [
+            "C",
+            "A"
+          ],
+          "text": "For major suppliers, selected by volume of purchases and not by balance, reconcile supplier statements to the ledger. Where no statement is available, request confirmation.",
+          "evidence": "Reconciliations or confirmations",
+          "reference": "ISA 500, ISA 505"
+        },
+        {
+          "id": "C8.04",
+          "tier": "core",
+          "assertions": [
+            "C",
+            "CO"
+          ],
+          "text": "Search for unrecorded liabilities: review payments made and invoices received after the period end, up to a date close to the audit report, and confirm that those relating to the period were recorded or accrued.",
+          "evidence": "Search schedule with cut-off date",
+          "reference": "ISA 500"
+        },
+        {
+          "id": "C8.05",
+          "tier": "core",
+          "assertions": [
+            "C",
+            "CO"
+          ],
+          "text": "Review goods-received records for the last days of the period for deliveries not yet invoiced, and confirm they were accrued.",
+          "evidence": "Cut-off test",
+          "reference": "ISA 500"
+        },
+        {
+          "id": "C8.06",
+          "tier": "core",
+          "assertions": [
+            "C",
+            "A"
+          ],
+          "text": "Obtain the accruals schedule. Compare with the prior year and with recurring expenses to identify missing accruals. Test significant items to later invoices or payment and recalculate.",
+          "evidence": "Accruals test",
+          "reference": "ISA 500, ISA 540"
+        },
+        {
+          "id": "C8.07",
+          "tier": "core",
+          "assertions": [
+            "CL",
+            "P"
+          ],
+          "text": "Review for debit balances, related-party balances, and amounts due after one year. Confirm classification and disclosures.",
+          "evidence": "Annotated listing",
+          "reference": "ISA 500"
+        },
+        {
+          "id": "C8.08",
+          "tier": "core",
+          "assertions": [
+            "A"
+          ],
+          "text": "Recalculate the translation of foreign-currency balances at the closing rate.",
+          "evidence": "Recalculation",
+          "reference": "ISA 500"
+        },
+        {
+          "id": "C8.09",
+          "tier": "extended",
+          "assertions": [
+            "C"
+          ],
+          "text": "Review open purchase orders and unmatched delivery notes at the period end for liabilities not recorded.",
+          "evidence": "Review notes",
+          "reference": "ISA 500"
+        },
+        {
+          "id": "C8.10",
+          "tier": "extended",
+          "assertions": [
+            "C",
+            "A"
+          ],
+          "text": "Review long-outstanding balances and disputed items, and consider whether amounts written back to income are justified.",
+          "evidence": "Review of old balances",
+          "reference": "ISA 500"
+        },
+        {
+          "id": "C8.11",
+          "tier": "significant",
+          "assertions": [
+            "C"
+          ],
+          "text": "Extend the search for unrecorded liabilities: lower the selection threshold, extend the period, and confirm directly with suppliers showing nil or small balances.",
+          "evidence": "Extended search",
+          "reference": "ISA 240, ISA 505"
+        }
+      ]
+    },
+    {
+      "code": "C9",
+      "title": "Borrowings and lease obligations",
+      "objective": "evidence that all borrowings and lease obligations are recorded, at the correct amounts, correctly split between current and non-current, with finance costs complete and terms disclosed.",
+      "procedures": [
+        {
+          "id": "C9.01",
+          "tier": "core",
+          "assertions": [
+            "C",
+            "A"
+          ],
+          "text": "Obtain a schedule of borrowings with movements: opening, drawdowns, repayments, interest, closing. Agree to the trial balance.",
+          "evidence": "Schedule",
+          "reference": "ISA 500"
+        },
+        {
+          "id": "C9.02",
+          "tier": "core",
+          "assertions": [
+            "E",
+            "C",
+            "A"
+          ],
+          "text": "Agree balances, terms and security to lender confirmations (see C6.01) and loan agreements.",
+          "evidence": "Confirmations; agreements",
+          "reference": "ISA 505"
+        },
+        {
+          "id": "C9.03",
+          "tier": "core",
+          "assertions": [
+            "A",
+            "C"
+          ],
+          "text": "Recalculate interest expense and accrued interest from the terms, or test in total against average borrowings and rates.",
+          "evidence": "Interest recalculation",
+          "reference": "ISA 520, ISA 500"
+        },
+        {
+          "id": "C9.04",
+          "tier": "core",
+          "assertions": [
+            "CL"
+          ],
+          "text": "Recalculate the split between current and non-current from the repayment schedule.",
+          "evidence": "Recalculation",
+          "reference": "ISA 500"
+        },
+        {
+          "id": "C9.05",
+          "tier": "core",
+          "assertions": [
+            "CL",
+            "P"
+          ],
+          "text": "Read the covenants. Test compliance at the period end using audited figures. If breached, consider classification, disclosure and going concern.",
+          "evidence": "Covenant test; link to D4",
+          "reference": "ISA 500, ISA 570"
+        },
+        {
+          "id": "C9.06",
+          "tier": "core",
+          "assertions": [
+            "C",
+            "CL"
+          ],
+          "text": "Obtain a list of lease agreements. For each significant lease, read the terms and conclude on its classification and accounting under the framework. Recalculate obligations and expense.",
+          "evidence": "Lease review and recalculation",
+          "reference": "ISA 500"
+        },
+        {
+          "id": "C9.07",
+          "tier": "core",
+          "assertions": [
+            "C"
+          ],
+          "text": "Review minutes, bank confirmations, interest expense accounts and large receipts for borrowings not recorded.",
+          "evidence": "Completeness review",
+          "reference": "ISA 500"
+        },
+        {
+          "id": "C9.08",
+          "tier": "core",
+          "assertions": [
+            "P"
+          ],
+          "text": "Confirm disclosures: terms, security, maturity, defaults, lease commitments, and guarantees given.",
+          "evidence": "Disclosure tie-out",
+          "reference": "ISA 330"
+        },
+        {
+          "id": "C9.09",
+          "tier": "extended",
+          "assertions": [
+            "A",
+            "V"
+          ],
+          "text": "For borrowings with unusual features, such as interest-free owner loans, conversion rights or restructured terms, evaluate the accounting against the framework.",
+          "evidence": "Assessment",
+          "reference": "ISA 500, ISA 540"
+        },
+        {
+          "id": "C9.10",
+          "tier": "significant",
+          "assertions": [
+            "C"
+          ],
+          "text": "Confirm directly with lenders and related parties the absence of other facilities, side agreements or guarantees.",
+          "evidence": "Confirmations",
+          "reference": "ISA 240, ISA 505"
+        }
+      ]
+    },
+    {
+      "code": "C10",
+      "title": "Provisions, contingencies and commitments",
+      "objective": "evidence that all obligations requiring provision are recognised at a reasonable estimate, and that contingencies and commitments are completely disclosed.",
+      "procedures": [
+        {
+          "id": "C10.01",
+          "tier": "core",
+          "assertions": [
+            "C"
+          ],
+          "text": "Ask management about litigation, claims, disputes, penalties, guarantees, warranties and onerous contracts. Record who was asked and when.",
+          "evidence": "Inquiry record",
+          "reference": "ISA 501"
+        },
+        {
+          "id": "C10.02",
+          "tier": "core",
+          "assertions": [
+            "C"
+          ],
+          "text": "Review legal and professional fee accounts, minutes, and correspondence with lawyers and authorities for indications of claims.",
+          "evidence": "Review notes",
+          "reference": "ISA 501"
+        },
+        {
+          "id": "C10.03",
+          "tier": "core",
+          "assertions": [
+            "C",
+            "V"
+          ],
+          "text": "Where litigation or claims are identified or risk is assessed, communicate directly with the entity's external lawyers through a letter of inquiry prepared by management and sent by you.",
+          "evidence": "Lawyers' letters and replies",
+          "reference": "ISA 501"
+        },
+        {
+          "id": "C10.04",
+          "tier": "core",
+          "assertions": [
+            "A",
+            "V"
+          ],
+          "text": "Obtain a schedule of provisions with movements. For each, understand the basis, test the data, and evaluate the assumptions.",
+          "evidence": "Provisions test",
+          "reference": "ISA 540"
+        },
+        {
+          "id": "C10.05",
+          "tier": "core",
+          "assertions": [
+            "V"
+          ],
+          "text": "Compare prior-year provisions with actual outcomes.",
+          "evidence": "Retrospective review",
+          "reference": "ISA 540"
+        },
+        {
+          "id": "C10.06",
+          "tier": "core",
+          "assertions": [
+            "C",
+            "P"
+          ],
+          "text": "Identify capital and other commitments from contracts, orders and minutes. Confirm disclosure.",
+          "evidence": "Commitments schedule",
+          "reference": "ISA 500"
+        },
+        {
+          "id": "C10.07",
+          "tier": "core",
+          "assertions": [
+            "C",
+            "P"
+          ],
+          "text": "Compare guarantees and contingent liabilities reported in bank confirmations with those disclosed.",
+          "evidence": "Comparison",
+          "reference": "ISA 505"
+        },
+        {
+          "id": "C10.08",
+          "tier": "core",
+          "assertions": [
+            "CL",
+            "P"
+          ],
+          "text": "For each matter, conclude whether it should be provided for, disclosed as a contingency, or neither, and confirm the disclosures.",
+          "evidence": "Conclusion per matter",
+          "reference": "ISA 500"
+        },
+        {
+          "id": "C10.09",
+          "tier": "extended",
+          "assertions": [
+            "V"
+          ],
+          "text": "For significant estimates, develop your own point estimate or range and compare with management's.",
+          "evidence": "Auditor's estimate",
+          "reference": "ISA 540"
+        },
+        {
+          "id": "C10.10",
+          "tier": "significant",
+          "assertions": [
+            "C",
+            "V"
+          ],
+          "text": "Meet the entity's lawyers, with management's permission, to discuss the likely outcome of significant matters.",
+          "evidence": "Meeting note",
+          "reference": "ISA 501"
+        }
+      ]
+    },
+    {
+      "code": "C11",
+      "title": "Employee benefits, including end-of-service benefits",
+      "objective": "evidence that liabilities to employees are complete and measured as the framework requires.",
+      "procedures": [
+        {
+          "id": "C11.01",
+          "tier": "core",
+          "assertions": [
+            "C",
+            "A"
+          ],
+          "text": "Obtain the end-of-service calculation by employee. Check arithmetic and agree to the trial balance. Reconcile headcount to payroll records.",
+          "evidence": "Calculation; headcount reconciliation",
+          "reference": "ISA 500"
+        },
+        {
+          "id": "C11.02",
+          "tier": "core",
+          "assertions": [
+            "A",
+            "V"
+          ],
+          "text": "For a selection of employees, agree joining date and salary components to contracts and payroll, and recalculate the entitlement under the applicable law and contract.",
+          "evidence": "Recalculation",
+          "reference": "ISA 500, ISA 540"
+        },
+        {
+          "id": "C11.03",
+          "tier": "core",
+          "assertions": [
+            "V"
+          ],
+          "text": "Conclude whether the measurement method is acceptable under the framework, including whether an actuarial valuation or a permitted simplification applies.",
+          "evidence": "Method assessment",
+          "reference": "ISA 540"
+        },
+        {
+          "id": "C11.04",
+          "tier": "core",
+          "assertions": [
+            "E",
+            "A"
+          ],
+          "text": "Agree payments to leavers in the year to final settlement documents and bank.",
+          "evidence": "Leavers test",
+          "reference": "ISA 500"
+        },
+        {
+          "id": "C11.05",
+          "tier": "core",
+          "assertions": [
+            "C",
+            "A"
+          ],
+          "text": "Test the accrual for untaken leave to leave records and salary rates.",
+          "evidence": "Leave accrual test",
+          "reference": "ISA 500"
+        },
+        {
+          "id": "C11.06",
+          "tier": "core",
+          "assertions": [
+            "C"
+          ],
+          "text": "Confirm that salaries, bonuses, commissions and statutory contributions unpaid at the period end are accrued. Compare with post-period payments.",
+          "evidence": "Accruals test",
+          "reference": "ISA 500"
+        },
+        {
+          "id": "C11.07",
+          "tier": "core",
+          "assertions": [
+            "P"
+          ],
+          "text": "Confirm disclosures.",
+          "evidence": "Disclosure tie-out",
+          "reference": "ISA 330"
+        },
+        {
+          "id": "C11.08",
+          "tier": "extended",
+          "assertions": [
+            "V"
+          ],
+          "text": "Where an actuary is used, evaluate the actuary's competence and objectivity, test the employee data supplied, and assess the key assumptions.",
+          "evidence": "Actuary evaluation; link to B11",
+          "reference": "ISA 500, ISA 540"
+        },
+        {
+          "id": "C11.09",
+          "tier": "extended",
+          "assertions": [
+            "C"
+          ],
+          "text": "Test completeness of the employee list by tracing from payroll and visa or labour records to the calculation.",
+          "evidence": "Completeness test",
+          "reference": "ISA 500"
+        }
+      ]
+    },
+    {
+      "code": "C12",
+      "title": "Equity and owner accounts",
+      "objective": "evidence that share capital, reserves and owner accounts are correctly stated, movements are authorised and lawful, and disclosures are complete.",
+      "procedures": [
+        {
+          "id": "C12.01",
+          "tier": "core",
+          "assertions": [
+            "E",
+            "A"
+          ],
+          "text": "Agree share capital and ownership to the constitutional documents and licence. Inspect evidence for any change in the year.",
+          "evidence": "Documents",
+          "reference": "ISA 500"
+        },
+        {
+          "id": "C12.02",
+          "tier": "core",
+          "assertions": [
+            "A",
+            "C"
+          ],
+          "text": "Prepare or obtain the statement of changes in equity. Agree opening balances to the prior year and each movement to evidence.",
+          "evidence": "Movement schedule",
+          "reference": "ISA 500"
+        },
+        {
+          "id": "C12.03",
+          "tier": "core",
+          "assertions": [
+            "E",
+            "A"
+          ],
+          "text": "Agree dividends or distributions to resolutions and payment. Confirm they were lawful, given available reserves.",
+          "evidence": "Distribution test",
+          "reference": "ISA 500, ISA 250"
+        },
+        {
+          "id": "C12.04",
+          "tier": "core",
+          "assertions": [
+            "A"
+          ],
+          "text": "Recalculate any statutory reserve transfer required by law or the constitutional documents.",
+          "evidence": "Recalculation",
+          "reference": "ISA 250"
+        },
+        {
+          "id": "C12.05",
+          "tier": "core",
+          "assertions": [
+            "A",
+            "CL"
+          ],
+          "text": "Obtain the movement on each owner's current account. Test significant movements, and conclude on classification between equity and liability. Linked to C7.",
+          "evidence": "Movement test",
+          "reference": "ISA 550, ISA 500"
+        },
+        {
+          "id": "C12.06",
+          "tier": "core",
+          "assertions": [
+            "P"
+          ],
+          "text": "Confirm disclosures: capital, reserves and their nature, distributions.",
+          "evidence": "Disclosure tie-out",
+          "reference": "ISA 330"
+        },
+        {
+          "id": "C12.07",
+          "tier": "extended",
+          "assertions": [
+            "E",
+            "A"
+          ],
+          "text": "For capital contributions in kind or conversions of loans to equity, examine the agreements, the valuation and the approvals.",
+          "evidence": "Review of evidence",
+          "reference": "ISA 500, ISA 550"
+        }
+      ]
+    },
+    {
+      "code": "C13",
+      "title": "Revenue",
+      "objective": "to obtain sufficient appropriate evidence that recorded revenue arose from real transactions, is complete, is measured accurately, is recorded in the correct period, and is properly classified and disclosed.",
+      "procedures": [
+        {
+          "id": "C13.01",
+          "tier": "core",
+          "assertions": [
+            "A",
+            "CL"
+          ],
+          "text": "Obtain a breakdown of revenue by stream and by month. Agree it to the trial balance. For each stream, record the recognition policy and conclude whether it complies with the framework.",
+          "evidence": "Breakdown; policy assessment per stream",
+          "reference": "ISA 500, ISA 315"
+        },
+        {
+          "id": "C13.02",
+          "tier": "core",
+          "assertions": [
+            "E",
+            "C",
+            "A"
+          ],
+          "text": "Build an expectation of revenue for each stream from independent or audited data, such as volumes and prices, contracts, headcount or capacity. Compare with recorded revenue, set a threshold, and corroborate differences above it.",
+          "evidence": "Expectation, threshold, differences, corroboration",
+          "reference": "ISA 520"
+        },
+        {
+          "id": "C13.03",
+          "tier": "core",
+          "assertions": [
+            "E",
+            "A"
+          ],
+          "text": "Select recorded sales and trace each to order or contract, delivery or service evidence, invoice, and receipt of cash.",
+          "evidence": "Sample schedule with documents",
+          "reference": "ISA 500, ISA 530"
+        },
+        {
+          "id": "C13.04",
+          "tier": "core",
+          "assertions": [
+            "C"
+          ],
+          "text": "Select from a source outside the sales ledger, such as delivery notes, job records or contracts, and trace each into recorded revenue.",
+          "evidence": "Sample schedule",
+          "reference": "ISA 500"
+        },
+        {
+          "id": "C13.05",
+          "tier": "core",
+          "assertions": [
+            "CO"
+          ],
+          "text": "Test sales and credit notes either side of the period end against delivery or service evidence. Shared with C5.07.",
+          "evidence": "Cut-off schedule",
+          "reference": "ISA 500"
+        },
+        {
+          "id": "C13.06",
+          "tier": "core",
+          "assertions": [
+            "C",
+            "A"
+          ],
+          "text": "Reconcile revenue per the ledger to revenue reported in VAT returns for the period. Investigate differences.",
+          "evidence": "Reconciliation",
+          "reference": "ISA 500"
+        },
+        {
+          "id": "C13.07",
+          "tier": "core",
+          "assertions": [
+            "P"
+          ],
+          "text": "Confirm that revenue disclosures, including the policy and any disaggregation required, agree to the evidence and meet the framework.",
+          "evidence": "Disclosure tie-out",
+          "reference": "ISA 330"
+        },
+        {
+          "id": "C13.08",
+          "tier": "extended",
+          "assertions": [
+            "E",
+            "A"
+          ],
+          "text": "Analyse gross margin by month and by product or customer. Investigate months or lines that depart from the pattern.",
+          "evidence": "Margin analysis",
+          "reference": "ISA 520"
+        },
+        {
+          "id": "C13.09",
+          "tier": "extended",
+          "assertions": [
+            "C"
+          ],
+          "text": "For cash sales, reconcile daily sales records or till reports to bankings for selected periods, and observe cash-handling procedures.",
+          "evidence": "Reconciliations; observation notes",
+          "reference": "ISA 500"
+        },
+        {
+          "id": "C13.10",
+          "tier": "extended",
+          "assertions": [
+            "A",
+            "CO"
+          ],
+          "text": "For contracts spanning the period end, recalculate revenue recognised from the contract terms and evidence of progress. Assess the reliability of the progress measure.",
+          "evidence": "Contract schedules; recalculation",
+          "reference": "ISA 500, ISA 540"
+        },
+        {
+          "id": "C13.11",
+          "tier": "extended",
+          "assertions": [
+            "A",
+            "C"
+          ],
+          "text": "Test discounts, rebates and returns: agree terms to agreements, recalculate accruals, and review post-period credit notes.",
+          "evidence": "Recalculation; credit note review",
+          "reference": "ISA 500"
+        },
+        {
+          "id": "C13.12",
+          "tier": "significant",
+          "assertions": [
+            "E",
+            "CO"
+          ],
+          "text": "Identify sales recorded in the last weeks of the period that are large, to new customers, or on unusual terms. Obtain evidence of delivery and of the customer's acceptance, and trace to cash received.",
+          "evidence": "Schedule with evidence per item",
+          "reference": "ISA 240"
+        },
+        {
+          "id": "C13.13",
+          "tier": "significant",
+          "assertions": [
+            "E"
+          ],
+          "text": "Confirm contract terms and the absence of side agreements directly with selected customers.",
+          "evidence": "Confirmation requests and replies",
+          "reference": "ISA 240, ISA 505"
+        },
+        {
+          "id": "C13.14",
+          "tier": "significant",
+          "assertions": [
+            "E",
+            "CO"
+          ],
+          "text": "Test manual journal entries posted to revenue, particularly near the period end. Linked to C16.",
+          "evidence": "Journal testing",
+          "reference": "ISA 240"
+        },
+        {
+          "id": "C13.15",
+          "tier": "significant",
+          "assertions": [
+            "E",
+            "A"
+          ],
+          "text": "For bill-and-hold, consignment, or sales with rights of return, examine the terms and conclude whether recognition is appropriate.",
+          "evidence": "Assessment per arrangement",
+          "reference": "ISA 240, ISA 500"
+        }
+      ]
+    },
+    {
+      "code": "C14",
+      "title": "Cost of sales and operating expenses, including payroll",
+      "objective": "evidence that expenses occurred, relate to the business, are complete, are accurately measured, and are recorded in the correct period and account.",
+      "procedures": [
+        {
+          "id": "C14.01",
+          "tier": "core",
+          "assertions": [
+            "E",
+            "C",
+            "A"
+          ],
+          "text": "Compare each expense line with the prior year and as a percentage of revenue. Set an expectation for significant lines, such as rent from leases and depreciation from the register. Corroborate unexpected movements.",
+          "evidence": "Analytical review",
+          "reference": "ISA 520"
+        },
+        {
+          "id": "C14.02",
+          "tier": "core",
+          "assertions": [
+            "E",
+            "A",
+            "CL"
+          ],
+          "text": "Select expense transactions and agree to invoice, evidence of receipt of goods or services, approval and payment. Confirm business purpose and correct account.",
+          "evidence": "Expense sample",
+          "reference": "ISA 500, ISA 530"
+        },
+        {
+          "id": "C14.03",
+          "tier": "core",
+          "assertions": [
+            "A",
+            "C"
+          ],
+          "text": "Reconcile cost of sales: opening inventory plus purchases and direct costs less closing inventory. Agree components to C4 and the purchases ledger.",
+          "evidence": "Reconciliation",
+          "reference": "ISA 500"
+        },
+        {
+          "id": "C14.04",
+          "tier": "core",
+          "assertions": [
+            "CO"
+          ],
+          "text": "Test purchases cut-off. Shared with C4.06 and C8.05.",
+          "evidence": "Cut-off test",
+          "reference": "ISA 500"
+        },
+        {
+          "id": "C14.05",
+          "tier": "core",
+          "assertions": [
+            "E",
+            "C",
+            "A"
+          ],
+          "text": "Build an expectation of payroll cost from headcount, average pay and changes in the year. Compare with the recorded cost and investigate differences.",
+          "evidence": "Payroll analytical test",
+          "reference": "ISA 520"
+        },
+        {
+          "id": "C14.06",
+          "tier": "core",
+          "assertions": [
+            "E",
+            "A"
+          ],
+          "text": "Select employees from the payroll and agree to contract, identity or visa record, approved pay rate, and payment to a bank account in the employee's name. Recalculate gross-to-net for one period.",
+          "evidence": "Payroll sample",
+          "reference": "ISA 500"
+        },
+        {
+          "id": "C14.07",
+          "tier": "core",
+          "assertions": [
+            "C",
+            "A"
+          ],
+          "text": "Reconcile total payroll for the period to the ledger and to wage-protection or bank payment records.",
+          "evidence": "Reconciliation",
+          "reference": "ISA 500"
+        },
+        {
+          "id": "C14.08",
+          "tier": "core",
+          "assertions": [
+            "CL",
+            "P"
+          ],
+          "text": "Confirm that the classification of expenses is consistent with the prior year and the presentation chosen under the framework.",
+          "evidence": "Classification review",
+          "reference": "ISA 330"
+        },
+        {
+          "id": "C14.09",
+          "tier": "extended",
+          "assertions": [
+            "E"
+          ],
+          "text": "Test joiners and leavers: confirm that pay starts and stops on the correct dates.",
+          "evidence": "Joiners and leavers test",
+          "reference": "ISA 500"
+        },
+        {
+          "id": "C14.10",
+          "tier": "extended",
+          "assertions": [
+            "E",
+            "A"
+          ],
+          "text": "Review sensitive accounts in detail: legal and professional, consultancy, commissions, donations, entertainment, travel and miscellaneous.",
+          "evidence": "Account review",
+          "reference": "ISA 500, ISA 250"
+        },
+        {
+          "id": "C14.11",
+          "tier": "extended",
+          "assertions": [
+            "C",
+            "A"
+          ],
+          "text": "Reconcile purchases and input VAT to VAT returns. Linked to C15.",
+          "evidence": "Reconciliation",
+          "reference": "ISA 500"
+        },
+        {
+          "id": "C14.12",
+          "tier": "significant",
+          "assertions": [
+            "E"
+          ],
+          "text": "Test for fictitious suppliers or employees: verify a selection of new suppliers independently, look for shared bank accounts or addresses between suppliers and staff, and meet a selection of employees in person.",
+          "evidence": "Verification record",
+          "reference": "ISA 240"
+        }
+      ]
+    },
+    {
+      "code": "C15",
+      "title": "Taxation: corporate tax and VAT",
+      "objective": "evidence that current and deferred tax and indirect tax balances are complete and accurately calculated under the law, and that disclosures are complete.",
+      "procedures": [
+        {
+          "id": "C15.01",
+          "tier": "core",
+          "assertions": [
+            "A",
+            "C"
+          ],
+          "text": "Obtain the corporate tax computation. Agree accounting profit to the draft statements and check arithmetic.",
+          "evidence": "Computation",
+          "reference": "ISA 500"
+        },
+        {
+          "id": "C15.02",
+          "tier": "core",
+          "assertions": [
+            "A",
+            "V"
+          ],
+          "text": "Test each significant adjustment to evidence and to the tax law: non-deductible expenses, exempt income, reliefs claimed, losses used, and limits on deductions. Confirm the rate applied.",
+          "evidence": "Adjustment testing",
+          "reference": "ISA 500, ISA 250"
+        },
+        {
+          "id": "C15.03",
+          "tier": "core",
+          "assertions": [
+            "A",
+            "V"
+          ],
+          "text": "Confirm that the entity's tax status, registrations and any elections or reliefs relied on are valid and supported, and that conditions are met for the period.",
+          "evidence": "Status and eligibility evidence",
+          "reference": "ISA 250"
+        },
+        {
+          "id": "C15.04",
+          "tier": "core",
+          "assertions": [
+            "C",
+            "A"
+          ],
+          "text": "Agree the opening tax balance, payments in the year and prior-year return to tax authority records. Investigate over- or under-provisions.",
+          "evidence": "Tax account reconciliation",
+          "reference": "ISA 500"
+        },
+        {
+          "id": "C15.05",
+          "tier": "core",
+          "assertions": [
+            "C",
+            "V"
+          ],
+          "text": "Identify temporary differences and recalculate deferred tax. Assess whether any deferred tax asset is recoverable.",
+          "evidence": "Deferred tax calculation",
+          "reference": "ISA 540"
+        },
+        {
+          "id": "C15.06",
+          "tier": "core",
+          "assertions": [
+            "C",
+            "A"
+          ],
+          "text": "Reconcile VAT: output and input tax per the ledger to returns filed, and the closing VAT balance to the last return and subsequent payment or refund.",
+          "evidence": "VAT reconciliation",
+          "reference": "ISA 500"
+        },
+        {
+          "id": "C15.07",
+          "tier": "core",
+          "assertions": [
+            "C"
+          ],
+          "text": "Inspect correspondence with the tax authority for assessments, audits, disputes and penalties. Consider provisions and disclosure. Linked to B5 and C10.",
+          "evidence": "Correspondence review",
+          "reference": "ISA 250, ISA 501"
+        },
+        {
+          "id": "C15.08",
+          "tier": "core",
+          "assertions": [
+            "P"
+          ],
+          "text": "Confirm disclosures: tax expense components, reconciliation of tax expense to accounting profit, and deferred tax.",
+          "evidence": "Disclosure tie-out",
+          "reference": "ISA 330"
+        },
+        {
+          "id": "C15.09",
+          "tier": "extended",
+          "assertions": [
+            "A",
+            "V"
+          ],
+          "text": "Evaluate the tax treatment of related-party transactions and whether transfer-pricing requirements and documentation obligations are met. Linked to C7.11.",
+          "evidence": "Assessment",
+          "reference": "ISA 250, ISA 550"
+        },
+        {
+          "id": "C15.10",
+          "tier": "extended",
+          "assertions": [
+            "V"
+          ],
+          "text": "For uncertain tax positions, evaluate management's judgement, using a tax specialist where needed, and consider provision or disclosure.",
+          "evidence": "Assessment; link to B11",
+          "reference": "ISA 540, ISA 620"
+        },
+        {
+          "id": "C15.11",
+          "tier": "extended",
+          "assertions": [
+            "A",
+            "C"
+          ],
+          "text": "Test VAT treatment on a selection of sales and purchases: rate applied, valid tax invoices, and recoverability of input tax.",
+          "evidence": "VAT sample",
+          "reference": "ISA 500, ISA 250"
+        }
+      ]
+    },
+    {
+      "code": "C16",
+      "title": "Journal entries and management override",
+      "objective": "to respond to the risk that management overrides controls to misstate the financial statements.",
+      "procedures": [
+        {
+          "id": "C16.01",
+          "tier": "core",
+          "assertions": [
+            "E",
+            "C",
+            "A",
+            "V",
+            "R",
+            "CO",
+            "CL",
+            "P"
+          ],
+          "text": "Understand how journal entries are initiated, authorised and posted, who has access, and whether entries can be changed or deleted after posting. Uses B1.07.",
+          "evidence": "Process notes",
+          "reference": "ISA 240, ISA 315"
+        },
+        {
+          "id": "C16.02",
+          "tier": "core",
+          "assertions": [
+            "C"
+          ],
+          "text": "Obtain the full population of journal entries for the period, including post-closing and consolidation-type adjustments. Prove completeness by rolling opening balances forward to closing balances.",
+          "evidence": "Journal listing; completeness check",
+          "reference": "ISA 240"
+        },
+        {
+          "id": "C16.03",
+          "tier": "core",
+          "assertions": [
+            "E",
+            "C",
+            "A",
+            "V",
+            "R",
+            "CO",
+            "CL",
+            "P"
+          ],
+          "text": "Ask staff involved in financial reporting whether they were asked to make unusual entries or noticed inappropriate ones.",
+          "evidence": "Inquiry record",
+          "reference": "ISA 240"
+        },
+        {
+          "id": "C16.04",
+          "tier": "core",
+          "assertions": [
+            "E",
+            "C",
+            "A",
+            "V",
+            "R",
+            "CO",
+            "CL",
+            "P"
+          ],
+          "text": "Select entries for testing using risk characteristics. Filter the journal listing for: entries at or after the period end; entries posted by senior management or unusual users; round amounts; entries with no description; unusual account pairings, such as revenue against anything other than receivables or cash; entries to seldom-used accounts; entries posted at weekends or outside working hours.",
+          "evidence": "Selection criteria and results",
+          "reference": "ISA 240"
+        },
+        {
+          "id": "C16.05",
+          "tier": "core",
+          "assertions": [
+            "E",
+            "C",
+            "A",
+            "V",
+            "R",
+            "CO",
+            "CL",
+            "P"
+          ],
+          "text": "For each selected entry, inspect support, confirm authorisation, and conclude whether it has a valid business reason and is correctly recorded.",
+          "evidence": "Schedule with support",
+          "reference": "ISA 240"
+        },
+        {
+          "id": "C16.06",
+          "tier": "core",
+          "assertions": [
+            "E",
+            "C",
+            "A",
+            "V",
+            "R",
+            "CO",
+            "CL",
+            "P"
+          ],
+          "text": "Consider whether entries during the period, not only at its end, also need testing, and record the decision.",
+          "evidence": "Decision note",
+          "reference": "ISA 240"
+        },
+        {
+          "id": "C16.07",
+          "tier": "core",
+          "assertions": [
+            "V"
+          ],
+          "text": "Review accounting estimates for bias. Consider whether judgements, taken together, lean in one direction, and compare prior-year estimates with outcomes. Uses the retrospective reviews in each area.",
+          "evidence": "Bias assessment across estimates",
+          "reference": "ISA 240, ISA 540"
+        },
+        {
+          "id": "C16.08",
+          "tier": "core",
+          "assertions": [
+            "E",
+            "C",
+            "A",
+            "V",
+            "R",
+            "CO",
+            "CL",
+            "P"
+          ],
+          "text": "Identify significant transactions outside the normal course of business or otherwise unusual. Evaluate whether the business rationale, or lack of one, suggests fraud or concealment.",
+          "evidence": "Schedule of unusual transactions with evaluation",
+          "reference": "ISA 240"
+        },
+        {
+          "id": "C16.09",
+          "tier": "core",
+          "assertions": [
+            "E",
+            "C",
+            "A",
+            "V",
+            "R",
+            "CO",
+            "CL",
+            "P"
+          ],
+          "text": "Conclude on whether evidence indicates override, and whether the fraud risk assessment needs revising. Report suspected fraud as required.",
+          "evidence": "Conclusion; link to D6",
+          "reference": "ISA 240"
+        }
+      ]
+    }
+  ]
+}

@@ -1,5 +1,6 @@
 import type { Tx } from "./db";
 import { audit, getEngagement, listAccounts } from "./repo";
+import { getAuditOverview } from "./audit";
 import { buildLeadSheets } from "../domain/leadsheet";
 import { buildStatements } from "../domain/statements";
 import { GROUP_BY_CODE } from "../domain/groups";
@@ -39,6 +40,8 @@ export interface ReviewPoint {
 
 export interface ReviewOverview {
   status: string;
+  /** Audit procedures marked not applicable, shown to the partner before locking. */
+  auditNotApplicable?: number;
   /** The firm has exactly one user, so that user may review their own lead sheets. */
   solePractitioner: boolean;
   lockedByName: string | null;
@@ -104,7 +107,10 @@ export async function getOverview(tx: Tx, engagementId: string): Promise<ReviewO
     openPoints: openFor(sh.groupCode),
   }));
 
-  return {
+  // Once an engagement is being audited, unfinished audit work also blocks the lock.
+  const auditOverview = await getAuditOverview(tx, engagementId);
+  const auditBlockers = auditOverview?.blockers ?? [];
+  const overview: ReviewOverview = {
     status: lock.rows[0].status,
     lockedByName: lock.rows[0].lockedByName,
     lockedAt: lock.rows[0].lockedAt,
@@ -118,6 +124,9 @@ export async function getOverview(tx: Tx, engagementId: string): Promise<ReviewO
       openPoints: points.rows.filter((p) => p.status === "open").length,
     }),
   };
+  overview.readiness = { ready: overview.readiness.ready && auditBlockers.length === 0, blockers: [...overview.readiness.blockers, ...auditBlockers] };
+  overview.auditNotApplicable = auditOverview?.enabled ? auditOverview.notApplicable : 0;
+  return overview;
 }
 
 export async function signOff(tx: Tx, actor: Actor, engagementId: string, groupCode: string, level: Level): Promise<void> {

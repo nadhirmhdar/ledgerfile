@@ -98,6 +98,12 @@ export default async function ReviewPage({ params }: { params: Promise<{ id: str
           <>
             <h2 className="text-base font-semibold">Ready to lock</h2>
             <p className="mt-1 text-sm">Every lead sheet is prepared and reviewed, no review points are open, and the statement checks pass.</p>
+            {(overview.auditNotApplicable ?? 0) > 0 && (
+              <p className="mt-1 text-sm font-medium">
+                {overview.auditNotApplicable} audit procedure(s) were marked not applicable. Review the reasons on the{" "}
+                <Link href={`/engagements/${id}/audit`} className="text-blue-700 underline">Audit tab</Link> before locking.
+              </p>
+            )}
             {canLock(session.role) ? (
               <ActionForm action={lockAction} fields={{ engagementId: id }} className="mt-3">
                 <button className={primary}>Lock engagement</button>
