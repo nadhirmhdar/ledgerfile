@@ -54,6 +54,11 @@ export default async function ProgrammePage({ params }: { params: Promise<{ id: 
         {area.code} {area.title}
       </h2>
       {area.objective && <p className="mt-1 text-sm text-slate-700">{area.objective}</p>}
+      {area.code === "C16" && (
+        <p className="mt-1 text-sm">
+          <Link href={`/engagements/${id}/audit/journals`} className="text-blue-700 underline">Journal entry testing: import the listing and select entries</Link>
+        </p>
+      )}
       {checklist?.optional && <p className="mt-1 text-sm text-slate-700">This checklist applies only in some circumstances. Mark its steps not applicable, with the reason, if it does not apply.</p>}
       <p role="note" className="mt-3 rounded border border-amber-400 bg-amber-50 px-3 py-2 text-xs">
         Methodology content: {LIBRARY_STATUS}.

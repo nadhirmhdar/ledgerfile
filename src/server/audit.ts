@@ -123,7 +123,7 @@ async function isEnabled(tx: Tx, engagementId: string): Promise<boolean> {
 }
 
 /** Audit work can be recorded only on an open engagement that is being audited. */
-async function requireAudit(tx: Tx, engagementId: string) {
+export async function requireAudit(tx: Tx, engagementId: string) {
   await requireOpen(tx, engagementId);
   if (!(await isEnabled(tx, engagementId))) throw new Error("Turn the audit on for this engagement first.");
 }
@@ -139,7 +139,8 @@ export async function setAuditEnabled(tx: Tx, s: Session, engagementId: string, 
     const worked = await tx.query("select 1 from audit_procedures where engagement_id = $1 and (status <> 'open' or work_done is not null or conclusion is not null) limit 1", [engagementId]);
     const found = await tx.query("select 1 from misstatements where engagement_id = $1 limit 1", [engagementId]);
     const evidence = await tx.query("select 1 from working_papers where engagement_id = $1 and target_kind = 'procedure' limit 1", [engagementId]);
-    if (worked.rows.length > 0 || found.rows.length > 0 || evidence.rows.length > 0) throw new Error("Work has been recorded on this audit, so it cannot be turned off.");
+    const journalTests = await tx.query("select 1 from journal_tests where engagement_id = $1 limit 1", [engagementId]);
+    if (worked.rows.length > 0 || found.rows.length > 0 || evidence.rows.length > 0 || journalTests.rows.length > 0) throw new Error("Work has been recorded on this audit, so it cannot be turned off.");
   }
   await tx.query("update engagements set audit_enabled = $2 where id = $1", [engagementId, on]);
   if (on) await ensureChecklists(tx, s, engagementId);
@@ -240,6 +241,8 @@ export async function getAuditOverview(tx: Tx, engagementId: string): Promise<Au
     if (notLoaded > 0) blockers.push(`Audit: the programme has not been loaded for ${notLoaded} area(s).`);
     const open = counts.rows.reduce((n, c) => n + (c.total - c.completed), 0);
     if (open > 0) blockers.push(`Audit: ${open} procedure(s) and checklist step(s) are not yet completed.`);
+    const untested = await tx.query<{ n: number }>("select count(*)::int as n from journal_tests where engagement_id = $1 and tested_at is null", [engagementId]);
+    if (untested.rows[0].n > 0) blockers.push(`Audit: ${untested.rows[0].n} journal entry(ies) selected for testing have no conclusion.`);
     if (misstatements.exceedsMateriality) blockers.push("Audit: uncorrected misstatements reach overall materiality. Have them corrected; modified opinions are not yet supported.");
   }
 

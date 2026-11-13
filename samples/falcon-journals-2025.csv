@@ -1,0 +1,333 @@
+Date,Journal No,Account Code,Account Name,Description,Debit,Credit,Posted By
+28/01/2025,JV-2025-01,1000,Emirates Bank current account - AED,Monthly summary of transactions,10480.80,,accountant
+28/01/2025,JV-2025-01,1010,Petty cash,Monthly summary of transactions,,66.66,accountant
+28/01/2025,JV-2025-01,1100,Trade receivables,Monthly summary of transactions,,1812.47,accountant
+28/01/2025,JV-2025-01,1110,Allowance for doubtful debts,Monthly summary of transactions,,625.00,accountant
+28/01/2025,JV-2025-01,1150,Prepaid rent,Monthly summary of transactions,416.66,,accountant
+28/01/2025,JV-2025-01,1200,Inventories - finished goods,Monthly summary of transactions,3704.12,,accountant
+28/01/2025,JV-2025-01,1500,Furniture and fixtures,Monthly summary of transactions,1250.00,,accountant
+28/01/2025,JV-2025-01,1590,Accumulated depreciation,Monthly summary of transactions,,5541.66,accountant
+28/01/2025,JV-2025-01,2000,Trade payables,Monthly summary of transactions,,4777.53,accountant
+28/01/2025,JV-2025-01,2100,Accrued expenses,Monthly summary of transactions,,1023.20,accountant
+28/01/2025,JV-2025-01,2150,VAT payable,Monthly summary of transactions,,945.83,accountant
+28/01/2025,JV-2025-01,2200,Due to related parties,Monthly summary of transactions,2500.00,,accountant
+28/01/2025,JV-2025-01,2300,Bank loan,Monthly summary of transactions,5000.00,,accountant
+28/01/2025,JV-2025-01,2400,Provision for end of service benefits,Monthly summary of transactions,,1854.16,accountant
+28/01/2025,JV-2025-01,3100,Statutory reserve,Monthly summary of transactions,,1250.00,accountant
+28/01/2025,JV-2025-01,3200,Retained earnings,Monthly summary of transactions,20382.08,,accountant
+28/01/2025,JV-2025-01,4000,Sales,Monthly summary of transactions,,303366.66,accountant
+28/01/2025,JV-2025-01,4900,Other income,Monthly summary of transactions,,20.83,accountant
+28/01/2025,JV-2025-01,5000,Cost of goods sold,Monthly summary of transactions,207488.00,,accountant
+28/01/2025,JV-2025-01,6000,Salaries and wages,Monthly summary of transactions,44366.66,,accountant
+28/01/2025,JV-2025-01,6100,Office rent,Monthly summary of transactions,10833.33,,accountant
+28/01/2025,JV-2025-01,6200,Utilities,Monthly summary of transactions,2235.70,,accountant
+28/01/2025,JV-2025-01,6300,Professional fees,Monthly summary of transactions,2000.00,,accountant
+28/01/2025,JV-2025-01,6400,Depreciation expense,Monthly summary of transactions,5541.66,,accountant
+28/01/2025,JV-2025-01,6500,Bank charges,Monthly summary of transactions,426.66,,accountant
+28/01/2025,JV-2025-01,6600,Interest on loan,Monthly summary of transactions,1450.00,,accountant
+28/01/2025,JV-2025-01,6700,Marketing and advertising,Monthly summary of transactions,3208.33,,accountant
+28/02/2025,JV-2025-02,1000,Emirates Bank current account - AED,Monthly summary of transactions,10480.80,,accountant
+28/02/2025,JV-2025-02,1010,Petty cash,Monthly summary of transactions,,66.66,accountant
+28/02/2025,JV-2025-02,1100,Trade receivables,Monthly summary of transactions,,1812.47,accountant
+28/02/2025,JV-2025-02,1110,Allowance for doubtful debts,Monthly summary of transactions,,625.00,accountant
+28/02/2025,JV-2025-02,1150,Prepaid rent,Monthly summary of transactions,416.66,,accountant
+28/02/2025,JV-2025-02,1200,Inventories - finished goods,Monthly summary of transactions,3704.12,,accountant
+28/02/2025,JV-2025-02,1500,Furniture and fixtures,Monthly summary of transactions,1250.00,,accountant
+28/02/2025,JV-2025-02,1590,Accumulated depreciation,Monthly summary of transactions,,5541.66,accountant
+28/02/2025,JV-2025-02,2000,Trade payables,Monthly summary of transactions,,4777.53,accountant
+28/02/2025,JV-2025-02,2100,Accrued expenses,Monthly summary of transactions,,1023.20,accountant
+28/02/2025,JV-2025-02,2150,VAT payable,Monthly summary of transactions,,945.83,accountant
+28/02/2025,JV-2025-02,2200,Due to related parties,Monthly summary of transactions,2500.00,,accountant
+28/02/2025,JV-2025-02,2300,Bank loan,Monthly summary of transactions,5000.00,,accountant
+28/02/2025,JV-2025-02,2400,Provision for end of service benefits,Monthly summary of transactions,,1854.16,accountant
+28/02/2025,JV-2025-02,3100,Statutory reserve,Monthly summary of transactions,,1250.00,accountant
+28/02/2025,JV-2025-02,3200,Retained earnings,Monthly summary of transactions,20382.08,,accountant
+28/02/2025,JV-2025-02,4000,Sales,Monthly summary of transactions,,303366.66,accountant
+28/02/2025,JV-2025-02,4900,Other income,Monthly summary of transactions,,20.83,accountant
+28/02/2025,JV-2025-02,5000,Cost of goods sold,Monthly summary of transactions,207488.00,,accountant
+28/02/2025,JV-2025-02,6000,Salaries and wages,Monthly summary of transactions,44366.66,,accountant
+28/02/2025,JV-2025-02,6100,Office rent,Monthly summary of transactions,10833.33,,accountant
+28/02/2025,JV-2025-02,6200,Utilities,Monthly summary of transactions,2235.70,,accountant
+28/02/2025,JV-2025-02,6300,Professional fees,Monthly summary of transactions,2000.00,,accountant
+28/02/2025,JV-2025-02,6400,Depreciation expense,Monthly summary of transactions,5541.66,,accountant
+28/02/2025,JV-2025-02,6500,Bank charges,Monthly summary of transactions,426.66,,accountant
+28/02/2025,JV-2025-02,6600,Interest on loan,Monthly summary of transactions,1450.00,,accountant
+28/02/2025,JV-2025-02,6700,Marketing and advertising,Monthly summary of transactions,3208.33,,accountant
+28/03/2025,JV-2025-03,1000,Emirates Bank current account - AED,Monthly summary of transactions,10480.80,,accountant
+28/03/2025,JV-2025-03,1010,Petty cash,Monthly summary of transactions,,66.66,accountant
+28/03/2025,JV-2025-03,1100,Trade receivables,Monthly summary of transactions,,1812.47,accountant
+28/03/2025,JV-2025-03,1110,Allowance for doubtful debts,Monthly summary of transactions,,625.00,accountant
+28/03/2025,JV-2025-03,1150,Prepaid rent,Monthly summary of transactions,416.66,,accountant
+28/03/2025,JV-2025-03,1200,Inventories - finished goods,Monthly summary of transactions,3704.12,,accountant
+28/03/2025,JV-2025-03,1500,Furniture and fixtures,Monthly summary of transactions,1250.00,,accountant
+28/03/2025,JV-2025-03,1590,Accumulated depreciation,Monthly summary of transactions,,5541.66,accountant
+28/03/2025,JV-2025-03,2000,Trade payables,Monthly summary of transactions,,4777.53,accountant
+28/03/2025,JV-2025-03,2100,Accrued expenses,Monthly summary of transactions,,1023.20,accountant
+28/03/2025,JV-2025-03,2150,VAT payable,Monthly summary of transactions,,945.83,accountant
+28/03/2025,JV-2025-03,2200,Due to related parties,Monthly summary of transactions,2500.00,,accountant
+28/03/2025,JV-2025-03,2300,Bank loan,Monthly summary of transactions,5000.00,,accountant
+28/03/2025,JV-2025-03,2400,Provision for end of service benefits,Monthly summary of transactions,,1854.16,accountant
+28/03/2025,JV-2025-03,3100,Statutory reserve,Monthly summary of transactions,,1250.00,accountant
+28/03/2025,JV-2025-03,3200,Retained earnings,Monthly summary of transactions,20382.08,,accountant
+28/03/2025,JV-2025-03,4000,Sales,Monthly summary of transactions,,303366.66,accountant
+28/03/2025,JV-2025-03,4900,Other income,Monthly summary of transactions,,20.83,accountant
+28/03/2025,JV-2025-03,5000,Cost of goods sold,Monthly summary of transactions,207488.00,,accountant
+28/03/2025,JV-2025-03,6000,Salaries and wages,Monthly summary of transactions,44366.66,,accountant
+28/03/2025,JV-2025-03,6100,Office rent,Monthly summary of transactions,10833.33,,accountant
+28/03/2025,JV-2025-03,6200,Utilities,Monthly summary of transactions,2235.70,,accountant
+28/03/2025,JV-2025-03,6300,Professional fees,Monthly summary of transactions,2000.00,,accountant
+28/03/2025,JV-2025-03,6400,Depreciation expense,Monthly summary of transactions,5541.66,,accountant
+28/03/2025,JV-2025-03,6500,Bank charges,Monthly summary of transactions,426.66,,accountant
+28/03/2025,JV-2025-03,6600,Interest on loan,Monthly summary of transactions,1450.00,,accountant
+28/03/2025,JV-2025-03,6700,Marketing and advertising,Monthly summary of transactions,3208.33,,accountant
+28/04/2025,JV-2025-04,1000,Emirates Bank current account - AED,Monthly summary of transactions,10480.80,,accountant
+28/04/2025,JV-2025-04,1010,Petty cash,Monthly summary of transactions,,66.66,accountant
+28/04/2025,JV-2025-04,1100,Trade receivables,Monthly summary of transactions,,1812.47,accountant
+28/04/2025,JV-2025-04,1110,Allowance for doubtful debts,Monthly summary of transactions,,625.00,accountant
+28/04/2025,JV-2025-04,1150,Prepaid rent,Monthly summary of transactions,416.66,,accountant
+28/04/2025,JV-2025-04,1200,Inventories - finished goods,Monthly summary of transactions,3704.12,,accountant
+28/04/2025,JV-2025-04,1500,Furniture and fixtures,Monthly summary of transactions,1250.00,,accountant
+28/04/2025,JV-2025-04,1590,Accumulated depreciation,Monthly summary of transactions,,5541.66,accountant
+28/04/2025,JV-2025-04,2000,Trade payables,Monthly summary of transactions,,4777.53,accountant
+28/04/2025,JV-2025-04,2100,Accrued expenses,Monthly summary of transactions,,1023.20,accountant
+28/04/2025,JV-2025-04,2150,VAT payable,Monthly summary of transactions,,945.83,accountant
+28/04/2025,JV-2025-04,2200,Due to related parties,Monthly summary of transactions,2500.00,,accountant
+28/04/2025,JV-2025-04,2300,Bank loan,Monthly summary of transactions,5000.00,,accountant
+28/04/2025,JV-2025-04,2400,Provision for end of service benefits,Monthly summary of transactions,,1854.16,accountant
+28/04/2025,JV-2025-04,3100,Statutory reserve,Monthly summary of transactions,,1250.00,accountant
+28/04/2025,JV-2025-04,3200,Retained earnings,Monthly summary of transactions,20382.08,,accountant
+28/04/2025,JV-2025-04,4000,Sales,Monthly summary of transactions,,303366.66,accountant
+28/04/2025,JV-2025-04,4900,Other income,Monthly summary of transactions,,20.83,accountant
+28/04/2025,JV-2025-04,5000,Cost of goods sold,Monthly summary of transactions,207488.00,,accountant
+28/04/2025,JV-2025-04,6000,Salaries and wages,Monthly summary of transactions,44366.66,,accountant
+28/04/2025,JV-2025-04,6100,Office rent,Monthly summary of transactions,10833.33,,accountant
+28/04/2025,JV-2025-04,6200,Utilities,Monthly summary of transactions,2235.70,,accountant
+28/04/2025,JV-2025-04,6300,Professional fees,Monthly summary of transactions,2000.00,,accountant
+28/04/2025,JV-2025-04,6400,Depreciation expense,Monthly summary of transactions,5541.66,,accountant
+28/04/2025,JV-2025-04,6500,Bank charges,Monthly summary of transactions,426.66,,accountant
+28/04/2025,JV-2025-04,6600,Interest on loan,Monthly summary of transactions,1450.00,,accountant
+28/04/2025,JV-2025-04,6700,Marketing and advertising,Monthly summary of transactions,3208.33,,accountant
+28/05/2025,JV-2025-05,1000,Emirates Bank current account - AED,Monthly summary of transactions,10480.80,,accountant
+28/05/2025,JV-2025-05,1010,Petty cash,Monthly summary of transactions,,66.66,accountant
+28/05/2025,JV-2025-05,1100,Trade receivables,Monthly summary of transactions,,1812.47,accountant
+28/05/2025,JV-2025-05,1110,Allowance for doubtful debts,Monthly summary of transactions,,625.00,accountant
+28/05/2025,JV-2025-05,1150,Prepaid rent,Monthly summary of transactions,416.66,,accountant
+28/05/2025,JV-2025-05,1200,Inventories - finished goods,Monthly summary of transactions,3704.12,,accountant
+28/05/2025,JV-2025-05,1500,Furniture and fixtures,Monthly summary of transactions,1250.00,,accountant
+28/05/2025,JV-2025-05,1590,Accumulated depreciation,Monthly summary of transactions,,5541.66,accountant
+28/05/2025,JV-2025-05,2000,Trade payables,Monthly summary of transactions,,4777.53,accountant
+28/05/2025,JV-2025-05,2100,Accrued expenses,Monthly summary of transactions,,1023.20,accountant
+28/05/2025,JV-2025-05,2150,VAT payable,Monthly summary of transactions,,945.83,accountant
+28/05/2025,JV-2025-05,2200,Due to related parties,Monthly summary of transactions,2500.00,,accountant
+28/05/2025,JV-2025-05,2300,Bank loan,Monthly summary of transactions,5000.00,,accountant
+28/05/2025,JV-2025-05,2400,Provision for end of service benefits,Monthly summary of transactions,,1854.16,accountant
+28/05/2025,JV-2025-05,3100,Statutory reserve,Monthly summary of transactions,,1250.00,accountant
+28/05/2025,JV-2025-05,3200,Retained earnings,Monthly summary of transactions,20382.08,,accountant
+28/05/2025,JV-2025-05,4000,Sales,Monthly summary of transactions,,303366.66,accountant
+28/05/2025,JV-2025-05,4900,Other income,Monthly summary of transactions,,20.83,accountant
+28/05/2025,JV-2025-05,5000,Cost of goods sold,Monthly summary of transactions,207488.00,,accountant
+28/05/2025,JV-2025-05,6000,Salaries and wages,Monthly summary of transactions,44366.66,,accountant
+28/05/2025,JV-2025-05,6100,Office rent,Monthly summary of transactions,10833.33,,accountant
+28/05/2025,JV-2025-05,6200,Utilities,Monthly summary of transactions,2235.70,,accountant
+28/05/2025,JV-2025-05,6300,Professional fees,Monthly summary of transactions,2000.00,,accountant
+28/05/2025,JV-2025-05,6400,Depreciation expense,Monthly summary of transactions,5541.66,,accountant
+28/05/2025,JV-2025-05,6500,Bank charges,Monthly summary of transactions,426.66,,accountant
+28/05/2025,JV-2025-05,6600,Interest on loan,Monthly summary of transactions,1450.00,,accountant
+28/05/2025,JV-2025-05,6700,Marketing and advertising,Monthly summary of transactions,3208.33,,accountant
+28/06/2025,JV-2025-06,1000,Emirates Bank current account - AED,Monthly summary of transactions,10480.80,,accountant
+28/06/2025,JV-2025-06,1010,Petty cash,Monthly summary of transactions,,66.66,accountant
+28/06/2025,JV-2025-06,1100,Trade receivables,Monthly summary of transactions,,1812.47,accountant
+28/06/2025,JV-2025-06,1110,Allowance for doubtful debts,Monthly summary of transactions,,625.00,accountant
+28/06/2025,JV-2025-06,1150,Prepaid rent,Monthly summary of transactions,416.66,,accountant
+28/06/2025,JV-2025-06,1200,Inventories - finished goods,Monthly summary of transactions,3704.12,,accountant
+28/06/2025,JV-2025-06,1500,Furniture and fixtures,Monthly summary of transactions,1250.00,,accountant
+28/06/2025,JV-2025-06,1590,Accumulated depreciation,Monthly summary of transactions,,5541.66,accountant
+28/06/2025,JV-2025-06,2000,Trade payables,Monthly summary of transactions,,4777.53,accountant
+28/06/2025,JV-2025-06,2100,Accrued expenses,Monthly summary of transactions,,1023.20,accountant
+28/06/2025,JV-2025-06,2150,VAT payable,Monthly summary of transactions,,945.83,accountant
+28/06/2025,JV-2025-06,2200,Due to related parties,Monthly summary of transactions,2500.00,,accountant
+28/06/2025,JV-2025-06,2300,Bank loan,Monthly summary of transactions,5000.00,,accountant
+28/06/2025,JV-2025-06,2400,Provision for end of service benefits,Monthly summary of transactions,,1854.16,accountant
+28/06/2025,JV-2025-06,3100,Statutory reserve,Monthly summary of transactions,,1250.00,accountant
+28/06/2025,JV-2025-06,3200,Retained earnings,Monthly summary of transactions,20382.08,,accountant
+28/06/2025,JV-2025-06,4000,Sales,Monthly summary of transactions,,303366.66,accountant
+28/06/2025,JV-2025-06,4900,Other income,Monthly summary of transactions,,20.83,accountant
+28/06/2025,JV-2025-06,5000,Cost of goods sold,Monthly summary of transactions,207488.00,,accountant
+28/06/2025,JV-2025-06,6000,Salaries and wages,Monthly summary of transactions,44366.66,,accountant
+28/06/2025,JV-2025-06,6100,Office rent,Monthly summary of transactions,10833.33,,accountant
+28/06/2025,JV-2025-06,6200,Utilities,Monthly summary of transactions,2235.70,,accountant
+28/06/2025,JV-2025-06,6300,Professional fees,Monthly summary of transactions,2000.00,,accountant
+28/06/2025,JV-2025-06,6400,Depreciation expense,Monthly summary of transactions,5541.66,,accountant
+28/06/2025,JV-2025-06,6500,Bank charges,Monthly summary of transactions,426.66,,accountant
+28/06/2025,JV-2025-06,6600,Interest on loan,Monthly summary of transactions,1450.00,,accountant
+28/06/2025,JV-2025-06,6700,Marketing and advertising,Monthly summary of transactions,3208.33,,accountant
+28/07/2025,JV-2025-07,1000,Emirates Bank current account - AED,Monthly summary of transactions,10480.80,,accountant
+28/07/2025,JV-2025-07,1010,Petty cash,Monthly summary of transactions,,66.66,accountant
+28/07/2025,JV-2025-07,1100,Trade receivables,Monthly summary of transactions,,1812.47,accountant
+28/07/2025,JV-2025-07,1110,Allowance for doubtful debts,Monthly summary of transactions,,625.00,accountant
+28/07/2025,JV-2025-07,1150,Prepaid rent,Monthly summary of transactions,416.66,,accountant
+28/07/2025,JV-2025-07,1200,Inventories - finished goods,Monthly summary of transactions,3704.12,,accountant
+28/07/2025,JV-2025-07,1500,Furniture and fixtures,Monthly summary of transactions,1250.00,,accountant
+28/07/2025,JV-2025-07,1590,Accumulated depreciation,Monthly summary of transactions,,5541.66,accountant
+28/07/2025,JV-2025-07,2000,Trade payables,Monthly summary of transactions,,4777.53,accountant
+28/07/2025,JV-2025-07,2100,Accrued expenses,Monthly summary of transactions,,1023.20,accountant
+28/07/2025,JV-2025-07,2150,VAT payable,Monthly summary of transactions,,945.83,accountant
+28/07/2025,JV-2025-07,2200,Due to related parties,Monthly summary of transactions,2500.00,,accountant
+28/07/2025,JV-2025-07,2300,Bank loan,Monthly summary of transactions,5000.00,,accountant
+28/07/2025,JV-2025-07,2400,Provision for end of service benefits,Monthly summary of transactions,,1854.16,accountant
+28/07/2025,JV-2025-07,3100,Statutory reserve,Monthly summary of transactions,,1250.00,accountant
+28/07/2025,JV-2025-07,3200,Retained earnings,Monthly summary of transactions,20382.08,,accountant
+28/07/2025,JV-2025-07,4000,Sales,Monthly summary of transactions,,303366.66,accountant
+28/07/2025,JV-2025-07,4900,Other income,Monthly summary of transactions,,20.83,accountant
+28/07/2025,JV-2025-07,5000,Cost of goods sold,Monthly summary of transactions,207488.00,,accountant
+28/07/2025,JV-2025-07,6000,Salaries and wages,Monthly summary of transactions,44366.66,,accountant
+28/07/2025,JV-2025-07,6100,Office rent,Monthly summary of transactions,10833.33,,accountant
+28/07/2025,JV-2025-07,6200,Utilities,Monthly summary of transactions,2235.70,,accountant
+28/07/2025,JV-2025-07,6300,Professional fees,Monthly summary of transactions,2000.00,,accountant
+28/07/2025,JV-2025-07,6400,Depreciation expense,Monthly summary of transactions,5541.66,,accountant
+28/07/2025,JV-2025-07,6500,Bank charges,Monthly summary of transactions,426.66,,accountant
+28/07/2025,JV-2025-07,6600,Interest on loan,Monthly summary of transactions,1450.00,,accountant
+28/07/2025,JV-2025-07,6700,Marketing and advertising,Monthly summary of transactions,3208.33,,accountant
+28/08/2025,JV-2025-08,1000,Emirates Bank current account - AED,Monthly summary of transactions,10480.80,,accountant
+28/08/2025,JV-2025-08,1010,Petty cash,Monthly summary of transactions,,66.66,accountant
+28/08/2025,JV-2025-08,1100,Trade receivables,Monthly summary of transactions,,1812.47,accountant
+28/08/2025,JV-2025-08,1110,Allowance for doubtful debts,Monthly summary of transactions,,625.00,accountant
+28/08/2025,JV-2025-08,1150,Prepaid rent,Monthly summary of transactions,416.66,,accountant
+28/08/2025,JV-2025-08,1200,Inventories - finished goods,Monthly summary of transactions,3704.12,,accountant
+28/08/2025,JV-2025-08,1500,Furniture and fixtures,Monthly summary of transactions,1250.00,,accountant
+28/08/2025,JV-2025-08,1590,Accumulated depreciation,Monthly summary of transactions,,5541.66,accountant
+28/08/2025,JV-2025-08,2000,Trade payables,Monthly summary of transactions,,4777.53,accountant
+28/08/2025,JV-2025-08,2100,Accrued expenses,Monthly summary of transactions,,1023.20,accountant
+28/08/2025,JV-2025-08,2150,VAT payable,Monthly summary of transactions,,945.83,accountant
+28/08/2025,JV-2025-08,2200,Due to related parties,Monthly summary of transactions,2500.00,,accountant
+28/08/2025,JV-2025-08,2300,Bank loan,Monthly summary of transactions,5000.00,,accountant
+28/08/2025,JV-2025-08,2400,Provision for end of service benefits,Monthly summary of transactions,,1854.16,accountant
+28/08/2025,JV-2025-08,3100,Statutory reserve,Monthly summary of transactions,,1250.00,accountant
+28/08/2025,JV-2025-08,3200,Retained earnings,Monthly summary of transactions,20382.08,,accountant
+28/08/2025,JV-2025-08,4000,Sales,Monthly summary of transactions,,303366.66,accountant
+28/08/2025,JV-2025-08,4900,Other income,Monthly summary of transactions,,20.83,accountant
+28/08/2025,JV-2025-08,5000,Cost of goods sold,Monthly summary of transactions,207488.00,,accountant
+28/08/2025,JV-2025-08,6000,Salaries and wages,Monthly summary of transactions,44366.66,,accountant
+28/08/2025,JV-2025-08,6100,Office rent,Monthly summary of transactions,10833.33,,accountant
+28/08/2025,JV-2025-08,6200,Utilities,Monthly summary of transactions,2235.70,,accountant
+28/08/2025,JV-2025-08,6300,Professional fees,Monthly summary of transactions,2000.00,,accountant
+28/08/2025,JV-2025-08,6400,Depreciation expense,Monthly summary of transactions,5541.66,,accountant
+28/08/2025,JV-2025-08,6500,Bank charges,Monthly summary of transactions,426.66,,accountant
+28/08/2025,JV-2025-08,6600,Interest on loan,Monthly summary of transactions,1450.00,,accountant
+28/08/2025,JV-2025-08,6700,Marketing and advertising,Monthly summary of transactions,3208.33,,accountant
+28/09/2025,JV-2025-09,1000,Emirates Bank current account - AED,Monthly summary of transactions,10480.80,,accountant
+28/09/2025,JV-2025-09,1010,Petty cash,Monthly summary of transactions,,66.66,accountant
+28/09/2025,JV-2025-09,1100,Trade receivables,Monthly summary of transactions,,1812.47,accountant
+28/09/2025,JV-2025-09,1110,Allowance for doubtful debts,Monthly summary of transactions,,625.00,accountant
+28/09/2025,JV-2025-09,1150,Prepaid rent,Monthly summary of transactions,416.66,,accountant
+28/09/2025,JV-2025-09,1200,Inventories - finished goods,Monthly summary of transactions,3704.12,,accountant
+28/09/2025,JV-2025-09,1500,Furniture and fixtures,Monthly summary of transactions,1250.00,,accountant
+28/09/2025,JV-2025-09,1590,Accumulated depreciation,Monthly summary of transactions,,5541.66,accountant
+28/09/2025,JV-2025-09,2000,Trade payables,Monthly summary of transactions,,4777.53,accountant
+28/09/2025,JV-2025-09,2100,Accrued expenses,Monthly summary of transactions,,1023.20,accountant
+28/09/2025,JV-2025-09,2150,VAT payable,Monthly summary of transactions,,945.83,accountant
+28/09/2025,JV-2025-09,2200,Due to related parties,Monthly summary of transactions,2500.00,,accountant
+28/09/2025,JV-2025-09,2300,Bank loan,Monthly summary of transactions,5000.00,,accountant
+28/09/2025,JV-2025-09,2400,Provision for end of service benefits,Monthly summary of transactions,,1854.16,accountant
+28/09/2025,JV-2025-09,3100,Statutory reserve,Monthly summary of transactions,,1250.00,accountant
+28/09/2025,JV-2025-09,3200,Retained earnings,Monthly summary of transactions,20382.08,,accountant
+28/09/2025,JV-2025-09,4000,Sales,Monthly summary of transactions,,303366.66,accountant
+28/09/2025,JV-2025-09,4900,Other income,Monthly summary of transactions,,20.83,accountant
+28/09/2025,JV-2025-09,5000,Cost of goods sold,Monthly summary of transactions,207488.00,,accountant
+28/09/2025,JV-2025-09,6000,Salaries and wages,Monthly summary of transactions,44366.66,,accountant
+28/09/2025,JV-2025-09,6100,Office rent,Monthly summary of transactions,10833.33,,accountant
+28/09/2025,JV-2025-09,6200,Utilities,Monthly summary of transactions,2235.70,,accountant
+28/09/2025,JV-2025-09,6300,Professional fees,Monthly summary of transactions,2000.00,,accountant
+28/09/2025,JV-2025-09,6400,Depreciation expense,Monthly summary of transactions,5541.66,,accountant
+28/09/2025,JV-2025-09,6500,Bank charges,Monthly summary of transactions,426.66,,accountant
+28/09/2025,JV-2025-09,6600,Interest on loan,Monthly summary of transactions,1450.00,,accountant
+28/09/2025,JV-2025-09,6700,Marketing and advertising,Monthly summary of transactions,3208.33,,accountant
+28/10/2025,JV-2025-10,1000,Emirates Bank current account - AED,Monthly summary of transactions,10480.80,,accountant
+28/10/2025,JV-2025-10,1010,Petty cash,Monthly summary of transactions,,66.66,accountant
+28/10/2025,JV-2025-10,1100,Trade receivables,Monthly summary of transactions,,1812.47,accountant
+28/10/2025,JV-2025-10,1110,Allowance for doubtful debts,Monthly summary of transactions,,625.00,accountant
+28/10/2025,JV-2025-10,1150,Prepaid rent,Monthly summary of transactions,416.66,,accountant
+28/10/2025,JV-2025-10,1200,Inventories - finished goods,Monthly summary of transactions,3704.12,,accountant
+28/10/2025,JV-2025-10,1500,Furniture and fixtures,Monthly summary of transactions,1250.00,,accountant
+28/10/2025,JV-2025-10,1590,Accumulated depreciation,Monthly summary of transactions,,5541.66,accountant
+28/10/2025,JV-2025-10,2000,Trade payables,Monthly summary of transactions,,4777.53,accountant
+28/10/2025,JV-2025-10,2100,Accrued expenses,Monthly summary of transactions,,1023.20,accountant
+28/10/2025,JV-2025-10,2150,VAT payable,Monthly summary of transactions,,945.83,accountant
+28/10/2025,JV-2025-10,2200,Due to related parties,Monthly summary of transactions,2500.00,,accountant
+28/10/2025,JV-2025-10,2300,Bank loan,Monthly summary of transactions,5000.00,,accountant
+28/10/2025,JV-2025-10,2400,Provision for end of service benefits,Monthly summary of transactions,,1854.16,accountant
+28/10/2025,JV-2025-10,3100,Statutory reserve,Monthly summary of transactions,,1250.00,accountant
+28/10/2025,JV-2025-10,3200,Retained earnings,Monthly summary of transactions,20382.08,,accountant
+28/10/2025,JV-2025-10,4000,Sales,Monthly summary of transactions,,303366.66,accountant
+28/10/2025,JV-2025-10,4900,Other income,Monthly summary of transactions,,20.83,accountant
+28/10/2025,JV-2025-10,5000,Cost of goods sold,Monthly summary of transactions,207488.00,,accountant
+28/10/2025,JV-2025-10,6000,Salaries and wages,Monthly summary of transactions,44366.66,,accountant
+28/10/2025,JV-2025-10,6100,Office rent,Monthly summary of transactions,10833.33,,accountant
+28/10/2025,JV-2025-10,6200,Utilities,Monthly summary of transactions,2235.70,,accountant
+28/10/2025,JV-2025-10,6300,Professional fees,Monthly summary of transactions,2000.00,,accountant
+28/10/2025,JV-2025-10,6400,Depreciation expense,Monthly summary of transactions,5541.66,,accountant
+28/10/2025,JV-2025-10,6500,Bank charges,Monthly summary of transactions,426.66,,accountant
+28/10/2025,JV-2025-10,6600,Interest on loan,Monthly summary of transactions,1450.00,,accountant
+28/10/2025,JV-2025-10,6700,Marketing and advertising,Monthly summary of transactions,3208.33,,accountant
+28/11/2025,JV-2025-11,1000,Emirates Bank current account - AED,Monthly summary of transactions,10480.80,,accountant
+28/11/2025,JV-2025-11,1010,Petty cash,Monthly summary of transactions,,66.66,accountant
+28/11/2025,JV-2025-11,1100,Trade receivables,Monthly summary of transactions,,1812.47,accountant
+28/11/2025,JV-2025-11,1110,Allowance for doubtful debts,Monthly summary of transactions,,625.00,accountant
+28/11/2025,JV-2025-11,1150,Prepaid rent,Monthly summary of transactions,416.66,,accountant
+28/11/2025,JV-2025-11,1200,Inventories - finished goods,Monthly summary of transactions,3704.12,,accountant
+28/11/2025,JV-2025-11,1500,Furniture and fixtures,Monthly summary of transactions,1250.00,,accountant
+28/11/2025,JV-2025-11,1590,Accumulated depreciation,Monthly summary of transactions,,5541.66,accountant
+28/11/2025,JV-2025-11,2000,Trade payables,Monthly summary of transactions,,4777.53,accountant
+28/11/2025,JV-2025-11,2100,Accrued expenses,Monthly summary of transactions,,1023.20,accountant
+28/11/2025,JV-2025-11,2150,VAT payable,Monthly summary of transactions,,945.83,accountant
+28/11/2025,JV-2025-11,2200,Due to related parties,Monthly summary of transactions,2500.00,,accountant
+28/11/2025,JV-2025-11,2300,Bank loan,Monthly summary of transactions,5000.00,,accountant
+28/11/2025,JV-2025-11,2400,Provision for end of service benefits,Monthly summary of transactions,,1854.16,accountant
+28/11/2025,JV-2025-11,3100,Statutory reserve,Monthly summary of transactions,,1250.00,accountant
+28/11/2025,JV-2025-11,3200,Retained earnings,Monthly summary of transactions,20382.08,,accountant
+28/11/2025,JV-2025-11,4000,Sales,Monthly summary of transactions,,303366.66,accountant
+28/11/2025,JV-2025-11,4900,Other income,Monthly summary of transactions,,20.83,accountant
+28/11/2025,JV-2025-11,5000,Cost of goods sold,Monthly summary of transactions,207488.00,,accountant
+28/11/2025,JV-2025-11,6000,Salaries and wages,Monthly summary of transactions,44366.66,,accountant
+28/11/2025,JV-2025-11,6100,Office rent,Monthly summary of transactions,10833.33,,accountant
+28/11/2025,JV-2025-11,6200,Utilities,Monthly summary of transactions,2235.70,,accountant
+28/11/2025,JV-2025-11,6300,Professional fees,Monthly summary of transactions,2000.00,,accountant
+28/11/2025,JV-2025-11,6400,Depreciation expense,Monthly summary of transactions,5541.66,,accountant
+28/11/2025,JV-2025-11,6500,Bank charges,Monthly summary of transactions,426.66,,accountant
+28/11/2025,JV-2025-11,6600,Interest on loan,Monthly summary of transactions,1450.00,,accountant
+28/11/2025,JV-2025-11,6700,Marketing and advertising,Monthly summary of transactions,3208.33,,accountant
+28/12/2025,JV-2025-12,1000,Emirates Bank current account - AED,Monthly summary of transactions,10480.85,,accountant
+28/12/2025,JV-2025-12,1010,Petty cash,Monthly summary of transactions,,66.74,accountant
+28/12/2025,JV-2025-12,1100,Trade receivables,Monthly summary of transactions,,1812.58,accountant
+28/12/2025,JV-2025-12,1110,Allowance for doubtful debts,Monthly summary of transactions,,625.00,accountant
+28/12/2025,JV-2025-12,1150,Prepaid rent,Monthly summary of transactions,416.74,,accountant
+28/12/2025,JV-2025-12,1200,Inventories - finished goods,Monthly summary of transactions,3704.18,,accountant
+28/12/2025,JV-2025-12,1500,Furniture and fixtures,Monthly summary of transactions,1250.00,,accountant
+28/12/2025,JV-2025-12,1590,Accumulated depreciation,Monthly summary of transactions,,5541.74,accountant
+28/12/2025,JV-2025-12,2000,Trade payables,Monthly summary of transactions,,4777.57,accountant
+28/12/2025,JV-2025-12,2100,Accrued expenses,Monthly summary of transactions,,1023.30,accountant
+28/12/2025,JV-2025-12,2150,VAT payable,Monthly summary of transactions,,945.87,accountant
+28/12/2025,JV-2025-12,2200,Due to related parties,Monthly summary of transactions,2500.00,,accountant
+28/12/2025,JV-2025-12,2300,Bank loan,Monthly summary of transactions,5000.00,,accountant
+28/12/2025,JV-2025-12,2400,Provision for end of service benefits,Monthly summary of transactions,,1854.24,accountant
+28/12/2025,JV-2025-12,3100,Statutory reserve,Monthly summary of transactions,,1250.00,accountant
+28/12/2025,JV-2025-12,3200,Retained earnings,Monthly summary of transactions,20382.12,,accountant
+28/12/2025,JV-2025-12,4000,Sales,Monthly summary of transactions,,303366.74,accountant
+28/12/2025,JV-2025-12,4900,Other income,Monthly summary of transactions,,20.87,accountant
+28/12/2025,JV-2025-12,5000,Cost of goods sold,Monthly summary of transactions,207488.00,,accountant
+28/12/2025,JV-2025-12,6000,Salaries and wages,Monthly summary of transactions,44366.74,,accountant
+28/12/2025,JV-2025-12,6100,Office rent,Monthly summary of transactions,10833.37,,accountant
+28/12/2025,JV-2025-12,6200,Utilities,Monthly summary of transactions,2235.80,,accountant
+28/12/2025,JV-2025-12,6300,Professional fees,Monthly summary of transactions,2000.00,,accountant
+28/12/2025,JV-2025-12,6400,Depreciation expense,Monthly summary of transactions,5541.74,,accountant
+28/12/2025,JV-2025-12,6500,Bank charges,Monthly summary of transactions,426.74,,accountant
+28/12/2025,JV-2025-12,6600,Interest on loan,Monthly summary of transactions,1450.00,,accountant
+28/12/2025,JV-2025-12,6700,Marketing and advertising,Monthly summary of transactions,3208.37,,accountant
+31/12/2025,JV-9001,1100,Trade receivables,,250000.00,,owner
+31/12/2025,JV-9001,4000,Sales,,,250000.00,owner
+03/01/2026,JV-9002,4000,Sales,Reverse JV-9001,250000.00,,owner
+03/01/2026,JV-9002,1100,Trade receivables,Reverse JV-9001,,250000.00,owner
+16/08/2025,JV-9003,6300,Professional fees,Reclass,18000.00,,owner
+16/08/2025,JV-9003,4900,Other income,Reclass,,18000.00,owner
+30/12/2025,JV-9004,6200,Utilities,Year-end accrual true-up,4321.50,,accountant
+30/12/2025,JV-9004,2100,Accrued expenses,Year-end accrual true-up,,4321.50,accountant

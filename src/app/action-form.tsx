@@ -30,9 +30,16 @@ export function ActionForm({
         {children}
       </fieldset>
       {state.message && (
-        <p role="status" className={`mt-1 text-xs ${state.ok ? "text-emerald-800" : "text-red-800"}`}>
-          {state.message}
-        </p>
+        <div role="status" className={`mt-1 text-xs ${state.ok ? "text-emerald-800" : "text-red-800"}`}>
+          <p>{state.message}</p>
+          {state.details && state.details.length > 0 && (
+            <ul className="mt-1 list-disc pl-5">
+              {state.details.map((d) => (
+                <li key={d}>{d}</li>
+              ))}
+            </ul>
+          )}
+        </div>
       )}
     </form>
   );
