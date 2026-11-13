@@ -7,6 +7,11 @@ import * as audit from "@/server/audit";
 import { AREA_BY_CODE, CHECKLIST_BY_CODE, LIBRARY_STATUS } from "@/domain/audit";
 import { ActionForm } from "@/app/action-form";
 import { updateProcedureAction } from "@/app/audit-actions";
+import { removeWorkingPaperAction, uploadWorkingPaperAction } from "@/app/papers-actions";
+import * as papers from "@/server/working-papers";
+import { canReview } from "@/domain/signoff";
+import { SamplingCalculator } from "./sampling";
+import { FileInput } from "@/app/file-input";
 import { EngagementNav } from "../../nav";
 
 export const dynamic = "force-dynamic";
@@ -24,9 +29,11 @@ export default async function ProgrammePage({ params }: { params: Promise<{ id: 
   if (!/^[0-9a-f-]{36}$/i.test(id) || !area) notFound();
 
   const session = await getSession();
-  const { engagement, procedures } = await withFirm(await getDb(), session.firmId, async (tx) => ({
+  const { engagement, procedures, files, overview } = await withFirm(await getDb(), session.firmId, async (tx) => ({
     engagement: await repo.getEngagement(tx, id),
     procedures: await audit.listProcedures(tx, id, area.code),
+    files: await papers.listWorkingPapers(tx, id),
+    overview: await audit.getAuditOverview(tx, id),
   }));
   if (!engagement) notFound();
 
@@ -56,6 +63,7 @@ export default async function ProgrammePage({ params }: { params: Promise<{ id: 
         <p className="mt-6 text-sm text-slate-600">{checklist ? "This checklist is loaded when the audit is turned on." : "No programme is loaded for this area. Assess its risks on the audit planning page."}</p>
       ) : (
         <>
+          {!checklist && overview?.materiality && <SamplingCalculator performanceMaterialityMinor={overview.materiality.performanceMinor} />}
           <p className="mt-4 text-sm font-medium">
             {completed} of {procedures.length} {checklist ? "steps" : "procedures"} completed
           </p>
@@ -74,6 +82,38 @@ export default async function ProgrammePage({ params }: { params: Promise<{ id: 
               <p className="mt-1 text-xs text-slate-600">
                 Evidence expected: {p.evidence} · Reference: {p.reference}
               </p>
+
+              {(() => {
+                const attached = files.filter((w) => w.targetKind === "procedure" && w.target === p.id);
+                return (
+                  <div className="mt-2 text-sm">
+                    {attached.length > 0 && (
+                      <ul className="space-y-1">
+                        {attached.map((w) => (
+                          <li key={w.id} className="flex flex-wrap items-center gap-2">
+                            <span className="text-xs text-slate-600">Evidence:</span>
+                            <a href={`/engagements/${id}/files/${w.id}`} className="text-blue-700 underline">{w.fileName}</a>
+                            <span className="text-xs text-slate-600">{w.uploadedByName} {w.uploadedAt}</span>
+                            {open && (w.uploadedBy === session.userId || canReview(session.role)) && (
+                              <ActionForm action={removeWorkingPaperAction} fields={{ paperId: w.id }}>
+                                <button className={small}>Remove</button>
+                              </ActionForm>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    {open && (
+                      <ActionForm action={uploadWorkingPaperAction} fields={{ engagementId: id, supports: `procedure:${p.id}`, description: "" }} className="mt-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <FileInput maxBytes={papers.MAX_FILE_BYTES} label={`Evidence file for ${p.templateId}`} accept={papers.ALLOWED_EXTENSIONS.map((e) => `.${e}`).join(",")} className="text-xs text-slate-900" />
+                          <button className={small}>Attach evidence</button>
+                        </div>
+                      </ActionForm>
+                    )}
+                  </div>
+                );
+              })()}
 
               {open ? (
                 <ActionForm action={updateProcedureAction} fields={{ procedureId: p.id }} className="mt-3">

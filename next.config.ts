@@ -5,8 +5,8 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ["@electric-sql/pglite", "exceljs", "docx"],
   experimental: {
     serverActions: {
-      // Trial balance uploads can exceed the 1MB default.
-      bodySizeLimit: "10mb",
+      // Trial balances and working papers can exceed the 1MB default. Files are capped at 10 MB; the rest is form overhead.
+      bodySizeLimit: "12mb",
     },
   },
   turbopack: {

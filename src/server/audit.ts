@@ -138,7 +138,8 @@ export async function setAuditEnabled(tx: Tx, s: Session, engagementId: string, 
   if (!on) {
     const worked = await tx.query("select 1 from audit_procedures where engagement_id = $1 and (status <> 'open' or work_done is not null or conclusion is not null) limit 1", [engagementId]);
     const found = await tx.query("select 1 from misstatements where engagement_id = $1 limit 1", [engagementId]);
-    if (worked.rows.length > 0 || found.rows.length > 0) throw new Error("Work has been recorded on this audit, so it cannot be turned off.");
+    const evidence = await tx.query("select 1 from working_papers where engagement_id = $1 and target_kind = 'procedure' limit 1", [engagementId]);
+    if (worked.rows.length > 0 || found.rows.length > 0 || evidence.rows.length > 0) throw new Error("Work has been recorded on this audit, so it cannot be turned off.");
   }
   await tx.query("update engagements set audit_enabled = $2 where id = $1", [engagementId, on]);
   if (on) await ensureChecklists(tx, s, engagementId);
@@ -297,8 +298,10 @@ function areaInScope(areas: Area[], areaCode: string): Area {
 async function syncProgramme(tx: Tx, s: Session, engagementId: string, area: Area, risks: AreaRisks): Promise<{ added: number; removed: number }> {
   const wanted = selectProcedures(area, risks);
   const existing = await tx.query<{ id: string; templateId: string; untouched: boolean }>(
-    `select id, template_id as "templateId", (status = 'open' and work_done is null and conclusion is null) as untouched
-     from audit_procedures where engagement_id = $1 and area_code = $2`,
+    `select p.id, p.template_id as "templateId",
+            (p.status = 'open' and p.work_done is null and p.conclusion is null
+             and not exists (select 1 from working_papers w where w.target_kind = 'procedure' and w.target = p.id::text)) as untouched
+     from audit_procedures p where p.engagement_id = $1 and p.area_code = $2`,
     [engagementId, area.code],
   );
   const have = new Set(existing.rows.map((r) => r.templateId));
