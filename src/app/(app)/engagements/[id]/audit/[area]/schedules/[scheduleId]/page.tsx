@@ -46,6 +46,20 @@ export default async function SchedulePage({ params }: { params: Promise<{ id: s
       <p className="mt-6 text-sm"><Link href={`/engagements/${id}/audit/${area}`} className="text-blue-700 underline">Back to {schedule.areaCode} {schedule.areaTitle}</Link></p>
       <h2 className="mt-2 text-xl font-semibold">{schedule.reference} {schedule.title}</h2>
 
+      <p className="mt-1 flex flex-wrap gap-x-6 text-sm">
+        <a href={`/engagements/${id}/audit/${area}/schedules/${schedule.id}/export`} className="text-blue-700 underline">Download as Excel</a>
+        {schedule.rolledFrom && (
+          <Link href={`/engagements/${schedule.rolledFrom.engagementId}/audit/${area}/schedules/${schedule.rolledFrom.id}`} className="text-blue-700 underline">
+            Brought forward from {schedule.rolledFrom.reference} ({schedule.rolledFrom.periodEnd})
+          </Link>
+        )}
+      </p>
+      {!schedule.areaInScope && (
+        <p role="note" className="mt-3 rounded border border-amber-600 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+          This area is no longer in scope on this year&apos;s trial balance. The schedule was brought forward anyway; check whether it is still needed.
+        </p>
+      )}
+
       <dl className="mt-3 grid grid-cols-1 gap-x-8 gap-y-1 text-sm sm:grid-cols-2">
         <div><dt className="inline font-medium">Client: </dt><dd className="inline">{engagement.clientName}</dd></div>
         <div><dt className="inline font-medium">Period: </dt><dd className="inline">{engagement.periodStart} to {engagement.periodEnd}</dd></div>
@@ -99,7 +113,7 @@ export default async function SchedulePage({ params }: { params: Promise<{ id: s
 
       <section className="mt-6">
         <h3 className="font-semibold">Lines</h3>
-        {schedule.editable && <ImportListing scheduleId={schedule.id} balanceMinor={schedule.balanceMinor} existingLines={schedule.lines.length} />}
+        {schedule.editable && <ImportListing scheduleId={schedule.id} balanceMinor={schedule.balanceMinor} existingLines={schedule.lines.map((l) => ({ id: l.id, docRef: l.docRef, description: l.description }))} broughtForward={schedule.lines.some((l) => l.priorAmountMinor !== null)} />}
         <div className="mt-3">
           <LinesTable
             key={schedule.lines.map((l) => l.id).join(",")}
@@ -123,6 +137,12 @@ export default async function SchedulePage({ params }: { params: Promise<{ id: s
 
       <section className="mt-8">
         <h3 className="font-semibold">Objective, work done and conclusion</h3>
+        {schedule.priorWorkDone && (
+          <div className="mt-2 rounded border border-slate-300 bg-slate-50 px-3 py-2 text-sm">
+            <p className="text-xs font-medium text-slate-600">Last year&apos;s work done (read-only, a starting point: this year&apos;s work is recorded below)</p>
+            <p className="mt-1 whitespace-pre-wrap">{schedule.priorWorkDone}</p>
+          </div>
+        )}
         {schedule.editable ? (
           <ActionForm action={updateScheduleHeaderAction} fields={{ scheduleId: schedule.id }} className="mt-2">
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">

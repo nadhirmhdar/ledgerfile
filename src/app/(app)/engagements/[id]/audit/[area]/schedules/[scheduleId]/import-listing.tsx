@@ -4,6 +4,7 @@ import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { formatAmount } from "@/domain/money";
 import { difference, MAX_SCHEDULE_LINES } from "@/domain/test-schedule";
+import { matchListing, type ExistingLine } from "@/domain/rollforward";
 import { importLinesAction, previewListingAction, type ListingPreview } from "@/app/schedule-actions";
 
 const small = "rounded border border-slate-400 px-2 py-1 text-xs hover:bg-slate-100";
@@ -13,11 +14,11 @@ const input = "w-full rounded border border-slate-300 bg-white px-2 py-1.5 text-
  * Bring in a client's listing by pasting it or uploading a file. It is read and shown first, with what could not be read,
  * and only saved when the user confirms. The preview is kept here, so nothing is lost between the two steps.
  */
-export function ImportListing({ scheduleId, balanceMinor, existingLines }: { scheduleId: string; balanceMinor: number | null; existingLines: number }) {
+export function ImportListing({ scheduleId, balanceMinor, existingLines, broughtForward }: { scheduleId: string; balanceMinor: number | null; existingLines: ExistingLine[]; broughtForward: boolean }) {
   const router = useRouter();
   const form = useRef<HTMLFormElement>(null);
   const [preview, setPreview] = useState<ListingPreview | null>(null);
-  const [mode, setMode] = useState<"append" | "replace">("append");
+  const [mode, setMode] = useState<"append" | "replace" | "match">(broughtForward ? "match" : "append");
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -41,6 +42,8 @@ export function ImportListing({ scheduleId, balanceMinor, existingLines }: { sch
   };
 
   const total = preview?.totalMinor ?? 0;
+  const existing = existingLines.length;
+  const match = preview && broughtForward && mode === "match" ? matchListing(existingLines, preview.lines) : null;
   return (
     <details className="mt-4 rounded border border-slate-200 p-3">
       <summary className="cursor-pointer text-sm font-medium">Import a listing from the client</summary>
@@ -68,7 +71,7 @@ export function ImportListing({ scheduleId, balanceMinor, existingLines }: { sch
             <>
               <p>
                 Read <span className="font-semibold">{preview.lines.length.toLocaleString("en-US")}</span> line(s) totalling <span className="font-semibold tabular-nums">{formatAmount(total)}</span>.
-                {balanceMinor !== null && mode === "replace" && (
+                {balanceMinor !== null && (mode === "replace" || (mode === "match" && match && match.unmatchedExisting.length === 0)) && (
                   <> The balance is {formatAmount(balanceMinor)}; difference {formatAmount(difference(total, balanceMinor))}.</>
                 )}
               </p>
@@ -87,10 +90,16 @@ export function ImportListing({ scheduleId, balanceMinor, existingLines }: { sch
                   </ul>
                 </div>
               )}
+              {match && (
+                <p role="note" className="mt-2 rounded border border-slate-300 bg-slate-50 px-3 py-2 text-xs">
+                  {match.matches.length} matched to last year&apos;s lines ({match.byReference} by reference, {match.byDescription} by description). {match.unmatchedImported.length} imported line(s) have no match and will be added with no comparative. {match.unmatchedExisting.length} of last year&apos;s line(s) have nothing imported against them and keep their comparative with a zero amount.
+                </p>
+              )}
               <fieldset className="mt-2 flex flex-wrap items-center gap-4 text-sm">
                 <legend className="sr-only">Where to put the lines</legend>
-                <label className="flex items-center gap-1"><input type="radio" name="mode" checked={mode === "append"} onChange={() => setMode("append")} /> Add after the {existingLines} line(s) already there</label>
-                <label className="flex items-center gap-1"><input type="radio" name="mode" checked={mode === "replace"} onChange={() => setMode("replace")} /> Replace them{existingLines > 0 ? ` (removes ${existingLines} line(s) and their tickmarks)` : ""}</label>
+                {broughtForward && <label className="flex items-center gap-1"><input type="radio" name="mode" checked={mode === "match"} onChange={() => setMode("match")} /> Match to last year&apos;s lines (by reference, then description)</label>}
+                <label className="flex items-center gap-1"><input type="radio" name="mode" checked={mode === "append"} onChange={() => setMode("append")} /> Add after the {existing} line(s) already there</label>
+                <label className="flex items-center gap-1"><input type="radio" name="mode" checked={mode === "replace"} onChange={() => setMode("replace")} /> Replace them{existing > 0 ? ` (removes ${existing} line(s), their tickmarks and last year's comparatives)` : ""}</label>
               </fieldset>
               <button type="button" className="mt-2 rounded bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-700 disabled:opacity-50" disabled={pending} onClick={save}>
                 Import {preview.lines.length.toLocaleString("en-US")} line(s)

@@ -10,7 +10,7 @@ import { reviewAreaAction, reviewProcedureAction, updateProcedureAction } from "
 import { removeWorkingPaperAction, uploadWorkingPaperAction } from "@/app/papers-actions";
 import * as papers from "@/server/working-papers";
 import { listSchedules } from "@/server/test-schedules";
-import { createScheduleAction } from "@/app/schedule-actions";
+import { bringForwardAction, createScheduleAction } from "@/app/schedule-actions";
 import { GROUP_BY_CODE } from "@/domain/groups";
 import { formatAmount } from "@/domain/money";
 import { canReview } from "@/domain/signoff";
@@ -93,6 +93,12 @@ export default async function ProgrammePage({ params }: { params: Promise<{ id: 
             </ul>
           ) : (
             <p className="mt-2 text-sm text-slate-600">No schedules yet.</p>
+          )}
+          {open && (overview?.enabled ?? false) && engagement.priorEngagementId && (
+            <ActionForm action={bringForwardAction} fields={{ engagementId: id }} className="mt-3">
+              <button className={small}>Bring forward last year&apos;s schedules</button>
+              <span className="ml-2 text-xs text-slate-600">Copies every schedule from the prior-year engagement that has not been brought forward yet: lines with last year&apos;s amounts as comparatives, no tickmarks, conclusions or reviews.</span>
+            </ActionForm>
           )}
           {open && (overview?.enabled ?? false) && (
             <ActionForm action={createScheduleAction} fields={{ engagementId: id, areaCode: area.code }} className="mt-3">

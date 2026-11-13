@@ -1,6 +1,6 @@
 import type { Tx } from "./db";
 import { audit as log, listAccounts, type Session } from "./repo";
-import { assertMayReview, requireAudit } from "./audit";
+import { areaCodesInScope, assertMayReview, requireAudit } from "./audit";
 import { AREA_BY_CODE } from "../domain/audit";
 import { canReview } from "../domain/signoff";
 import { GROUP_BY_CODE } from "../domain/groups";
@@ -20,6 +20,7 @@ import {
   type ThresholdCode,
 } from "../domain/test-schedule";
 import type { ListingLine } from "../domain/listing-parse";
+import { comparativeTotals, matchListing, type ComparativeTotals } from "../domain/rollforward";
 
 export interface LineView {
   id: string;
@@ -31,6 +32,8 @@ export interface LineView {
   tickmarks: string[];
   workingPaperId: string | null;
   remarks: string | null;
+  /** Last year's amount for a schedule brought forward; null for a line with no comparative. */
+  priorAmountMinor: number | null;
 }
 
 export interface ScheduleSummary {
@@ -83,6 +86,14 @@ export interface ScheduleView {
   reviewed: boolean;
   /** The audit is on for the engagement. */
   auditOn: boolean;
+  /** The schedule this one was brought forward from, if any. */
+  rolledFrom: { id: string; reference: string; engagementId: string; periodEnd: string } | null;
+  /** Last year's work done, shown read-only: a starting point, not this year's work. */
+  priorWorkDone: string | null;
+  /** False when the area has dropped out of scope on this year's trial balance. */
+  areaInScope: boolean;
+  /** Last year's amounts and the movement, for a schedule brought forward. */
+  comparatives: ComparativeTotals | null;
   /** Files uploaded to this engagement that a line can cite as evidence. */
   files: { id: string; fileName: string }[];
 }
@@ -102,10 +113,12 @@ interface Row {
   preparedBy: string | null;
   contributors: string[];
   reviewedBy: string | null;
+  rolledFromId: string | null;
+  priorWorkDone: string | null;
 }
 
 const COLUMNS = `s.id, s.engagement_id as "engagementId", s.area_code as "areaCode", s.group_code as "groupCode", s.reference, s.title, s.objective,
-  s.work_done as "workDone", s.conclusion, s.explanation_of_difference as explanation, s.threshold, s.prepared_by as "preparedBy", s.contributors, s.reviewed_by as "reviewedBy"`;
+  s.work_done as "workDone", s.conclusion, s.explanation_of_difference as explanation, s.threshold, s.prepared_by as "preparedBy", s.contributors, s.reviewed_by as "reviewedBy", s.rolled_from_id as "rolledFromId", s.prior_work_done as "priorWorkDone"`;
 
 /** Everyone whose work a reviewer must not be: who recorded the conclusion and everyone who changed the schedule. */
 const workedBy = (r: Pick<Row, "preparedBy" | "contributors">): string[] => [...new Set([r.preparedBy, ...r.contributors].filter((x): x is string => !!x))];
@@ -289,7 +302,7 @@ export async function getSchedule(tx: Tx, scheduleId: string): Promise<ScheduleV
   const n = names.rows[0];
   const lines = await tx.query<LineView>(
     `select id, position, description, doc_ref as "docRef", amount_minor::float8 as "amountMinor", tested, tickmarks,
-            working_paper_id as "workingPaperId", remarks from test_schedule_lines where schedule_id = $1 order by position, id`,
+            working_paper_id as "workingPaperId", remarks, prior_amount_minor::float8 as "priorAmountMinor" from test_schedule_lines where schedule_id = $1 order by position, id`,
     [scheduleId],
   );
   const mat = await tx.query<{ overallMinor: number; performanceMinor: number }>(
@@ -302,6 +315,13 @@ export async function getSchedule(tx: Tx, scheduleId: string): Promise<ScheduleV
   const totalMinor = scheduleTotal(lines.rows);
   const balanceMinor = r.groupCode ? presentationBalance(accounts, r.groupCode) : null;
   const thresholdMinor = thresholdAmount(materiality, r.threshold);
+  const from = r.rolledFromId
+    ? await tx.query<{ id: string; reference: string; engagementId: string; periodEnd: string }>(
+        'select p.id, p.reference, p.engagement_id as "engagementId", to_char(e.period_end, \'YYYY-MM-DD\') as "periodEnd" from test_schedules p join engagements e on e.id = p.engagement_id where p.id = $1',
+        [r.rolledFromId],
+      )
+    : null;
+  const rolledFrom = from?.rows[0] ?? null;
   const files = await tx.query<{ id: string; fileName: string }>('select id, file_name as "fileName" from working_papers where engagement_id = $1 order by uploaded_at, file_name', [r.engagementId]);
   return {
     id: r.id,
@@ -333,6 +353,10 @@ export async function getSchedule(tx: Tx, scheduleId: string): Promise<ScheduleV
     editable: n.status === "open" && n.on && !r.reviewedBy,
     reviewed: !!r.reviewedBy,
     auditOn: n.on,
+    rolledFrom,
+    priorWorkDone: r.priorWorkDone,
+    areaInScope: (await areaCodesInScope(tx, r.engagementId)).has(r.areaCode),
+    comparatives: lines.rows.some((l) => l.priorAmountMinor !== null) ? comparativeTotals(lines.rows) : null,
     files: files.rows,
   };
 }
@@ -414,12 +438,13 @@ export async function saveLines(
 }
 
 /** Add a pasted or uploaded listing to the schedule, after the lines already there, or in place of them. */
-export async function importLines(tx: Tx, s: Session, scheduleId: string, lines: ListingLine[], mode: "append" | "replace"): Promise<{ imported: number; replaced: number }> {
+export async function importLines(tx: Tx, s: Session, scheduleId: string, lines: ListingLine[], mode: "append" | "replace" | "match"): Promise<{ imported: number; replaced: number; matched?: number; added?: number }> {
   const row = await loadForEdit(tx, scheduleId);
   if (lines.length === 0) throw new Error("There are no lines to import.");
   const checked = lines.map((l, i) => checkLine({ description: l.description, docRef: l.docRef, amountMinor: l.amountMinor }, i + 1));
   const existing = await lineCount(tx, scheduleId);
   if ((mode === "replace" ? 0 : existing) + checked.length > MAX_SCHEDULE_LINES) throw new Error(`A schedule holds at most ${MAX_SCHEDULE_LINES.toLocaleString("en-US")} lines.`);
+  if (mode === "match") return importMatched(tx, s, scheduleId, row, checked);
   let replaced = 0;
   if (mode === "replace") {
     replaced = (await tx.query("delete from test_schedule_lines where schedule_id = $1 returning id", [scheduleId])).rows.length;
@@ -432,6 +457,88 @@ export async function importLines(tx: Tx, s: Session, scheduleId: string, lines:
   await touch(tx, scheduleId, s.userId);
   await log(tx, s, "import_lines", "test_schedule", scheduleId, { engagementId: row.engagementId, reference: row.reference, imported: checked.length, replaced, mode });
   return { imported: checked.length, replaced };
+}
+
+/**
+ * Import a listing into a schedule brought forward, putting each line against last year's where it matches (by reference, then by
+ * exact description), so the comparative stays with the right line. Lines with no match are added with no comparative; lines
+ * nothing was imported against keep their comparative and a zero current amount.
+ */
+async function importMatched(tx: Tx, s: Session, scheduleId: string, row: Row, checked: LineInput[]): Promise<{ imported: number; replaced: number; matched: number; added: number }> {
+  const existing = await tx.query<{ id: string; docRef: string | null; description: string }>(
+    'select id, doc_ref as "docRef", description from test_schedule_lines where schedule_id = $1 order by position, id',
+    [scheduleId],
+  );
+  const result = matchListing(existing.rows, checked.map((l) => ({ description: l.description, docRef: l.docRef, amountMinor: l.amountMinor })));
+  if (existing.rows.length + result.unmatchedImported.length > MAX_SCHEDULE_LINES) throw new Error(`A schedule holds at most ${MAX_SCHEDULE_LINES.toLocaleString("en-US")} lines.`);
+  for (const m of result.matches) {
+    const l = checked[m.importedIndex];
+    await tx.query("update test_schedule_lines set amount_minor = $2, doc_ref = coalesce(doc_ref, $3) where id = $1", [m.existingId, l.amountMinor, l.docRef]);
+  }
+  let position = (await tx.query<{ p: number }>("select coalesce(max(position), 0)::int as p from test_schedule_lines where schedule_id = $1", [scheduleId])).rows[0].p;
+  for (const i of result.unmatchedImported) {
+    const l = checked[i];
+    position++;
+    await tx.query("insert into test_schedule_lines (firm_id, schedule_id, position, description, doc_ref, amount_minor) values ($1, $2, $3, $4, $5, $6)", [s.firmId, scheduleId, position, l.description, l.docRef, l.amountMinor]);
+  }
+  await touch(tx, scheduleId, s.userId);
+  await log(tx, s, "import_lines", "test_schedule", scheduleId, {
+    engagementId: row.engagementId,
+    reference: row.reference,
+    imported: checked.length,
+    mode: "match",
+    matchedByReference: result.byReference,
+    matchedByDescription: result.byDescription,
+    added: result.unmatchedImported.length,
+    notMatched: result.unmatchedExisting.length,
+  });
+  return { imported: checked.length, replaced: 0, matched: result.matches.length, added: result.unmatchedImported.length };
+}
+
+/**
+ * Bring last year's schedules forward into this engagement, from the prior-year engagement it is linked to (the same client).
+ * Schedules already brought forward are skipped, so it can be run again. Each new schedule has the same area, lead sheet, title,
+ * objective and threshold; its lines carry last year's description and reference, with last year's amount as the comparative and
+ * this year's amount at zero. Nothing of last year's testing is carried over as this year's: no tested flags, tickmarks, evidence,
+ * conclusion, explanation, preparer, contributors or review. Last year's work done goes into a separate read-only field.
+ */
+export async function bringForwardSchedules(tx: Tx, s: Session, engagementId: string): Promise<{ created: number; alreadyBrought: number; lines: number; outOfScope: number }> {
+  await requireAudit(tx, engagementId);
+  const e = await tx.query<{ priorId: string | null; clientId: string }>('select prior_engagement_id as "priorId", client_id as "clientId" from engagements where id = $1', [engagementId]);
+  const priorId = e.rows[0]?.priorId;
+  if (!priorId) throw new Error("This engagement is not linked to a prior year, so there is nothing to bring forward.");
+  const prior = await tx.query<{ clientId: string }>('select client_id as "clientId" from engagements where id = $1', [priorId]);
+  if (prior.rows.length === 0 || prior.rows[0].clientId !== e.rows[0].clientId) throw new Error("The prior-year engagement is not for the same client.");
+
+  const schedules = await tx.query<Row>(`select ${COLUMNS} from test_schedules s where s.engagement_id = $1 order by s.area_code, s.seq`, [priorId]);
+  const done = await tx.query<{ from: string }>('select rolled_from_id as "from" from test_schedules where engagement_id = $1 and rolled_from_id is not null', [engagementId]);
+  const brought = new Set(done.rows.map((r) => r.from));
+  const inScope = await areaCodesInScope(tx, engagementId);
+
+  let created = 0;
+  let lines = 0;
+  let outOfScope = 0;
+  for (const p of schedules.rows) {
+    if (brought.has(p.id)) continue;
+    const next = await tx.query<{ n: number }>("select coalesce(max(seq), 0)::int + 1 as n from test_schedules where engagement_id = $1 and area_code = $2", [engagementId, p.areaCode]);
+    const seq = next.rows[0].n;
+    const made = await tx.query<{ id: string }>(
+      `insert into test_schedules (firm_id, engagement_id, area_code, group_code, seq, reference, title, objective, threshold, rolled_from_id, prior_work_done, created_by)
+       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) returning id`,
+      [s.firmId, engagementId, p.areaCode, p.groupCode, seq, `${p.areaCode}-${seq}`, p.title, p.objective, p.threshold, p.id, p.workDone, s.userId],
+    );
+    const copied = await tx.query(
+      `insert into test_schedule_lines (firm_id, schedule_id, position, description, doc_ref, amount_minor, prior_amount_minor)
+       select firm_id, $1, position, description, doc_ref, 0, amount_minor from test_schedule_lines where schedule_id = $2 returning id`,
+      [made.rows[0].id, p.id],
+    );
+    created++;
+    lines += copied.rows.length;
+    if (!inScope.has(p.areaCode)) outOfScope++;
+  }
+  const alreadyBrought = schedules.rows.length - created;
+  await log(tx, s, "rollforward", "engagement", engagementId, { fromEngagementId: priorId, created, alreadyBrought, lines, outOfScope });
+  return { created, alreadyBrought, lines, outOfScope };
 }
 
 /**
