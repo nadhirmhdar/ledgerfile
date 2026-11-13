@@ -299,3 +299,14 @@ export async function isSolePractitioner(tx: Tx): Promise<boolean> {
   const { rows } = await tx.query<{ n: number }>("select count(*)::int as n from users");
   return rows[0].n === 1;
 }
+/**
+ * Whether a reviewer may review audit work they performed themselves: the firm has only ever had one user, or only ever
+ * had one user with reviewer-level rights (reviewer, partner or admin), who then has nobody else to review their work.
+ * Deactivated users count, so a second reviewer cannot be added, used to make the rule apply, and removed again.
+ * Applies to audit procedures and checklist steps. Lead-sheet sign-off keeps its own rule.
+ */
+export async function canSelfReviewAudit(tx: Tx): Promise<boolean> {
+  if (await isSolePractitioner(tx)) return true;
+  const { rows } = await tx.query<{ n: number }>("select count(*)::int as n from users where role in ('reviewer', 'partner', 'admin')");
+  return rows[0].n === 1;
+}

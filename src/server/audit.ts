@@ -1,5 +1,5 @@
 import type { Tx } from "./db";
-import { audit as log, getEngagement, isSolePractitioner, listAccounts, type Session } from "./repo";
+import { audit as log, canSelfReviewAudit, getEngagement, listAccounts, type Session } from "./repo";
 import { canLock, canReview } from "../domain/signoff";
 import { buildStatements } from "../domain/statements";
 import { compareYears, unexplainedMovements, type ExplanationRecord } from "../domain/analytics";
@@ -98,6 +98,8 @@ export interface AuditOverview {
   materialityStale: boolean;
   /** Procedures marked not applicable, for the partner's attention at lock. */
   notApplicable: number;
+  /** Procedures and checklist steps reviewed by the person who did them: work that had no second person. */
+  selfReviewed: number;
   /** The partner's approval of the risk assessment. */
   approval: RiskApproval;
   /** What the audit work still needs before the engagement can be locked. Empty when the audit is off. */
@@ -129,6 +131,8 @@ export interface ProcedureRow {
   /** The reviewer's sign-off on the work as recorded; null while it is unreviewed. */
   reviewedByName: string | null;
   reviewedAt: string | null;
+  /** The reviewer is the person who did the work: possible only where the firm has no other reviewer. */
+  selfReviewed: boolean;
   /** The partner's own sign-off step: it needs no further review. */
   partnerStep: boolean;
 }
@@ -210,10 +214,11 @@ export async function getAuditOverview(tx: Tx, engagementId: string): Promise<Au
     [engagementId],
   );
   const risks = await risksByArea(tx, engagementId);
-  const counts = await tx.query<{ areaCode: string; total: number; completed: number; na: number; unreviewed: number }>(
+  const counts = await tx.query<{ areaCode: string; total: number; completed: number; na: number; unreviewed: number; selfReviewed: number }>(
     `select area_code as "areaCode", count(*)::int as total, count(*) filter (where status <> 'open')::int as completed,
             count(*) filter (where status = 'na')::int as na,
-            count(*) filter (where status <> 'open' and reviewed_by is null and evidence !~* ${PARTNER_STEP})::int as unreviewed
+            count(*) filter (where status <> 'open' and reviewed_by is null and evidence !~* ${PARTNER_STEP})::int as unreviewed,
+            count(*) filter (where reviewed_by is not null and reviewed_by = performed_by)::int as "selfReviewed"
      from audit_procedures where engagement_id = $1 group by area_code`,
     [engagementId],
   );
@@ -313,6 +318,7 @@ export async function getAuditOverview(tx: Tx, engagementId: string): Promise<Au
     enabled,
     materialityStale,
     notApplicable: counts.rows.reduce((n, c) => n + c.na, 0),
+    selfReviewed: counts.rows.reduce((n, c) => n + c.selfReviewed, 0),
     approval,
     blockers,
   };
@@ -476,7 +482,7 @@ export async function listProcedures(tx: Tx, engagementId: string, areaCode: str
   const { rows } = await tx.query<ProcedureRow>(
     `select p.id, p.template_id as "templateId", p.tier, p.assertions, p.body, p.evidence, p.reference, p.status,
             p.work_done as "workDone", p.conclusion, u.name as "performedByName", to_char(p.performed_at, 'YYYY-MM-DD') as "performedAt",
-            r.name as "reviewedByName", to_char(p.reviewed_at, 'YYYY-MM-DD') as "reviewedAt", p.evidence ~* ${PARTNER_STEP} as "partnerStep"
+            r.name as "reviewedByName", to_char(p.reviewed_at, 'YYYY-MM-DD') as "reviewedAt", p.reviewed_by is not null and p.reviewed_by = p.performed_by as "selfReviewed", p.evidence ~* ${PARTNER_STEP} as "partnerStep"
      from audit_procedures p left join users u on u.id = p.performed_by left join users r on r.id = p.reviewed_by
      where p.engagement_id = $1 and p.area_code = $2`,
     [engagementId, areaCode],
@@ -547,9 +553,10 @@ export async function reviewProcedure(tx: Tx, s: Session, procedureId: string): 
   if (p.status === "open") throw new Error("Only completed work can be reviewed.");
   if (needsPartner(p.evidence)) throw new Error("This is the partner's own sign-off, so it needs no further review.");
   if (p.reviewed) throw new Error("This procedure has already been reviewed.");
-  if (p.performedBy === s.userId && !(await isSolePractitioner(tx))) throw new Error("The reviewer must be a different person from the one who did the work.");
+  const selfReview = p.performedBy === s.userId;
+  if (selfReview && !(await canSelfReviewAudit(tx))) throw new Error("The reviewer must be a different person from the one who did the work.");
   await tx.query("update audit_procedures set reviewed_by = $2, reviewed_at = now() where id = $1", [procedureId, s.userId]);
-  await log(tx, s, "procedure_review", "audit_procedure", procedureId, { engagementId: p.engagementId, templateId: p.templateId });
+  await log(tx, s, "procedure_review", "audit_procedure", procedureId, { engagementId: p.engagementId, templateId: p.templateId, selfReview });
   return p.engagementId;
 }
 
@@ -569,23 +576,24 @@ export async function unreviewProcedure(tx: Tx, s: Session, procedureId: string)
 }
 
 /**
- * Review everything finished and not yet reviewed in one area or checklist. The reviewer's own work is
- * skipped (unless they are a sole practitioner) and counted, so they can see what is left for someone else.
+ * Review everything finished and not yet reviewed in one area or checklist. The reviewer's own work is skipped and
+ * counted, so they can see what is left for someone else, except where the firm has no other reviewer: then it is
+ * reviewed too, and counted as self-reviewed.
  */
-export async function reviewArea(tx: Tx, s: Session, engagementId: string, areaCode: string): Promise<{ reviewed: number; skipped: number }> {
+export async function reviewArea(tx: Tx, s: Session, engagementId: string, areaCode: string): Promise<{ reviewed: number; skipped: number; selfReviewed: number }> {
   await requireAudit(tx, engagementId);
   if (!canReview(s.role)) throw new Error("Only a reviewer or partner can review audit work.");
-  const own = (await isSolePractitioner(tx)) ? "false" : "performed_by is not distinct from $3::uuid";
-  const done = await tx.query<{ templateId: string }>(
+  const own = (await canSelfReviewAudit(tx)) ? "false" : "performed_by is not distinct from $3::uuid";
+  const done = await tx.query<{ templateId: string; performedBy: string | null }>(
     `update audit_procedures set reviewed_by = $3, reviewed_at = now()
-     where engagement_id = $1 and area_code = $2 and status <> 'open' and reviewed_by is null and evidence !~* ${PARTNER_STEP} and not (${own}) returning template_id as "templateId"`,
+     where engagement_id = $1 and area_code = $2 and status <> 'open' and reviewed_by is null and evidence !~* ${PARTNER_STEP} and not (${own}) returning template_id as "templateId", performed_by as "performedBy"`,
     [engagementId, areaCode, s.userId],
   );
   const left = await tx.query<{ n: number }>(
     `select count(*)::int as n from audit_procedures where engagement_id = $1 and area_code = $2 and status <> 'open' and reviewed_by is null and evidence !~* ${PARTNER_STEP}`,
     [engagementId, areaCode],
   );
-  const result = { reviewed: done.rows.length, skipped: left.rows[0].n };
+  const result = { reviewed: done.rows.length, skipped: left.rows[0].n, selfReviewed: done.rows.filter((r) => r.performedBy === s.userId).length };
   if (result.reviewed + result.skipped === 0) throw new Error("There is no completed work waiting for review here.");
   await log(tx, s, "procedure_review_area", "audit_area", engagementId, { area: areaCode, ...result, reviewedSteps: done.rows.map((r) => r.templateId) });
   return result;

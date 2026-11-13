@@ -137,7 +137,7 @@ describe("reviewing audit procedures", () => {
     await expect(as(outsider, (tx) => audit.reviewArea(tx, outsider, engagement, area))).rejects.toThrow(/not found/);
     // A second reviewer clears what was skipped, and the blocker goes.
     const rest = await as(rev2, (tx) => audit.reviewArea(tx, rev2, engagement, area));
-    expect(rest).toEqual({ reviewed: 1, skipped: 0 });
+    expect(rest).toEqual({ reviewed: 1, skipped: 0, selfReviewed: 0 });
     expect((await overview()).areas.find((a) => a.code === area)!.unreviewed).toBe(0);
     expect(await blocker()).toBeUndefined();
     await expect(as(rev2, (tx) => audit.reviewArea(tx, rev2, engagement, area))).rejects.toThrow(/no completed work waiting/);
@@ -217,7 +217,7 @@ describe("reviewing audit procedures in a one-person firm", () => {
     await as(me, (tx) => audit.updateProcedure(tx, me, b.id, work("More own work")));
     await as(me, (tx) => audit.reviewProcedure(tx, me, a.id));
     const bulk = await as(me, (tx) => audit.reviewArea(tx, me, engagement, area));
-    expect(bulk).toEqual({ reviewed: 1, skipped: 0 });
+    expect(bulk).toEqual({ reviewed: 1, skipped: 0, selfReviewed: 1 });
 
     // A colleague joins: the sole-practitioner exception no longer applies to new work.
     await db.query("insert into users (id, firm_id, email, name, role) values ($1, $2, 'you@x.test', 'You', 'reviewer')", [you.userId, SOLO]);
@@ -263,7 +263,7 @@ describe("the partner's own sign-off", () => {
     const b801 = (await steps()).find((p) => p.templateId === "B8.01")!;
     await as(prep, (tx) => audit.updateProcedure(tx, prep, b801.id, work("Overall risks")));
     expect((await overview()).checklists.find((c) => c.code === "B8")!.unreviewed).toBe(1);
-    expect(await as(partner, (tx) => audit.reviewArea(tx, partner, engagement, "B8"))).toEqual({ reviewed: 1, skipped: 0 });
+    expect(await as(partner, (tx) => audit.reviewArea(tx, partner, engagement, "B8"))).toEqual({ reviewed: 1, skipped: 0, selfReviewed: 0 });
     expect((await overview()).checklists.find((c) => c.code === "B8")!.unreviewed).toBe(0);
     expect((await overview()).blockers.some((b) => b.includes("have not been reviewed"))).toBe(false);
     expect((await steps()).find((p) => p.templateId === "B8.08")!.reviewedAt).toBeNull();

@@ -61,6 +61,11 @@ export default async function AuditPage({ params }: { params: Promise<{ id: stri
                 ? "Unfinished audit work holds up the lock. The audit can be turned off only while no work has been recorded on any procedure."
                 : "Turn the audit on to set materiality, assess risk and load audit programmes. Accounts-preparation engagements can leave it off."}
             </p>
+            {overview.enabled && overview.selfReviewed > 0 && (
+              <p role="note" className="mt-2 rounded border border-amber-600 bg-amber-100 px-3 py-2 text-sm text-amber-950">
+                {overview.selfReviewed} procedure(s) and checklist step(s) were reviewed by the person who did the work, because the firm has no other reviewer. They had no second person. This is shown for the partner&apos;s attention and does not hold up the lock.
+              </p>
+            )}
             {open && reviewer ? (
               <ActionForm action={setAuditEnabledAction} fields={{ engagementId: id, on: String(!overview.enabled) }} className="mt-3">
                 <button className={overview.enabled ? small : primary}>{overview.enabled ? "Turn audit off" : "Turn audit on"}</button>
