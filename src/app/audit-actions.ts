@@ -73,6 +73,16 @@ export async function setAreaRisksAction(_prev: FormState, form: FormData): Prom
   );
 }
 
+export async function approveRiskAssessmentAction(_prev: FormState, form: FormData): Promise<FormState> {
+  const engagementId = field(form, "engagementId");
+  if (!UUID.test(engagementId)) return { ok: false, message: "Engagement not found." };
+  return run(
+    () => "Risk assessment approved.",
+    (tx, session) => audit.approveRiskAssessment(tx, session, engagementId),
+    () => engagementId,
+  );
+}
+
 export async function addMisstatementAction(_prev: FormState, form: FormData): Promise<FormState> {
   const engagementId = field(form, "engagementId");
   if (!UUID.test(engagementId)) return { ok: false, message: "Engagement not found." };

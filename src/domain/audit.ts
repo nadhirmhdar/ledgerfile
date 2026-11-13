@@ -132,6 +132,29 @@ export function isAssessed(area: Area, risks: AreaRisks): boolean {
   return area.fixedRisk !== undefined || assertionsOf(area).every((a) => risks[a] !== undefined);
 }
 
+/** The planning step that is the partner's approval of the risk assessment. It can be completed only once that approval is on record. */
+export const RISK_APPROVAL_STEP = "B8.08";
+
+export interface AssessmentInput {
+  materiality: { benchmark: string; benchmarkAmountMinor: number; overallMinor: number; performanceMinor: number; trivialMinor: number } | null;
+  areas: { code: string; fixedRisk?: string; risks: AreaRisks }[];
+}
+
+/**
+ * The risk assessment written out in one fixed form: the materiality in force and every area's
+ * ratings. Two assessments are the same exactly when their snapshots are equal, so a partner's
+ * approval can be held against the snapshot it was given for.
+ */
+export function assessmentSnapshot(input: AssessmentInput): string {
+  const m = input.materiality;
+  return JSON.stringify({
+    materiality: m ? [m.benchmark, m.benchmarkAmountMinor, m.overallMinor, m.performanceMinor, m.trivialMinor] : null,
+    areas: [...input.areas]
+      .sort((a, b) => (a.code < b.code ? -1 : a.code > b.code ? 1 : 0))
+      .map((a) => [a.code, a.fixedRisk ? "fixed:" + a.fixedRisk : Object.keys(a.risks).sort().map((k) => k + ":" + a.risks[k as Assertion])]),
+  });
+}
+
 /**
  * The procedures an area's programme contains for the assessed risks.
  * Core procedures always load. An extended procedure loads when any assertion it

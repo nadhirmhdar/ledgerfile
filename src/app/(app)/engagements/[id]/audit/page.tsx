@@ -5,10 +5,10 @@ import { getSession } from "@/server/session";
 import * as repo from "@/server/repo";
 import * as audit from "@/server/audit";
 import { ASSERTIONS, BENCHMARKS, computeMateriality, STAGES, LIBRARY_STATUS, PERFORMANCE_RANGE, RISK_LEVELS, TRIVIAL_MAX, type Benchmark } from "@/domain/audit";
-import { canReview } from "@/domain/signoff";
+import { canLock, canReview } from "@/domain/signoff";
 import { formatAmount } from "@/domain/money";
 import { ActionForm } from "@/app/action-form";
-import { addMisstatementAction, setAreaRisksAction, setAuditEnabledAction, setMaterialityAction, setMisstatementCorrectedAction } from "@/app/audit-actions";
+import { addMisstatementAction, approveRiskAssessmentAction, setAreaRisksAction, setAuditEnabledAction, setMaterialityAction, setMisstatementCorrectedAction } from "@/app/audit-actions";
 import { EngagementNav } from "../nav";
 
 export const dynamic = "force-dynamic";
@@ -31,6 +31,8 @@ export default async function AuditPage({ params }: { params: Promise<{ id: stri
 
   const open = engagement.status === "open";
   const reviewer = canReview(session.role);
+  const partner = canLock(session.role);
+  const approval = overview.approval;
   const m = overview.materiality;
   const guideWarnings = m ? computeMateriality(m).warnings : [];
   const assertionLabel = new Map(ASSERTIONS.map((a) => [a.code, a.label]));
@@ -214,6 +216,32 @@ export default async function AuditPage({ params }: { params: Promise<{ id: stri
                 )}
               </div>
             ))}
+
+            <div className={`mt-6 rounded border p-4 ${approval.state === "current" ? "border-green-600 bg-green-50" : "border-amber-400 bg-amber-50"}`}>
+              <h3 className="text-base font-semibold">Partner approval of the risk assessment</h3>
+              <p className="mt-1 text-sm">
+                {approval.state === "current" && `Approved by ${approval.approvedBy} on ${approval.approvedAt}.`}
+                {approval.state === "lapsed" &&
+                  `Approved by ${approval.approvedBy} on ${approval.approvedAt}, but materiality, a risk rating or the areas in scope have changed since. It needs approving again.`}
+                {approval.state === "none" &&
+                  (open
+                    ? "Not yet approved. The methodology expects approval before fieldwork starts; the engagement cannot be locked without it."
+                    : "No approval was recorded before this engagement was locked.")}
+              </p>
+              <p className="mt-1 text-sm text-slate-600">
+                The approval covers materiality and the risk ratings above, as recorded here. It lapses by itself if any of them changes.
+              </p>
+              {open && approval.state !== "current" &&
+                (approval.notReady ? (
+                  <p className="mt-2 text-sm text-slate-700">{approval.notReady}</p>
+                ) : partner ? (
+                  <ActionForm action={approveRiskAssessmentAction} fields={{ engagementId: id }} className="mt-3">
+                    <button className={primary}>{approval.state === "lapsed" ? "Approve again" : "Approve risk assessment"}</button>
+                  </ActionForm>
+                ) : (
+                  <p className="mt-2 text-sm text-slate-700">Ready for the partner to approve.</p>
+                ))}
+            </div>
           </section>
 
           <section className="mt-10">
