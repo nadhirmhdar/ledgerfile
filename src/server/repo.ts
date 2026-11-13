@@ -290,3 +290,12 @@ export async function approveAllMappings(tx: Tx, s: Session, engagementId: strin
   await audit(tx, s, "approve_all", "mapping", engagementId, { count: rows.length });
   return rows.length;
 }
+
+/**
+ * The firm has only ever had one user. Deactivated users count, so an administrator cannot add a colleague, have
+ * them do or review work, and remove them again. One rule for lead-sheet and procedure review.
+ */
+export async function isSolePractitioner(tx: Tx): Promise<boolean> {
+  const { rows } = await tx.query<{ n: number }>("select count(*)::int as n from users");
+  return rows[0].n === 1;
+}

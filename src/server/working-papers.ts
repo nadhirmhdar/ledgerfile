@@ -96,8 +96,10 @@ export async function addWorkingPaper(
     if (!input.target || !GROUP_BY_CODE.has(input.target)) throw new Error("Choose the lead sheet the file supports.");
     target = input.target;
   } else if (input.targetKind === "procedure") {
-    const found = await tx.query("select 1 from audit_procedures where id::text = $1 and engagement_id = $2", [input.target ?? "", engagementId]);
+    const found = await tx.query<{ reviewed: boolean }>("select reviewed_by is not null as reviewed from audit_procedures where id::text = $1 and engagement_id = $2", [input.target ?? "", engagementId]);
     if (found.rows.length === 0) throw new Error("That procedure is not on this engagement.");
+    // A review vouches for the evidence as it stood, so more cannot be added under it.
+    if (found.rows[0].reviewed) throw new Error("This procedure has been reviewed. Ask the reviewer to withdraw the review before attaching evidence.");
     const audited = await tx.query<{ on: boolean }>('select audit_enabled as "on" from engagements where id = $1', [engagementId]);
     if (!audited.rows[0]?.on) throw new Error("Turn the audit on for this engagement first.");
     target = input.target;

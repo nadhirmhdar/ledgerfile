@@ -170,6 +170,7 @@ export default async function AuditPage({ params }: { params: Promise<{ id: stri
                     {area.procedures > 0 ? (
                       <Link href={`/engagements/${id}/audit/${area.code}`} className="text-blue-700 underline">
                         Programme: {area.completed} of {area.procedures} completed
+                        {area.unreviewed > 0 && `, ${area.unreviewed} to review`}
                       </Link>
                     ) : (
                       <span className="text-slate-600">{area.assessed ? "Programme not loaded" : "Not assessed"}</span>
@@ -263,6 +264,7 @@ export default async function AuditPage({ params }: { params: Promise<{ id: stri
                           </Link>
                           <span className={`whitespace-nowrap tabular-nums ${c.steps > 0 && c.completed === c.steps ? "text-emerald-800" : "text-slate-600"}`}>
                             {c.completed} / {c.steps}
+                            {c.unreviewed > 0 && <span className="ml-2 text-amber-800">{c.unreviewed} to review</span>}
                           </span>
                         </li>
                       ))}
