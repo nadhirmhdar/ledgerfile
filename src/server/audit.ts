@@ -1,5 +1,5 @@
 import type { Tx } from "./db";
-import { audit as log, getEngagement, listAccounts, type Session } from "./repo";
+import { audit as log, getEngagement, isSolePractitioner, listAccounts, type Session } from "./repo";
 import { canLock, canReview } from "../domain/signoff";
 import { buildStatements } from "../domain/statements";
 import {
@@ -128,7 +128,15 @@ export interface ProcedureRow {
   /** The reviewer's sign-off on the work as recorded; null while it is unreviewed. */
   reviewedByName: string | null;
   reviewedAt: string | null;
+  /** The partner's own sign-off step: it needs no further review. */
+  partnerStep: boolean;
 }
+
+/**
+ * Steps whose evidence is the partner's own sign-off (the same test as needsPartner, for SQL). The partner's sign-off is
+ * itself the top-level review, so these are never reviewed again and never counted as waiting for review.
+ */
+const PARTNER_STEP = "'^Partner sign-off'";
 
 async function requireOpen(tx: Tx, engagementId: string) {
   const engagement = await getEngagement(tx, engagementId);
@@ -204,7 +212,7 @@ export async function getAuditOverview(tx: Tx, engagementId: string): Promise<Au
   const counts = await tx.query<{ areaCode: string; total: number; completed: number; na: number; unreviewed: number }>(
     `select area_code as "areaCode", count(*)::int as total, count(*) filter (where status <> 'open')::int as completed,
             count(*) filter (where status = 'na')::int as na,
-            count(*) filter (where status <> 'open' and reviewed_by is null)::int as unreviewed
+            count(*) filter (where status <> 'open' and reviewed_by is null and evidence !~* ${PARTNER_STEP})::int as unreviewed
      from audit_procedures where engagement_id = $1 group by area_code`,
     [engagementId],
   );
@@ -464,7 +472,7 @@ export async function listProcedures(tx: Tx, engagementId: string, areaCode: str
   const { rows } = await tx.query<ProcedureRow>(
     `select p.id, p.template_id as "templateId", p.tier, p.assertions, p.body, p.evidence, p.reference, p.status,
             p.work_done as "workDone", p.conclusion, u.name as "performedByName", to_char(p.performed_at, 'YYYY-MM-DD') as "performedAt",
-            r.name as "reviewedByName", to_char(p.reviewed_at, 'YYYY-MM-DD') as "reviewedAt"
+            r.name as "reviewedByName", to_char(p.reviewed_at, 'YYYY-MM-DD') as "reviewedAt", p.evidence ~* ${PARTNER_STEP} as "partnerStep"
      from audit_procedures p left join users u on u.id = p.performed_by left join users r on r.id = p.reviewed_by
      where p.engagement_id = $1 and p.area_code = $2`,
     [engagementId, areaCode],
@@ -522,19 +530,10 @@ export async function updateProcedure(
   return rows[0].engagementId;
 }
 
-/**
- * A firm that has only ever had one user, deactivated users included, so a second user cannot be
- * added, used as the reviewer, and removed again. The same rule as for lead-sheet sign-off.
- */
-async function isSolePractitioner(tx: Tx): Promise<boolean> {
-  const { rows } = await tx.query<{ n: number }>("select count(*)::int as n from users");
-  return rows[0].n === 1;
-}
-
 /** Sign off a procedure whose work is finished. A different person from the one who did the work, except for a sole practitioner. */
 export async function reviewProcedure(tx: Tx, s: Session, procedureId: string): Promise<string> {
-  const { rows } = await tx.query<{ engagementId: string; templateId: string; status: string; performedBy: string | null; reviewed: boolean }>(
-    'select engagement_id as "engagementId", template_id as "templateId", status, performed_by as "performedBy", reviewed_by is not null as reviewed from audit_procedures where id = $1',
+  const { rows } = await tx.query<{ engagementId: string; templateId: string; status: string; evidence: string; performedBy: string | null; reviewed: boolean }>(
+    'select engagement_id as "engagementId", template_id as "templateId", status, evidence, performed_by as "performedBy", reviewed_by is not null as reviewed from audit_procedures where id = $1',
     [procedureId],
   );
   if (rows.length === 0) throw new Error("Procedure not found.");
@@ -542,6 +541,7 @@ export async function reviewProcedure(tx: Tx, s: Session, procedureId: string): 
   await requireAudit(tx, p.engagementId);
   if (!canReview(s.role)) throw new Error("Only a reviewer or partner can review audit work.");
   if (p.status === "open") throw new Error("Only completed work can be reviewed.");
+  if (needsPartner(p.evidence)) throw new Error("This is the partner's own sign-off, so it needs no further review.");
   if (p.reviewed) throw new Error("This procedure has already been reviewed.");
   if (p.performedBy === s.userId && !(await isSolePractitioner(tx))) throw new Error("The reviewer must be a different person from the one who did the work.");
   await tx.query("update audit_procedures set reviewed_by = $2, reviewed_at = now() where id = $1", [procedureId, s.userId]);
@@ -574,11 +574,11 @@ export async function reviewArea(tx: Tx, s: Session, engagementId: string, areaC
   const own = (await isSolePractitioner(tx)) ? "false" : "performed_by is not distinct from $3::uuid";
   const done = await tx.query<{ templateId: string }>(
     `update audit_procedures set reviewed_by = $3, reviewed_at = now()
-     where engagement_id = $1 and area_code = $2 and status <> 'open' and reviewed_by is null and not (${own}) returning template_id as "templateId"`,
+     where engagement_id = $1 and area_code = $2 and status <> 'open' and reviewed_by is null and evidence !~* ${PARTNER_STEP} and not (${own}) returning template_id as "templateId"`,
     [engagementId, areaCode, s.userId],
   );
   const left = await tx.query<{ n: number }>(
-    "select count(*)::int as n from audit_procedures where engagement_id = $1 and area_code = $2 and status <> 'open' and reviewed_by is null",
+    `select count(*)::int as n from audit_procedures where engagement_id = $1 and area_code = $2 and status <> 'open' and reviewed_by is null and evidence !~* ${PARTNER_STEP}`,
     [engagementId, areaCode],
   );
   const result = { reviewed: done.rows.length, skipped: left.rows[0].n };

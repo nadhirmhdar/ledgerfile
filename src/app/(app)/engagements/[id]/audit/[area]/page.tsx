@@ -39,7 +39,7 @@ export default async function ProgrammePage({ params }: { params: Promise<{ id: 
 
   const open = engagement.status === "open";
   const completed = procedures.filter((p) => p.status !== "open").length;
-  const unreviewed = procedures.filter((p) => p.status !== "open" && !p.reviewedAt).length;
+  const unreviewed = procedures.filter((p) => p.status !== "open" && !p.reviewedAt && !p.partnerStep).length;
   const reviewer = canReview(session.role);
   const auditOn = overview?.enabled ?? false;
 
@@ -73,7 +73,7 @@ export default async function ProgrammePage({ params }: { params: Promise<{ id: 
         <>
           {!checklist && overview?.materiality && <SamplingCalculator performanceMaterialityMinor={overview.materiality.performanceMinor} />}
           <p className="mt-4 text-sm font-medium">
-            {completed} of {procedures.length} {checklist ? "steps" : "procedures"} completed, {completed - unreviewed} reviewed
+            {completed} of {procedures.length} {checklist ? "steps" : "procedures"} completed, {procedures.filter((p) => p.reviewedAt).length} reviewed
           </p>
           {open && auditOn && reviewer && unreviewed > 0 && (
             <ActionForm action={reviewAreaAction} fields={{ engagementId: id, areaCode: area.code }} className="mt-2">
@@ -131,12 +131,14 @@ export default async function ProgrammePage({ params }: { params: Promise<{ id: 
 
               {p.status !== "open" && (
                 <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
-                  {p.reviewedAt ? (
+                  {p.partnerStep ? (
+                    <span className="text-slate-700">Partner sign-off: no further review</span>
+                  ) : p.reviewedAt ? (
                     <span className="font-medium text-emerald-800">Reviewed by {p.reviewedByName} on {p.reviewedAt}</span>
                   ) : (
                     <span className="text-amber-800">Not yet reviewed</span>
                   )}
-                  {open && auditOn && reviewer && (
+                  {open && auditOn && reviewer && !p.partnerStep && (
                     <ActionForm action={reviewProcedureAction} fields={{ procedureId: p.id, withdraw: p.reviewedAt ? "true" : "false" }}>
                       <button className={small}>{p.reviewedAt ? "Withdraw review" : "Review"}</button>
                     </ActionForm>

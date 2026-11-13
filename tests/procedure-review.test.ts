@@ -1,8 +1,13 @@
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { beforeAll, describe, expect, it } from "vitest";
 import type { PGlite } from "@electric-sql/pglite";
 import { openDatabase, withFirm } from "../src/server/db";
 import * as repo from "../src/server/repo";
 import * as audit from "../src/server/audit";
+import * as papers from "../src/server/working-papers";
+import { localFileStore } from "../src/server/file-store";
 import { AREA_BY_CODE, assertionsOf } from "../src/domain/audit";
 
 const TB = [
@@ -158,6 +163,17 @@ describe("reviewing audit procedures", () => {
     await expect(as(partner, (tx) => audit.setAuditEnabled(tx, partner, engagement, false))).rejects.toThrow(/cannot be turned off/);
   });
 
+  it("stops evidence being attached to reviewed work until the review is withdrawn", async () => {
+    const store = localFileStore(mkdtempSync(join(tmpdir(), "procedure-review-")));
+    const attach = (id: string) =>
+      as(rev, (tx) => papers.addWorkingPaper(tx, rev, store, engagement, { targetKind: "procedure", target: id, fileName: "support.pdf", data: new TextEncoder().encode("%PDF sample"), description: "" }));
+    const p = (await procs()).find((x) => x.reviewedAt)!;
+    await expect(attach(p.id)).rejects.toThrow(/has been reviewed.*withdraw the review/);
+    await withdraw(rev2, p.id);
+    await attach(p.id);
+    await review(rev2, p.id);
+  });
+
   it("cannot be done once the audit is off for the engagement or the engagement is locked", async () => {
     const other = await as(partner, async (tx) => {
       const client = await repo.createClient(tx, partner, "No Audit Co");
@@ -208,5 +224,48 @@ describe("reviewing audit procedures in a one-person firm", () => {
     await as(me, (tx) => audit.unreviewProcedure(tx, me, a.id));
     await expect(as(me, (tx) => audit.reviewProcedure(tx, me, a.id))).rejects.toThrow(/different person/);
     await as(you, (tx) => audit.reviewProcedure(tx, you, a.id));
+  });
+});
+
+describe("the partner's own sign-off", () => {
+  const FIRM = "dddddddd-8888-4000-8000-000000000001";
+  const partner: repo.Session = { firmId: FIRM, userId: "dddddddd-8888-4000-8000-000000000011", role: "partner" };
+  const prep: repo.Session = { firmId: FIRM, userId: "dddddddd-8888-4000-8000-000000000012", role: "preparer" };
+  let db: PGlite;
+  let engagement: string;
+  const as = <R,>(s: repo.Session, fn: (tx: T) => Promise<R>) => withFirm(db, s.firmId, fn);
+  const overview = async () => (await as(prep, (tx) => audit.getAuditOverview(tx, engagement)))!;
+  const steps = () => as(prep, (tx) => audit.listProcedures(tx, engagement, "B8"));
+
+  beforeAll(async () => {
+    db = await openDatabase();
+    await db.query("insert into firms (id, name) values ($1, 'Partner and preparer')", [FIRM]);
+    await db.query("insert into users (id, firm_id, email, name, role) values ($1, $2, 'p@x.test', 'Partner', 'partner'), ($3, $2, 'q@x.test', 'Preparer', 'preparer')", [partner.userId, FIRM, prep.userId]);
+    engagement = await setup(db, FIRM, partner);
+    for (const a of (await overview()).areas.filter((x) => !x.assessed)) await as(partner, (tx) => audit.setAreaRisks(tx, partner, engagement, a.code, rate(a.code, "low")));
+    await as(partner, (tx) => audit.approveRiskAssessment(tx, partner, engagement));
+  });
+
+  it("needs no further review, so a partner and preparers alone can reach zero unreviewed", async () => {
+    const b808 = (await steps()).find((p) => p.templateId === "B8.08")!;
+    expect(b808.partnerStep).toBe(true);
+    expect((await steps()).find((p) => p.templateId === "B8.01")!.partnerStep).toBe(false);
+    await as(partner, (tx) => audit.updateProcedure(tx, partner, b808.id, work("Approved")));
+    // Counted nowhere and not blocking.
+    expect((await overview()).checklists.find((c) => c.code === "B8")!.unreviewed).toBe(0);
+    expect((await overview()).blockers.some((b) => b.includes("have not been reviewed"))).toBe(false);
+    await expect(as(partner, (tx) => audit.reviewProcedure(tx, partner, b808.id))).rejects.toThrow(/partner's own sign-off/);
+    await expect(as(partner, (tx) => audit.reviewArea(tx, partner, engagement, "B8"))).rejects.toThrow(/no completed work waiting/);
+    // It stays editable by a partner, as before.
+    await as(partner, (tx) => audit.updateProcedure(tx, partner, b808.id, work("Approved again")));
+
+    // The preparer's step is reviewed by the partner; the sign-off is neither reviewed nor reported as skipped.
+    const b801 = (await steps()).find((p) => p.templateId === "B8.01")!;
+    await as(prep, (tx) => audit.updateProcedure(tx, prep, b801.id, work("Overall risks")));
+    expect((await overview()).checklists.find((c) => c.code === "B8")!.unreviewed).toBe(1);
+    expect(await as(partner, (tx) => audit.reviewArea(tx, partner, engagement, "B8"))).toEqual({ reviewed: 1, skipped: 0 });
+    expect((await overview()).checklists.find((c) => c.code === "B8")!.unreviewed).toBe(0);
+    expect((await overview()).blockers.some((b) => b.includes("have not been reviewed"))).toBe(false);
+    expect((await steps()).find((p) => p.templateId === "B8.08")!.reviewedAt).toBeNull();
   });
 });
