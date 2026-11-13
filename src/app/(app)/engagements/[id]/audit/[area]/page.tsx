@@ -6,7 +6,7 @@ import * as repo from "@/server/repo";
 import * as audit from "@/server/audit";
 import { AREA_BY_CODE, CHECKLIST_BY_CODE, LIBRARY_STATUS } from "@/domain/audit";
 import { ActionForm } from "@/app/action-form";
-import { updateProcedureAction } from "@/app/audit-actions";
+import { reviewAreaAction, reviewProcedureAction, updateProcedureAction } from "@/app/audit-actions";
 import { removeWorkingPaperAction, uploadWorkingPaperAction } from "@/app/papers-actions";
 import * as papers from "@/server/working-papers";
 import { canReview } from "@/domain/signoff";
@@ -39,6 +39,9 @@ export default async function ProgrammePage({ params }: { params: Promise<{ id: 
 
   const open = engagement.status === "open";
   const completed = procedures.filter((p) => p.status !== "open").length;
+  const unreviewed = procedures.filter((p) => p.status !== "open" && !p.reviewedAt).length;
+  const reviewer = canReview(session.role);
+  const auditOn = overview?.enabled ?? false;
 
   return (
     <main className="mx-auto w-full max-w-5xl px-4 py-8 text-slate-900">
@@ -70,8 +73,14 @@ export default async function ProgrammePage({ params }: { params: Promise<{ id: 
         <>
           {!checklist && overview?.materiality && <SamplingCalculator performanceMaterialityMinor={overview.materiality.performanceMinor} />}
           <p className="mt-4 text-sm font-medium">
-            {completed} of {procedures.length} {checklist ? "steps" : "procedures"} completed
+            {completed} of {procedures.length} {checklist ? "steps" : "procedures"} completed, {completed - unreviewed} reviewed
           </p>
+          {open && auditOn && reviewer && unreviewed > 0 && (
+            <ActionForm action={reviewAreaAction} fields={{ engagementId: id, areaCode: area.code }} className="mt-2">
+              <button className={small}>Review all {unreviewed} outstanding</button>
+              <span className="ml-2 text-xs text-slate-600">Work you did yourself is skipped.</span>
+            </ActionForm>
+          )}
           {procedures.map((p) => (
             <section key={p.id} className={`mt-4 rounded border p-4 ${p.status === "open" ? "border-slate-300" : "border-emerald-300 bg-emerald-50"}`}>
               <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -120,7 +129,22 @@ export default async function ProgrammePage({ params }: { params: Promise<{ id: 
                 );
               })()}
 
-              {open ? (
+              {p.status !== "open" && (
+                <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
+                  {p.reviewedAt ? (
+                    <span className="font-medium text-emerald-800">Reviewed by {p.reviewedByName} on {p.reviewedAt}</span>
+                  ) : (
+                    <span className="text-amber-800">Not yet reviewed</span>
+                  )}
+                  {open && auditOn && reviewer && (
+                    <ActionForm action={reviewProcedureAction} fields={{ procedureId: p.id, withdraw: p.reviewedAt ? "true" : "false" }}>
+                      <button className={small}>{p.reviewedAt ? "Withdraw review" : "Review"}</button>
+                    </ActionForm>
+                  )}
+                </div>
+              )}
+
+              {open && !p.reviewedAt ? (
                 <ActionForm action={updateProcedureAction} fields={{ procedureId: p.id }} className="mt-3">
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <label className="flex flex-col gap-1 text-sm text-slate-700">
@@ -146,6 +170,7 @@ export default async function ProgrammePage({ params }: { params: Promise<{ id: 
                 </ActionForm>
               ) : (
                 <div className="mt-3 text-sm">
+                  {open && p.reviewedAt && <p className="mb-1 text-xs text-slate-600">Reviewed work cannot be changed. A reviewer withdraws the review first.</p>}
                   <p><span className="font-medium">Work done:</span> {p.workDone ?? "None recorded"}</p>
                   <p className="mt-1"><span className="font-medium">Conclusion:</span> {p.conclusion ?? "None recorded"}</p>
                 </div>

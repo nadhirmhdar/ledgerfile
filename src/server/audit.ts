@@ -47,6 +47,8 @@ export interface AreaStatus {
   assessed: boolean;
   procedures: number;
   completed: number;
+  /** Completed or not-applicable procedures that no reviewer has signed off yet. */
+  unreviewed: number;
 }
 
 export interface ChecklistStatus {
@@ -56,6 +58,7 @@ export interface ChecklistStatus {
   optional: boolean;
   steps: number;
   completed: number;
+  unreviewed: number;
 }
 
 export interface MisstatementRow {
@@ -122,6 +125,9 @@ export interface ProcedureRow {
   conclusion: string | null;
   performedByName: string | null;
   performedAt: string | null;
+  /** The reviewer's sign-off on the work as recorded; null while it is unreviewed. */
+  reviewedByName: string | null;
+  reviewedAt: string | null;
 }
 
 async function requireOpen(tx: Tx, engagementId: string) {
@@ -195,9 +201,10 @@ export async function getAuditOverview(tx: Tx, engagementId: string): Promise<Au
     [engagementId],
   );
   const risks = await risksByArea(tx, engagementId);
-  const counts = await tx.query<{ areaCode: string; total: number; completed: number; na: number }>(
+  const counts = await tx.query<{ areaCode: string; total: number; completed: number; na: number; unreviewed: number }>(
     `select area_code as "areaCode", count(*)::int as total, count(*) filter (where status <> 'open')::int as completed,
-            count(*) filter (where status = 'na')::int as na
+            count(*) filter (where status = 'na')::int as na,
+            count(*) filter (where status <> 'open' and reviewed_by is null)::int as unreviewed
      from audit_procedures where engagement_id = $1 group by area_code`,
     [engagementId],
   );
@@ -213,6 +220,7 @@ export async function getAuditOverview(tx: Tx, engagementId: string): Promise<Au
     assessed: isAssessed(a, risks.get(a.code) ?? {}),
     procedures: countOf.get(a.code)?.total ?? 0,
     completed: countOf.get(a.code)?.completed ?? 0,
+    unreviewed: countOf.get(a.code)?.unreviewed ?? 0,
   }));
 
   const materiality: MaterialityRow | null = mat.rows[0] ?? null;
@@ -223,6 +231,7 @@ export async function getAuditOverview(tx: Tx, engagementId: string): Promise<Au
     optional: c.optional,
     steps: countOf.get(c.code)?.total ?? 0,
     completed: countOf.get(c.code)?.completed ?? 0,
+    unreviewed: countOf.get(c.code)?.unreviewed ?? 0,
   }));
 
   const mis = await tx.query<MisstatementRow>(
@@ -275,6 +284,8 @@ export async function getAuditOverview(tx: Tx, engagementId: string): Promise<Au
     if (approval.state === "lapsed") blockers.push("Audit: the risk assessment has changed since the partner approved it. It needs approving again.");
     const open = counts.rows.reduce((n, c) => n + (c.total - c.completed), 0);
     if (open > 0) blockers.push(`Audit: ${open} procedure(s) and checklist step(s) are not yet completed.`);
+    const unreviewed = counts.rows.reduce((n, c) => n + c.unreviewed, 0);
+    if (unreviewed > 0) blockers.push(`Audit: ${unreviewed} completed procedure(s) and checklist step(s) have not been reviewed.`);
     const untested = await tx.query<{ n: number }>("select count(*)::int as n from journal_tests where engagement_id = $1 and tested_at is null", [engagementId]);
     if (untested.rows[0].n > 0) blockers.push(`Audit: ${untested.rows[0].n} journal entry(ies) selected for testing have no conclusion.`);
     if (misstatements.exceedsMateriality) blockers.push("Audit: uncorrected misstatements reach overall materiality. Have them corrected; modified opinions are not yet supported.");
@@ -452,8 +463,9 @@ export async function approveRiskAssessment(tx: Tx, s: Session, engagementId: st
 export async function listProcedures(tx: Tx, engagementId: string, areaCode: string): Promise<ProcedureRow[]> {
   const { rows } = await tx.query<ProcedureRow>(
     `select p.id, p.template_id as "templateId", p.tier, p.assertions, p.body, p.evidence, p.reference, p.status,
-            p.work_done as "workDone", p.conclusion, u.name as "performedByName", to_char(p.performed_at, 'YYYY-MM-DD') as "performedAt"
-     from audit_procedures p left join users u on u.id = p.performed_by
+            p.work_done as "workDone", p.conclusion, u.name as "performedByName", to_char(p.performed_at, 'YYYY-MM-DD') as "performedAt",
+            r.name as "reviewedByName", to_char(p.reviewed_at, 'YYYY-MM-DD') as "reviewedAt"
+     from audit_procedures p left join users u on u.id = p.performed_by left join users r on r.id = p.reviewed_by
      where p.engagement_id = $1 and p.area_code = $2`,
     [engagementId, areaCode],
   );
@@ -468,12 +480,15 @@ export async function updateProcedure(
   procedureId: string,
   input: { status: string; workDone: string; conclusion: string },
 ): Promise<string> {
-  const { rows } = await tx.query<{ engagementId: string; templateId: string; tier: string; areaCode: string; evidence: string }>(
-    'select engagement_id as "engagementId", template_id as "templateId", tier, area_code as "areaCode", evidence from audit_procedures where id = $1',
+  const { rows } = await tx.query<{ engagementId: string; templateId: string; tier: string; areaCode: string; evidence: string; reviewed: boolean }>(
+    'select engagement_id as "engagementId", template_id as "templateId", tier, area_code as "areaCode", evidence, reviewed_by is not null as reviewed from audit_procedures where id = $1',
     [procedureId],
   );
   if (rows.length === 0) throw new Error("Procedure not found.");
   await requireAudit(tx, rows[0].engagementId);
+  // A review vouches for the work as it stood. Changing the work under it would leave a sign-off on something
+  // the reviewer never saw, so the reviewer withdraws the review first.
+  if (rows[0].reviewed) throw new Error("This procedure has been reviewed. Ask the reviewer to withdraw the review before changing the work.");
   const workDone = input.workDone.trim();
   const conclusion = input.conclusion.trim();
   if (workDone.length > 5000 || conclusion.length > 5000) throw new Error("The text is too long.");
@@ -505,4 +520,69 @@ export async function updateProcedure(
   );
   await log(tx, s, "procedure_" + input.status, "audit_procedure", procedureId, { engagementId: rows[0].engagementId, templateId: rows[0].templateId });
   return rows[0].engagementId;
+}
+
+/**
+ * A firm that has only ever had one user, deactivated users included, so a second user cannot be
+ * added, used as the reviewer, and removed again. The same rule as for lead-sheet sign-off.
+ */
+async function isSolePractitioner(tx: Tx): Promise<boolean> {
+  const { rows } = await tx.query<{ n: number }>("select count(*)::int as n from users");
+  return rows[0].n === 1;
+}
+
+/** Sign off a procedure whose work is finished. A different person from the one who did the work, except for a sole practitioner. */
+export async function reviewProcedure(tx: Tx, s: Session, procedureId: string): Promise<string> {
+  const { rows } = await tx.query<{ engagementId: string; templateId: string; status: string; performedBy: string | null; reviewed: boolean }>(
+    'select engagement_id as "engagementId", template_id as "templateId", status, performed_by as "performedBy", reviewed_by is not null as reviewed from audit_procedures where id = $1',
+    [procedureId],
+  );
+  if (rows.length === 0) throw new Error("Procedure not found.");
+  const p = rows[0];
+  await requireAudit(tx, p.engagementId);
+  if (!canReview(s.role)) throw new Error("Only a reviewer or partner can review audit work.");
+  if (p.status === "open") throw new Error("Only completed work can be reviewed.");
+  if (p.reviewed) throw new Error("This procedure has already been reviewed.");
+  if (p.performedBy === s.userId && !(await isSolePractitioner(tx))) throw new Error("The reviewer must be a different person from the one who did the work.");
+  await tx.query("update audit_procedures set reviewed_by = $2, reviewed_at = now() where id = $1", [procedureId, s.userId]);
+  await log(tx, s, "procedure_review", "audit_procedure", procedureId, { engagementId: p.engagementId, templateId: p.templateId });
+  return p.engagementId;
+}
+
+/** Withdraw a review so the work can be changed. Any reviewer or partner may, not only the one who gave it. */
+export async function unreviewProcedure(tx: Tx, s: Session, procedureId: string): Promise<string> {
+  const { rows } = await tx.query<{ engagementId: string; templateId: string; reviewedBy: string | null }>(
+    'select engagement_id as "engagementId", template_id as "templateId", reviewed_by as "reviewedBy" from audit_procedures where id = $1',
+    [procedureId],
+  );
+  if (rows.length === 0) throw new Error("Procedure not found.");
+  await requireAudit(tx, rows[0].engagementId);
+  if (!canReview(s.role)) throw new Error("Only a reviewer or partner can withdraw a review.");
+  if (!rows[0].reviewedBy) throw new Error("This procedure has not been reviewed.");
+  await tx.query("update audit_procedures set reviewed_by = null, reviewed_at = null where id = $1", [procedureId]);
+  await log(tx, s, "procedure_unreview", "audit_procedure", procedureId, { engagementId: rows[0].engagementId, templateId: rows[0].templateId, reviewedBy: rows[0].reviewedBy });
+  return rows[0].engagementId;
+}
+
+/**
+ * Review everything finished and not yet reviewed in one area or checklist. The reviewer's own work is
+ * skipped (unless they are a sole practitioner) and counted, so they can see what is left for someone else.
+ */
+export async function reviewArea(tx: Tx, s: Session, engagementId: string, areaCode: string): Promise<{ reviewed: number; skipped: number }> {
+  await requireAudit(tx, engagementId);
+  if (!canReview(s.role)) throw new Error("Only a reviewer or partner can review audit work.");
+  const own = (await isSolePractitioner(tx)) ? "false" : "performed_by is not distinct from $3::uuid";
+  const done = await tx.query<{ templateId: string }>(
+    `update audit_procedures set reviewed_by = $3, reviewed_at = now()
+     where engagement_id = $1 and area_code = $2 and status <> 'open' and reviewed_by is null and not (${own}) returning template_id as "templateId"`,
+    [engagementId, areaCode, s.userId],
+  );
+  const left = await tx.query<{ n: number }>(
+    "select count(*)::int as n from audit_procedures where engagement_id = $1 and area_code = $2 and status <> 'open' and reviewed_by is null",
+    [engagementId, areaCode],
+  );
+  const result = { reviewed: done.rows.length, skipped: left.rows[0].n };
+  if (result.reviewed + result.skipped === 0) throw new Error("There is no completed work waiting for review here.");
+  await log(tx, s, "procedure_review_area", "audit_area", engagementId, { area: areaCode, ...result, reviewedSteps: done.rows.map((r) => r.templateId) });
+  return result;
 }
