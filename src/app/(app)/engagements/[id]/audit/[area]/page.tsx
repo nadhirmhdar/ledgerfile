@@ -10,6 +10,7 @@ import { reviewAreaAction, reviewProcedureAction, updateProcedureAction } from "
 import { removeWorkingPaperAction, uploadWorkingPaperAction } from "@/app/papers-actions";
 import * as papers from "@/server/working-papers";
 import { listSchedules } from "@/server/test-schedules";
+import { requestCounts } from "@/server/client-requests";
 import { bringForwardAction, createScheduleAction } from "@/app/schedule-actions";
 import { GROUP_BY_CODE } from "@/domain/groups";
 import { formatAmount } from "@/domain/money";
@@ -33,12 +34,13 @@ export default async function ProgrammePage({ params }: { params: Promise<{ id: 
   if (!/^[0-9a-f-]{36}$/i.test(id) || !area) notFound();
 
   const session = await getSession();
-  const { engagement, procedures, files, overview, scheduleList } = await withFirm(await getDb(), session.firmId, async (tx) => ({
+  const { engagement, procedures, files, overview, scheduleList, requestSummary } = await withFirm(await getDb(), session.firmId, async (tx) => ({
     engagement: await repo.getEngagement(tx, id),
     procedures: await audit.listProcedures(tx, id, area.code),
     files: await papers.listWorkingPapers(tx, id),
     overview: await audit.getAuditOverview(tx, id),
     scheduleList: checklist ? [] : await listSchedules(tx, id, area.code),
+    requestSummary: checklist ? null : (await requestCounts(tx, id)).byArea.get(area.code) ?? null,
   }));
   if (!engagement) notFound();
 
@@ -71,6 +73,13 @@ export default async function ProgrammePage({ params }: { params: Promise<{ id: 
       <p role="note" className="mt-3 rounded border border-amber-400 bg-amber-50 px-3 py-2 text-xs">
         Methodology content: {LIBRARY_STATUS}.
       </p>
+
+      {requestSummary && (requestSummary.open > 0 || requestSummary.received > 0) && (
+        <p className="mt-3 text-sm">
+          <Link href={`/engagements/${id}/requests?area=${area.code}`} className="text-blue-700 underline">Client requests for this area</Link>
+          : {requestSummary.open} open{requestSummary.overdue > 0 ? `, ${requestSummary.overdue} overdue` : ""}, {requestSummary.received} received.
+        </p>
+      )}
 
       {!checklist && (
         <section className="mt-6 rounded border border-slate-200 p-4">
