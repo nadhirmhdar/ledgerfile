@@ -44,7 +44,7 @@ export async function addRequestAction(_prev: FormState, form: FormData): Promis
 }
 
 export async function editRequestAction(_prev: FormState, form: FormData): Promise<FormState> {
-  return onRequest(form, "Saved.", (tx, s, id) => requests.editRequest(tx, s, id, { description: field(form, "description"), areaCode: field(form, "areaCode"), dueOn: field(form, "dueOn"), note: field(form, "note") }));
+  return onRequest(form, "Saved.", (tx, s, id) => requests.editRequest(tx, s, id, { description: field(form, "description"), areaCode: field(form, "areaCode"), dueOn: field(form, "dueOn"), note: field(form, "note"), requestedOn: field(form, "requestedOn") }));
 }
 
 export async function markReceivedAction(_prev: FormState, form: FormData): Promise<FormState> {

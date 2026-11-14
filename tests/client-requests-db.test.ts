@@ -97,13 +97,15 @@ describe("the client request list", () => {
     await as(prep, (tx) => requests.reopenRequest(tx, prep, first.id));
     expect((await list(plain))[0]).toMatchObject({ status: "open", receivedOn: null });
     await expect(as(prep, (tx) => requests.reopenRequest(tx, prep, first.id))).rejects.toThrow(/already open/);
+    await expect(as(prep, (tx) => requests.markReceived(tx, prep, first.id, "2025-06-10", TODAY))).rejects.toThrow(/before the date the request was made/);
+    await as(prep, (tx) => requests.editRequest(tx, prep, first.id, { description: "Bank statements", areaCode: "C6", requestedOn: "2025-06-01" }));
     await as(prep, (tx) => requests.markReceived(tx, prep, first.id, "2025-06-10", TODAY));
     expect((await list(plain))[0]).toMatchObject({ receivedOn: "2025-06-10" });
     await as(prep, (tx) => requests.reopenRequest(tx, prep, first.id));
 
     await as(prep, (tx) => requests.editRequest(tx, prep, first.id, { description: "Bank statements, all accounts, for the year", areaCode: "C6", dueOn: "2025-07-15", note: "Chase the finance manager" }));
     expect((await list(plain))[0]).toMatchObject({ description: "Bank statements, all accounts, for the year", dueOn: "2025-07-15", note: "Chase the finance manager" });
-    await expect(as(prep, (tx) => requests.editRequest(tx, prep, first.id, { description: "x", dueOn: "2025-06-01" }))).rejects.toThrow(/before the date/);
+    await expect(as(prep, (tx) => requests.editRequest(tx, prep, first.id, { description: "x", dueOn: "2025-05-01" }))).rejects.toThrow(/before the date/);
     const log = await db.query("select action from audit_log where entity_id = $1 order by id", [first.id]);
     expect(log.rows.map((r) => (r as { action: string }).action)).toEqual(expect.arrayContaining(["client_request_received", "client_request_reopen", "client_request_edit"]));
   });
@@ -163,6 +165,8 @@ describe("the client request list", () => {
   it("refuses every change while the engagement is locked, and allows them again once it is open", async () => {
     const id = await add(plain, "Insurance schedule");
     const file = await upload(plain, "insurance.pdf");
+    const linked = await upload(plain, "insurance-schedule.pdf");
+    await as(prep, (tx) => requests.linkFile(tx, prep, id, linked));
     await db.query("update engagements set status = 'locked' where id = $1", [plain]);
     const locked = /locked/;
     await expect(add(plain, "Another")).rejects.toThrow(locked);
@@ -172,6 +176,7 @@ describe("the client request list", () => {
     await expect(as(prep, (tx) => requests.reopenRequest(tx, prep, id))).rejects.toThrow(locked);
     await expect(as(prep, (tx) => requests.deleteRequest(tx, prep, id))).rejects.toThrow(locked);
     await expect(as(prep, (tx) => requests.linkFile(tx, prep, id, file))).rejects.toThrow(locked);
+    await expect(as(prep, (tx) => requests.unlinkFile(tx, prep, id, linked))).rejects.toThrow(locked);
     await expect(as(prep, (tx) => requests.addStandardRequests(tx, prep, plain, TODAY))).rejects.toThrow(locked);
     await expect(as(prep, (tx) => requests.bringForwardRequests(tx, prep, plain, TODAY))).rejects.toThrow(locked);
     // It can still be read and exported.
@@ -179,6 +184,33 @@ describe("the client request list", () => {
     expect(await as(prep, (tx) => exportRequests(tx, prep, plain, TODAY))).not.toBeNull();
     await db.query("update engagements set status = 'open' where id = $1", [plain]);
     await as(prep, (tx) => requests.editRequest(tx, prep, id, { description: "Insurance schedule, all policies" }));
+    await as(prep, (tx) => requests.unlinkFile(tx, prep, id, linked));
+  });
+
+  it("refuses a received date before the request date, in the application and in the database", async () => {
+    const id = await add(plain, "Board pack", { requestedOn: "2025-06-10" });
+    await expect(as(prep, (tx) => requests.markReceived(tx, prep, id, "2025-06-09", TODAY))).rejects.toThrow(/before the date the request was made \(2025-06-10\)/);
+    await as(prep, (tx) => requests.markReceived(tx, prep, id, "2025-06-10", TODAY)); // the same day is fine
+    // Moving the request date past the received date is refused too; moving it earlier is how a wrong date is corrected.
+    await expect(as(prep, (tx) => requests.editRequest(tx, prep, id, { description: "Board pack", requestedOn: "2025-06-12" }))).rejects.toThrow(/cannot be after the date it was received/);
+    await as(prep, (tx) => requests.editRequest(tx, prep, id, { description: "Board pack", requestedOn: "2025-06-05" }));
+    await as(prep, (tx) => requests.reopenRequest(tx, prep, id));
+    const other = await add(plain, "Board minutes", { requestedOn: "2025-06-10" });
+    await as(prep, (tx) => requests.editRequest(tx, prep, other, { description: "Board minutes", requestedOn: "2025-06-01" }));
+    expect((await list(plain)).find((r) => r.id === other)!.requestedOn).toBe("2025-06-01");
+    await expect(db.query("update client_requests set status = 'received', received_on = '2025-05-01' where id = $1", [other])).rejects.toThrow();
+  });
+
+  it("lets the database refuse a file from another engagement or firm being linked, even to a direct insert", async () => {
+    const req = await add(plain, "Tax certificate");
+    const foreign = await upload(e2025, "not-for-this-engagement.pdf");
+    const [{ engagementId }] = (await db.query("select engagement_id as \"engagementId\" from client_requests where id = $1", [req])).rows as { engagementId: string }[];
+    const insert = (firm: string, paper: string) => as(prep, (tx) => tx.query("insert into client_request_files (firm_id, engagement_id, request_id, working_paper_id, linked_by) values ($1, $2, $3, $4, $5)", [firm, engagementId, req, paper, prep.userId]));
+    await expect(insert(FIRM, foreign)).rejects.toThrow(/foreign key/i);
+    await expect(insert(OTHER, foreign)).rejects.toThrow();
+    const own = await upload(plain, "tax-certificate.pdf");
+    await insert(FIRM, own); // the same insert with this engagement's own file goes through
+    expect((await list(plain)).find((r) => r.id === req)!.files).toHaveLength(1);
   });
 
   it("keeps one firm's requests from another firm", async () => {
@@ -225,7 +257,7 @@ describe("the client request list", () => {
 
   it("brings forward last year's requests once, as open requests dated today, and skips what is already there", async () => {
     await add(e2024, "Bank statements for 2024", { areaCode: "C6", dueOn: "2025-07-31" });
-    const second = await add(e2024, "Share register", { areaCode: "C12" });
+    const second = await add(e2024, "Share register", { areaCode: "C12", requestedOn: "2025-01-10" });
     await as(prep, (tx) => requests.markReceived(tx, prep, second, "2025-01-20", "2025-02-01"));
     await add(e2024, "Trade licence, current and valid for the whole period"); // wording also in this year's standard list
     expect(await list(e2024)).toHaveLength(3);
@@ -257,7 +289,7 @@ describe("the client request list", () => {
       return repo.createEngagement(tx, partner, c, "2025-01-01", "2025-12-31");
     });
     const open = await add(e, '=HYPERLINK("http://invalid.example","click")', { areaCode: "C6", requestedOn: "2025-05-01", dueOn: "2025-06-01" });
-    const done = await add(e, "+1 Signed accounts");
+    const done = await add(e, "+1 Signed accounts", { requestedOn: "2025-06-01" });
     await as(prep, (tx) => requests.editRequest(tx, prep, open, { description: '=HYPERLINK("http://invalid.example","click")', areaCode: "C6", dueOn: "2025-06-01", note: "INTERNAL: the owner is slow to reply" }));
     const file = await upload(e, "accounts-2024.pdf");
     await as(prep, (tx) => requests.linkFile(tx, prep, done, file));
@@ -272,7 +304,7 @@ describe("the client request list", () => {
     expect([1, 2, 3, 4, 5, 6, 7, 8].map((c) => text(4, c))).toEqual(["Reference", "Area", "Description", "Requested on", "Due", "Status", "Received on", "Files received"]);
     expect(text(1, 1)).toContain("Export / Requests (invented)");
     expect([text(5, 1), text(5, 2), text(5, 5), text(5, 6), text(5, 7), text(5, 8)]).toEqual(["R-1", "C6 Cash and bank", "2025-06-01", "Open (overdue)", "", ""]);
-    expect([text(6, 1), text(6, 3), text(6, 4), text(6, 6), text(6, 7), text(6, 8)]).toEqual(["R-2", "+1 Signed accounts", TODAY, "Received", "2025-06-10", "accounts-2024.pdf"]);
+    expect([text(6, 1), text(6, 3), text(6, 4), text(6, 6), text(6, 7), text(6, 8)]).toEqual(["R-2", "+1 Signed accounts", "2025-06-01", "Received", "2025-06-10", "accounts-2024.pdf"]);
     // Text that looks like a formula is stored as text, and the internal note is nowhere in the file.
     const cell = sheet.getRow(5).getCell(3);
     expect(cell.value).toBe('=HYPERLINK("http://invalid.example","click")');

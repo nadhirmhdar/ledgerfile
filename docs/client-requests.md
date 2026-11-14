@@ -14,7 +14,9 @@ The wording behind "Add the standard requests" is in `src/domain/client-request-
 - Every role in the firm may add, edit, mark received, mark not applicable, reopen, delete and link files. A locked engagement refuses every change. Every change is written to the audit log.
 - References run R-1, R-2 and so on within an engagement. A number is one more than the highest still on the list, so deleting the last request frees its number.
 - Overdue means open with a due date before today. A request due today is not overdue yet. Overdue requests are counted within "open".
-- Delete is allowed only while a request is open and has no files linked.
+- Delete is allowed only while a request is open and has no files linked. A received or not applicable request can be reopened and then deleted if no files are linked; both steps are logged.
+- "Today" is reckoned in the Asia/Dubai time zone (one constant in `src/domain/client-requests.ts`, to become a firm setting). A request cannot be marked received before the date it was made or on a future date.
+- The database ties a linked file to the same firm and engagement as the request (composite keys), not only the application check.
 - Files are the engagement's working papers; there is no separate upload. A file linked to a request cannot be removed from Working papers until it is unlinked.
 - "Add the standard requests" adds the general requests and those for each audit area with a balance on the trial balance (the same areas the audit pages use). Wording already on the list, in any area, is skipped.
 - "Bring forward last year's requests" copies each request from the prior-year engagement (same client only) as open, dated today, with no due date. A request already brought forward, or whose wording is already on the list, is skipped.

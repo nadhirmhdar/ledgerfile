@@ -15,8 +15,14 @@ export const isRequestStatus = (v: string): v is RequestStatus => v === "open" |
 export const MAX_DESCRIPTION = 500;
 export const MAX_NOTE = 1000;
 
-/** Today as a calendar date. The clock is a parameter so the rules can be tested on any day. */
-export const todayIso = (now: Date = new Date()): string => now.toISOString().slice(0, 10);
+/**
+ * The time zone the application reckons "today" in. One place, for now: it should become a setting of each firm. Without it the
+ * date would be the UTC date, a day behind in the UAE between midnight and 04:00.
+ */
+export const APP_TIME_ZONE = "Asia/Dubai";
+
+/** Today as a calendar date in the application time zone. The clock is a parameter so the rules can be tested on any day. */
+export const todayIso = (now: Date = new Date()): string => new Intl.DateTimeFormat("en-CA", { timeZone: APP_TIME_ZONE, year: "numeric", month: "2-digit", day: "2-digit" }).format(now);
 
 /** True for a real calendar date written YYYY-MM-DD (2025-02-30 is not one). */
 export function isIsoDate(value: string): boolean {

@@ -60,7 +60,9 @@ export default async function RequestsPage({ params, searchParams }: { params: P
     if (area) q.set("area", area);
     return `/engagements/${id}/requests${q.size ? `?${q}` : ""}`;
   };
-  const c = counts.overall;
+  // With an area chosen, the cards count that area (general requests under "general"), so they match the list below.
+  const empty = { total: 0, open: 0, overdue: 0, received: 0, notApplicable: 0 };
+  const c = areaFilter ? (counts.byArea.get(areaFilter) ?? empty) : counts.overall;
 
   return (
     <main className="mx-auto w-full max-w-6xl px-4 py-8 text-slate-900">
@@ -184,7 +186,7 @@ export default async function RequestsPage({ params, searchParams }: { params: P
                     {r.status === "open" && (
                       <>
                         <ActionForm action={markReceivedAction} fields={{ requestId: r.id }} className="flex items-center gap-1">
-                          <input type="date" name="receivedOn" defaultValue={today} max={today} aria-label={`Received on, ${r.reference}`} className="rounded border border-slate-300 px-1 py-1 text-xs" />
+                          <input type="date" name="receivedOn" defaultValue={today} max={today} min={r.requestedOn} aria-label={`Received on, ${r.reference}`} className="rounded border border-slate-300 px-1 py-1 text-xs" />
                           <button className={small}>Mark received</button>
                         </ActionForm>
                         <ActionForm action={markNotApplicableAction} fields={{ requestId: r.id }} className="flex items-center gap-1">
@@ -221,6 +223,7 @@ export default async function RequestsPage({ params, searchParams }: { params: P
                             {AREAS.map((a) => <option key={a.code} value={a.code}>{a.code} {a.title}</option>)}
                           </select>
                         </label>
+                        <label className="flex flex-col gap-1 text-slate-700">Asked on<input type="date" name="requestedOn" defaultValue={r.requestedOn} required className={input} /></label>
                         <label className="flex flex-col gap-1 text-slate-700">Due<input type="date" name="dueOn" defaultValue={r.dueOn ?? ""} className={input} /></label>
                         <label className="flex flex-col gap-1 text-slate-700">Internal note (not in the Excel download)<input name="note" defaultValue={r.note ?? ""} maxLength={1000} className={input} /></label>
                         <button className={small}>Save</button>

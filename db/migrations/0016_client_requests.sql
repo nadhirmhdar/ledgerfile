@@ -26,9 +26,12 @@ create table client_requests (
   unique (engagement_id, seq),
   unique (engagement_id, reference),
   unique (firm_id, id),
+  unique (firm_id, engagement_id, id),
   foreign key (firm_id, engagement_id) references engagements (firm_id, id),
   foreign key (firm_id, rolled_from_id) references client_requests (firm_id, id) on delete set null (rolled_from_id),
   check (due_on is null or due_on >= requested_on),
+  -- Nothing arrives before it is asked for.
+  check (received_on is null or received_on >= requested_on),
   -- A received date goes with the received status and with nothing else.
   check ((status = 'received') = (received_on is not null)),
   -- Not applicable needs the reason.
@@ -41,14 +44,20 @@ create unique index client_requests_rolled_from on client_requests (engagement_i
 
 -- Which received files answer a request. The application checks the file is on the same engagement, and refuses to remove a
 -- file while it is linked here.
+-- A linked file must be on the same firm and engagement as the request, which the keys below enforce (a foreign key check does not
+-- go through row-level security, so the application check alone would not be enough).
+alter table working_papers add unique (firm_id, engagement_id, id);
+
 create table client_request_files (
   firm_id uuid not null references firms(id),
+  engagement_id uuid not null,
   request_id uuid not null,
-  working_paper_id uuid not null references working_papers(id),
+  working_paper_id uuid not null,
   linked_by uuid not null references users(id),
   linked_at timestamptz not null default clock_timestamp(),
   primary key (request_id, working_paper_id),
-  foreign key (firm_id, request_id) references client_requests (firm_id, id) on delete cascade
+  foreign key (firm_id, engagement_id, request_id) references client_requests (firm_id, engagement_id, id) on delete cascade,
+  foreign key (firm_id, engagement_id, working_paper_id) references working_papers (firm_id, engagement_id, id)
 );
 create index client_request_files_paper on client_request_files (working_paper_id);
 

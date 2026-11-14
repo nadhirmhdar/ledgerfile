@@ -74,10 +74,10 @@ export default async function ProgrammePage({ params }: { params: Promise<{ id: 
         Methodology content: {LIBRARY_STATUS}.
       </p>
 
-      {requestSummary && (requestSummary.open > 0 || requestSummary.received > 0) && (
+      {requestSummary && requestSummary.total > 0 && (
         <p className="mt-3 text-sm">
           <Link href={`/engagements/${id}/requests?area=${area.code}`} className="text-blue-700 underline">Client requests for this area</Link>
-          : {requestSummary.open} open{requestSummary.overdue > 0 ? `, ${requestSummary.overdue} overdue` : ""}, {requestSummary.received} received.
+          : {requestSummary.open} open{requestSummary.overdue > 0 ? `, ${requestSummary.overdue} overdue` : ""}, {requestSummary.received} received{requestSummary.notApplicable > 0 ? `, ${requestSummary.notApplicable} not applicable` : ""}.
         </p>
       )}
 

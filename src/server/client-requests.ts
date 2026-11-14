@@ -167,16 +167,18 @@ export async function addRequest(
 }
 
 /** Change the wording, area, due date or note. Status changes have their own steps. Returns the engagement id. */
-export async function editRequest(tx: Tx, s: Session, id: string, input: { description: string; areaCode?: string | null; dueOn?: string | null; note?: string | null }): Promise<string> {
+export async function editRequest(tx: Tx, s: Session, id: string, input: { description: string; areaCode?: string | null; dueOn?: string | null; note?: string | null; requestedOn?: string | null }): Promise<string> {
   const row = await load(tx, id);
   await requireOpen(tx, row.engagementId);
   const description = cleanDescription(input.description);
   const areaCode = cleanArea(input.areaCode);
   const dueOn = cleanDate(input.dueOn, "The due date");
-  checkDue(dueOn, row.requestedOn);
+  const requestedOn = cleanDate(input.requestedOn, "The request date") ?? row.requestedOn;
+  checkDue(dueOn, requestedOn);
+  if (row.receivedOn && row.receivedOn < requestedOn) throw new Error(`The request date cannot be after the date it was received (${row.receivedOn}).`);
   const note = cleanNote(input.note);
   if (row.status === "not_applicable" && !note) throw new Error("A request marked not applicable needs the reason in its note.");
-  await tx.query("update client_requests set description = $2, area_code = $3, due_on = $4, note = $5, updated_at = clock_timestamp() where id = $1", [id, description, areaCode, dueOn, note]);
+  await tx.query("update client_requests set description = $2, area_code = $3, due_on = $4, note = $5, requested_on = $6, updated_at = clock_timestamp() where id = $1", [id, description, areaCode, dueOn, note, requestedOn]);
   await log(tx, s, "client_request_edit", "client_request", id, { engagementId: row.engagementId, reference: row.reference });
   return row.engagementId;
 }
@@ -188,6 +190,7 @@ export async function markReceived(tx: Tx, s: Session, id: string, receivedOn?: 
   if (row.status !== "open") throw new Error("Only an open request can be marked received. Reopen it first.");
   const date = cleanDate(receivedOn, "The received date") ?? today;
   if (date > today) throw new Error("The received date cannot be in the future.");
+  if (date < row.requestedOn) throw new Error(`The received date cannot be before the date the request was made (${row.requestedOn}). Correct the request date first.`);
   await tx.query("update client_requests set status = 'received', received_on = $2, updated_at = clock_timestamp() where id = $1", [id, date]);
   await log(tx, s, "client_request_received", "client_request", id, { engagementId: row.engagementId, reference: row.reference, receivedOn: date });
   return row.engagementId;
@@ -214,7 +217,10 @@ export async function reopenRequest(tx: Tx, s: Session, id: string): Promise<str
   return row.engagementId;
 }
 
-/** Remove a request that is still open and has no files linked. Anything that has been answered stays on the record. */
+/**
+ * Remove a request that is open and has no files linked. A received or not applicable request is not deleted directly: it can be
+ * reopened and then deleted if no files are linked to it. Both steps are written to the audit log.
+ */
 export async function deleteRequest(tx: Tx, s: Session, id: string): Promise<string> {
   const row = await load(tx, id);
   await requireOpen(tx, row.engagementId);
@@ -233,8 +239,8 @@ export async function linkFile(tx: Tx, s: Session, requestId: string, workingPap
   const paper = await tx.query<{ fileName: string }>("select file_name as \"fileName\" from working_papers where id::text = $1 and engagement_id = $2", [workingPaperId, row.engagementId]);
   if (paper.rows.length === 0) throw new Error("That file is not on this engagement. Upload it under Working papers first.");
   const made = await tx.query(
-    "insert into client_request_files (firm_id, request_id, working_paper_id, linked_by) values ($1, $2, $3, $4) on conflict do nothing returning request_id",
-    [s.firmId, requestId, workingPaperId, s.userId],
+    "insert into client_request_files (firm_id, engagement_id, request_id, working_paper_id, linked_by) values ($1, $2, $3, $4, $5) on conflict do nothing returning request_id",
+    [s.firmId, row.engagementId, requestId, workingPaperId, s.userId],
   );
   if (made.rows.length === 0) throw new Error("That file is already linked to this request.");
   await log(tx, s, "client_request_link", "client_request", requestId, { engagementId: row.engagementId, reference: row.reference, fileName: paper.rows[0].fileName });

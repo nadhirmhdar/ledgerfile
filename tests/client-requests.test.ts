@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cleanDescription, cleanNote, descriptionKey, isIsoDate, isOverdue, nextStatuses, summarise, todayIso, MAX_DESCRIPTION } from "../src/domain/client-requests";
+import { APP_TIME_ZONE, cleanDescription, cleanNote, descriptionKey, isIsoDate, isOverdue, nextStatuses, summarise, todayIso, MAX_DESCRIPTION } from "../src/domain/client-requests";
 import { AREA_REQUESTS, DEFAULT_REQUESTS, GENERAL_REQUESTS, REQUEST_DEFAULTS_STATUS } from "../src/domain/client-request-defaults";
 import { AREA_BY_CODE, AREAS } from "../src/domain/audit";
 
@@ -45,6 +45,16 @@ describe("client request rules", () => {
     expect(isIsoDate("15/06/2025")).toBe(false);
     expect(isIsoDate("")).toBe(false);
     expect(todayIso(new Date("2025-06-15T10:00:00Z"))).toBe("2025-06-15");
+  });
+
+  it("reckons today in the application time zone, a day ahead of UTC late in the evening there", () => {
+    expect(APP_TIME_ZONE).toBe("Asia/Dubai"); // UTC+4, no daylight saving
+    // 19:59 UTC is 23:59 in Dubai: still the same day. 20:00 UTC is midnight there: the next day.
+    expect(todayIso(new Date("2025-06-15T19:59:59Z"))).toBe("2025-06-15");
+    expect(todayIso(new Date("2025-06-15T20:00:00Z"))).toBe("2025-06-16");
+    expect(todayIso(new Date("2025-06-15T23:30:00Z"))).toBe("2025-06-16"); // the UTC date would still say the 15th
+    expect(todayIso(new Date("2025-12-31T21:00:00Z"))).toBe("2026-01-01"); // across a year end
+    expect(todayIso(new Date("2025-06-16T03:59:00Z"))).toBe("2025-06-16");
   });
 
   it("tidies descriptions and notes, and refuses empty or over-long ones", () => {
