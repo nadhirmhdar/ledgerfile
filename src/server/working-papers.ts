@@ -4,6 +4,7 @@ import type { FileStore } from "./file-store";
 import { audit as log, getEngagement, type Session } from "./repo";
 import { canReview } from "../domain/signoff";
 import { GROUP_BY_CODE } from "../domain/groups";
+import { cleanFileReference, cleanSectionCode, homeOfFile } from "../domain/wp-index";
 
 export const MAX_FILE_BYTES = 10 * 1024 * 1024;
 /** File types accepted as working papers. Anything else is refused. */
@@ -22,6 +23,10 @@ export interface WorkingPaper {
   sizeBytes: number;
   sha256: string;
   description: string | null;
+  /** The reference the preparer gave the file on the working paper index, such as C5-F1; null when none. */
+  reference: string | null;
+  /** The area or checklist an engagement-level file is filed under on the index; null when unfiled or when the file follows what it supports. */
+  sectionCode: string | null;
   uploadedBy: string;
   uploadedByName: string;
   uploadedAt: string;
@@ -49,7 +54,7 @@ export function cleanFileName(name: string): string {
 
 const SELECT = `
   select w.id, w.target_kind as "targetKind", w.target, w.file_name as "fileName", w.size_bytes::float8 as "sizeBytes", w.sha256,
-         w.description, w.uploaded_by as "uploadedBy", u.name as "uploadedByName", to_char(w.uploaded_at, 'YYYY-MM-DD') as "uploadedAt",
+         w.description, w.reference, w.section_code as "sectionCode", w.uploaded_by as "uploadedBy", u.name as "uploadedByName", to_char(w.uploaded_at, 'YYYY-MM-DD') as "uploadedAt",
          p.template_id as "procedureCode"
   from working_papers w
   join users u on u.id = w.uploaded_by
@@ -66,6 +71,43 @@ const label = (r: Row): WorkingPaper => {
 export async function listWorkingPapers(tx: Tx, engagementId: string): Promise<WorkingPaper[]> {
   const { rows } = await tx.query<Row>(`${SELECT} where w.engagement_id = $1 order by w.uploaded_at, w.file_name`, [engagementId]);
   return rows.map(label);
+}
+
+/**
+ * Give an uploaded file its reference and the place it is filed on the working paper index. Anyone in the firm may; an engagement that
+ * is locked refuses. The file's bytes and description are untouched, and only these two columns can be changed (the database grants no more).
+ *
+ * A file that supports a lead sheet or a procedure is filed where that lead sheet or procedure is, so it takes no place of its own. A file
+ * that supports the engagement generally is filed under the area or checklist chosen, or the one its reference starts with.
+ */
+export async function setFileFiling(tx: Tx, s: Session, id: string, input: { reference: string; sectionCode: string }): Promise<string> {
+  const { rows } = await tx.query<{ engagementId: string; targetKind: TargetKind; target: string | null; template: string | null; reference: string | null; sectionCode: string | null }>(
+    `select w.engagement_id as "engagementId", w.target_kind as "targetKind", w.target, p.template_id as template, w.reference, w.section_code as "sectionCode"
+     from working_papers w left join audit_procedures p on w.target_kind = 'procedure' and p.id::text = w.target
+     where w.id::text = $1`,
+    [id],
+  );
+  if (rows.length === 0) throw new Error("Working paper not found.");
+  const row = rows[0];
+  await requireOpen(tx, row.engagementId);
+
+  const reference = cleanFileReference(input.reference);
+  let sectionCode = cleanSectionCode(input.sectionCode);
+  if (row.targetKind !== "engagement" && sectionCode) throw new Error("This file is filed where the lead sheet or procedure it supports is. Only a file that supports the engagement generally can be filed elsewhere.");
+  if (row.targetKind === "engagement" && reference && !sectionCode) sectionCode = reference.split("-")[0];
+
+  const home = homeOfFile({ targetKind: row.targetKind, target: row.target, procedureTemplate: row.template, sectionCode });
+  if (reference && !home) throw new Error("This file is not filed under an area or checklist (what it supported is no longer on the file), so it cannot take a reference. File it under one first.");
+  if (reference && home && reference.split("-")[0] !== home) throw new Error(`The reference ${reference} does not match where this file is filed (${home}). Start it with ${home}.`);
+
+  if (reference) {
+    const taken = await tx.query("select 1 from working_papers where engagement_id = $1 and reference = $2 and id::text <> $3", [row.engagementId, reference, id]);
+    if (taken.rows.length > 0) throw new Error(`Another file already has the reference ${reference}.`);
+  }
+  if (reference === row.reference && sectionCode === row.sectionCode) return row.engagementId; // nothing changed: no write, no log entry
+  await tx.query("update working_papers set reference = $2, section_code = $3 where id::text = $1", [id, reference, sectionCode]);
+  await log(tx, s, "file", "working_paper", id, { engagementId: row.engagementId, reference, sectionCode, previousReference: row.reference, previousSectionCode: row.sectionCode });
+  return row.engagementId;
 }
 
 /**
