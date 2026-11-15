@@ -36,6 +36,6 @@ Lawyers' replies: record Agreed when the reply is consistent with what the books
 
 "Download (Excel)" is an internal workbook: a Confirmations sheet with every column (including difference, reply note, reconciliation, alternative procedures, reminders, file names, preparer, reviewer and self-review) and a Summary sheet by area. Amounts are numbers; text cells are text. It is session- and firm-scoped, audit-logged, and not available when the audit is off.
 
-## Not yet
+## Working paper index
 
-Confirmations are not yet listed in the working paper index.
+Each area that has confirmations appears in the index as one paper (a reference such as C6.CF), after the area's test schedules. Its status comes from the records: Reviewed when every confirmation in the area is reviewed, Prepared when all are prepared or reviewed, In progress when any has been sent, Not started otherwise.

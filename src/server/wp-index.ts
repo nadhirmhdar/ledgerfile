@@ -7,9 +7,12 @@ import { buildLeadSheets } from "../domain/leadsheet";
 import { buildStatements } from "../domain/statements";
 import { AREA_BY_CODE, CHECKLISTS } from "../domain/audit";
 import { GROUP_BY_CODE } from "../domain/groups";
+import { confirmationState } from "../domain/confirmations";
 import { differenceUnexplained, presentationBalance } from "../domain/test-schedule";
 import {
   buildIndex,
+  confirmationsNote,
+  confirmationsStatus,
   GENERAL,
   homeOfFile,
   leadSheetReference,
@@ -405,6 +408,40 @@ export async function buildWorkingPaperIndex(tx: Tx, engagementId: string): Prom
         reviewedBy: s.reviewedBy,
         reviewedOn: s.reviewedOn,
         note: [unexplained ? (reviewed ? "Reviewed, but the listing does not agree to the balance and the difference is not explained." : "The listing does not agree to the balance and the difference is not explained.") : null, s.selfReviewed ? "Self-reviewed." : null].filter(Boolean).join(" ") || null,
+      });
+    }
+
+    // External confirmations: one paper per area that has any, after the area's test schedules.
+    const confs = await tx.query<{
+      areaCode: string; reply: "agreed" | "differs" | "no_reply" | null; sent: boolean; prepared: boolean; reviewed: boolean;
+      preparedBy: string | null; preparedOn: string | null; reviewedBy: string | null; reviewedOn: string | null; self: boolean;
+    }>(
+      `select c.area_code as "areaCode", c.reply, c.sent_on is not null as sent, c.prepared_by is not null as prepared, c.reviewed_by is not null as reviewed,
+              pu.name as "preparedBy", to_char(c.prepared_at, 'YYYY-MM-DD') as "preparedOn", ru.name as "reviewedBy", to_char(c.reviewed_at, 'YYYY-MM-DD') as "reviewedOn",
+              coalesce(c.reviewed_by = c.prepared_by or c.reviewed_by = any(c.contributors), false) as self
+       from confirmations c left join users pu on pu.id = c.prepared_by left join users ru on ru.id = c.reviewed_by
+       where c.engagement_id = $1`,
+      [engagementId],
+    );
+    for (const code of new Set(confs.rows.map((c) => c.areaCode))) {
+      const own = confs.rows.filter((c) => c.areaCode === code);
+      const facts = own.map((c) => ({ reply: c.reply, state: confirmationState({ sentOn: c.sent ? "x" : null, reply: c.reply, prepared: c.prepared, reviewed: c.reviewed }) }));
+      const status = confirmationsStatus(facts);
+      const selfN = own.filter((c) => c.reviewed && c.self).length;
+      const latest = (dates: (string | null)[]) => dates.filter((d): d is string => !!d).sort().at(-1) ?? null;
+      add({
+        reference: `${code}.CF`,
+        section: sectionOfCode(code) ?? UNFILED,
+        title: "External confirmations",
+        kind: "confirmations",
+        href: `${base}/audit/confirmations#area-${code}`,
+        status,
+        reviewable: true,
+        preparedBy: peopleLabel(own.map((c) => c.preparedBy).filter((n): n is string => !!n)),
+        preparedOn: latest(own.map((c) => c.preparedOn)),
+        reviewedBy: status === "reviewed" ? peopleLabel(own.map((c) => c.reviewedBy).filter((n): n is string => !!n)) : null,
+        reviewedOn: status === "reviewed" ? latest(own.map((c) => c.reviewedOn)) : null,
+        note: `${confirmationsNote(facts)}${selfN > 0 ? ` ${selfN} self-reviewed.` : ""}`,
       });
     }
   }

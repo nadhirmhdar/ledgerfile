@@ -5,6 +5,8 @@ import {
   cleanFileReference,
   cleanSectionCode,
   compareEntries,
+  confirmationsNote,
+  confirmationsStatus,
   countEntries,
   filterIndex,
   homeOfFile,
@@ -21,6 +23,7 @@ import {
   stepsStatus,
   type IndexEntry,
 } from "../src/domain/wp-index";
+import type { ConfirmationState } from "../src/domain/confirmations";
 import { AREAS, CHECKLISTS } from "../src/domain/audit";
 import { GROUPS } from "../src/domain/groups";
 
@@ -270,5 +273,35 @@ describe("not-applicable note", () => {
     expect(notApplicableNote(0)).toBeNull();
     expect(notApplicableNote(1)).toBe("1 more is marked not applicable.");
     expect(notApplicableNote(2)).toBe("2 more are marked not applicable.");
+  });
+});
+
+describe("confirmations in the index", () => {
+  const f = (state: ConfirmationState, reply: "agreed" | "differs" | "no_reply" | null = null) => ({ state, reply });
+  it("maps the confirmations of an area to one status, from the records only", () => {
+    expect(confirmationsStatus([f("not_sent"), f("not_sent")])).toBe("not_started");
+    expect(confirmationsStatus([f("not_sent"), f("awaiting_reply")])).toBe("in_progress");
+    expect(confirmationsStatus([f("to_prepare", "agreed"), f("prepared", "agreed")])).toBe("in_progress");
+    expect(confirmationsStatus([f("prepared", "agreed"), f("reviewed", "differs")])).toBe("prepared");
+    expect(confirmationsStatus([f("prepared", "agreed")])).toBe("prepared");
+    expect(confirmationsStatus([f("reviewed", "agreed"), f("reviewed", "no_reply")])).toBe("reviewed");
+    expect(confirmationsStatus([f("reviewed"), f("not_sent")])).toBe("in_progress");
+  });
+
+  it("describes the counts by reply and state, singular and plural", () => {
+    expect(confirmationsNote([f("reviewed", "agreed"), f("reviewed", "agreed"), f("prepared", "differs"), f("awaiting_reply")])).toBe("4 confirmations: 2 agreed, 1 differs, 1 awaiting reply.");
+    expect(confirmationsNote([f("not_sent")])).toBe("1 confirmation: 1 not sent.");
+    expect(confirmationsNote([f("to_prepare", "no_reply")])).toBe("1 confirmation: 1 no reply.");
+  });
+
+  it("sits in the area after the test schedules and before uploaded files, and its reference cannot be typed for a file", () => {
+    const e = [
+      entry({ section: "C6", reference: "C6-F1", kind: "file" }),
+      entry({ section: "C6", reference: "C6.CF", kind: "confirmations" }),
+      entry({ section: "C6", reference: "C6-2", kind: "schedule" }),
+      entry({ section: "C6", reference: "C6.P", kind: "procedures" }),
+    ];
+    expect(e.slice().sort(compareEntries).map((x) => x.reference)).toEqual(["C6.P", "C6-2", "C6.CF", "C6-F1"]);
+    expect(() => cleanFileReference("C6.CF")).toThrow(/-F/);
   });
 });
