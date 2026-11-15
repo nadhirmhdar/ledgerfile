@@ -152,6 +152,7 @@ describe("the working paper index", () => {
     await as(rev, (tx) => audit.reviewArea(tx, rev, audited, "C5"));
     index = (await build(audited))!;
     expect(find(index, "C5.P")).toMatchObject({ status: "reviewed", reviewedBy: "reviewer person", preparedBy: "preparer person" });
+    expect(find(index, "C5.P")!.note).not.toMatch(/self-reviewed/);
 
     // A test schedule is C5-1 and follows its own review.
     const id = await as(prep, (tx) => schedules.createSchedule(tx, prep, audited, { areaCode: "C5", groupCode: "TRADEREC", title: "Receivables listing", fromTrialBalance: true }));
@@ -165,6 +166,7 @@ describe("the working paper index", () => {
     await as(rev, (tx) => schedules.reviewSchedule(tx, rev, id));
     index = (await build(audited))!;
     expect(find(index, "C5-1")).toMatchObject({ status: "reviewed", reviewedBy: "reviewer person" });
+    expect(find(index, "C5-1")!.note).toBeNull();
     // The area's papers sit together: lead sheet, procedures, schedule.
     const c5 = index.sections.find((s) => s.code === "C5")!.entries.map((e) => e.reference);
     expect(c5).toEqual(["C5.L1", "C5.P", "C5-1"]);
@@ -215,6 +217,18 @@ describe("the working paper index", () => {
     await expect(file(onSheet, "C5-F9")).rejects.toThrow(/does not match/);
     await file(onSheet, "C6-F1");
 
+    // Saving the same values again changes nothing and logs nothing.
+    const logged = async () => (await db.query("select count(*)::int as n from audit_log where entity_id = $1 and action = 'file'", [b])).rows[0] as { n: number };
+    const before = (await logged()).n;
+    await file(b, "C5-F2");
+    expect((await logged()).n).toBe(before);
+    await expect(file(b, "C5-F02")).rejects.toThrow(/-F/);
+
+    // A file whose procedure has gone is unfiled and takes no reference.
+    const orphan = await upload(plain, "orphan.pdf");
+    await db.query("update working_papers set target_kind = 'procedure', target = '00000000-0000-4000-8000-000000000000' where id = $1", [orphan]);
+    await expect(file(orphan, "C5-F5")).rejects.toThrow(/no longer on the file/);
+
     // Cleared again.
     await file(a, "");
     const cleared = await as(prep, (tx) => tx.query<{ reference: string | null; section: string | null }>('select reference, section_code as section from working_papers where id = $1', [a]));
@@ -230,6 +244,16 @@ describe("the working paper index", () => {
     await expect(as(prep, (tx) => tx.query("update working_papers set section_code = 'C5' where id = $1", [onSheet]))).rejects.toThrow();
     await expect(as(prep, (tx) => tx.query("update working_papers set file_name = 'changed.pdf' where id = $1", [b]))).rejects.toThrow(/permission denied/);
     await expect(as(prep, (tx) => tx.query("update working_papers set sha256 = 'x' where id = $1", [b]))).rejects.toThrow(/permission denied/);
+  });
+
+  it("shows who asked for client requests, and marks a lead sheet reviewed by its own preparer as self-reviewed", async () => {
+    await as(prep, (tx) => tx.query("insert into client_requests (firm_id, engagement_id, seq, reference, description, requested_by, requested_on) values ($1, $2, 1, 'R-1', 'Bank statements', $3, '2025-03-01')", [FIRM, plain, prep.userId]));
+    let index = (await build(plain))!;
+    expect(find(index, "G4")).toMatchObject({ preparedBy: "preparer person", preparedOn: "2025-03-01", status: "in_progress" });
+    // The partner prepares and reviews the cash lead sheet alone (the lead sheet rule allows it only for a sole practitioner, so write the sign-offs directly).
+    await db.query("insert into sign_offs (firm_id, engagement_id, target, level, user_id) values ($1, $2, 'CASH', 'preparer', $3), ($1, $2, 'CASH', 'reviewer', $3)", [FIRM, plain, partner.userId]);
+    index = (await build(plain))!;
+    expect(find(index, "C6.L1")).toMatchObject({ status: "reviewed", note: "Self-reviewed." });
   });
 
   it("keeps one firm's index and files out of another's", async () => {

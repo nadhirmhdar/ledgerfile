@@ -167,7 +167,7 @@ export function leadSheetReference(groupCode: string): string | null {
 // --- Uploaded files -----------------------------------------------------------
 
 /** The shape of a reference typed for a file. The application's own references are never of this shape. */
-export const FILE_REFERENCE = /^[A-E][0-9]{1,2}-F[0-9]{1,3}$/;
+export const FILE_REFERENCE = /^[A-E][0-9]{1,2}-F[1-9][0-9]{0,2}$/;
 
 /** Normalise and check a typed file reference. Blank means none. Throws a message written for the user. */
 export function cleanFileReference(raw: string | null | undefined): string | null {
@@ -214,9 +214,10 @@ export const peopleLabel = (names: string[]): string | null => {
  */
 export function stepsStatus(c: { total: number; open: number; notApplicable: number; unreviewed: number }): Status {
   if (c.total === 0 || c.open === c.total) return "not_started";
-  if (c.notApplicable === c.total) return "not_applicable";
   if (c.open > 0) return "in_progress";
-  return c.unreviewed > 0 ? "prepared" : "reviewed";
+  // Steps set aside as not applicable still need a review, as the lock counts them: all not applicable and unreviewed is only prepared.
+  if (c.unreviewed > 0) return "prepared";
+  return c.notApplicable === c.total ? "not_applicable" : "reviewed";
 }
 
 /** A lead sheet: reviewed once a reviewer has signed; open review points keep it in progress; prepared once the preparer has signed. */
@@ -228,7 +229,8 @@ export function leadSheetStatus(s: { prepared: boolean; reviewed: boolean; openP
 
 /** A test schedule: reviewed, or prepared with a conclusion (unless a difference is unexplained), or in progress once it has lines. */
 export function scheduleStatus(s: { hasLines: boolean; hasConclusion: boolean; reviewed: boolean; differenceUnexplained: boolean }): Status {
-  if (s.reviewed) return "reviewed";
+  // An unexplained difference holds up the lock whether or not the schedule was reviewed.
+  if (s.reviewed && !s.differenceUnexplained) return "reviewed";
   if (s.hasConclusion && !s.differenceUnexplained) return "prepared";
   return s.hasLines || s.hasConclusion || s.differenceUnexplained ? "in_progress" : "not_started";
 }
@@ -295,10 +297,16 @@ export function buildIndex(entries: IndexEntry[]): WorkingPaperIndex {
 export type IndexFilter = "all" | "unreviewed" | "not_started";
 export const isIndexFilter = (v: string): v is IndexFilter => v === "all" || v === "unreviewed" || v === "not_started";
 
+/** The sections with only the entries that match; each section's counts are those of the entries shown. */
 export function filterIndex(index: WorkingPaperIndex, filter: IndexFilter): IndexSection[] {
   if (filter === "all") return index.sections;
   const keep = filter === "unreviewed" ? isToReview : (e: IndexEntry) => e.status === "not_started";
-  return index.sections.map((s) => ({ ...s, entries: s.entries.filter(keep) })).filter((s) => s.entries.length > 0);
+  return index.sections
+    .map((s) => {
+      const entries = s.entries.filter(keep);
+      return { ...s, entries, counts: countEntries(entries) };
+    })
+    .filter((s) => s.entries.length > 0);
 }
 
 /** Every checklist the index can list, in file order. Exposed so tests can check no reference repeats. */

@@ -12,7 +12,7 @@
 alter table working_papers
   add column reference text,
   add column section_code text,
-  add constraint working_papers_reference_shape check (reference is null or reference ~ '^[A-E][0-9]{1,2}-F[0-9]{1,3}$'),
+  add constraint working_papers_reference_shape check (reference is null or reference ~ '^[A-E][0-9]{1,2}-F[1-9][0-9]{0,2}$'),
   add constraint working_papers_section_shape check (section_code is null or section_code ~ '^[A-E][0-9]{1,2}$'),
   add constraint working_papers_section_engagement_only check (section_code is null or target_kind = 'engagement'),
   -- Where both are given, the reference starts with the code of the place the file is filed.

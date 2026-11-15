@@ -59,8 +59,16 @@ Files are listed as they are filed:
 - A file that supports a procedure is listed where the procedure is: an area, or a checklist's section.
 - A file that supports the engagement generally is listed under the area or checklist the preparer chooses on the Working papers tab, or under **Unfiled**.
 
-A preparer may give a file a reference of the form `C5-F1`: an area or checklist code, `-F` and a number. The form is one the application never makes itself, so a typed reference cannot collide with a derived one. A reference is unique within an engagement, starts with the code the file is filed under, is checked by the database as well as the application, is written to the audit log, and is refused on a locked engagement. Only the reference and place can change after upload; the file and its record are untouched.
+A preparer may give a file a reference of the form `C5-F1`: an area or checklist code, `-F` and a number. The form is one the application never makes itself, so a typed reference cannot collide with a derived one. A reference has no leading zeros (C5-F1, not C5-F01), is unique within an engagement, starts with the code the file is filed under, is checked by the database as well as the application, is written to the audit log, and is refused on a locked engagement. Only the reference and place can change after upload; the file and its record are untouched.
 
 ## Export
 
 "Download index (Excel)" gives one sheet in file order. It is logged. Every cell is written as text, so a file name that begins with `=`, `+`, `-` or `@` is never read as a formula.
+
+## Known limits
+
+- A test schedule's preparer is shown as the person who recorded its conclusion (`prepared_by`), not everyone who contributed.
+- The analytical review's preparer includes the writers of explanations that have since lapsed.
+- Letters are found by scanning the audit log for the last export of each.
+- Open review points raised on the engagement generally (not on a lead sheet) do not affect any entry.
+- A review by the person who did the work is noted as "self-reviewed" on lead sheets, procedure and checklist roll-ups and schedules.

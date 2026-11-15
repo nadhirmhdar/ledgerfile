@@ -61,7 +61,8 @@ export default async function IndexPage({ params, searchParams }: { params: Prom
         {!index.auditOn && " The audit is off for this engagement, so only the papers that do not depend on it are listed."}
       </p>
 
-      <section className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6" aria-label="Summary">
+      <p className="mt-4 text-xs text-slate-600">Totals for the whole file, whatever filter is chosen below.</p>
+      <section className="mt-1 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6" aria-label="Summary, whole file">
         {[
           ["Papers", o.total],
           ["Reviewed", o.reviewed],
@@ -94,7 +95,7 @@ export default async function IndexPage({ params, searchParams }: { params: Prom
             <h3 id={`sec-${s.code}`} className="text-base font-semibold">
               {s.title}
               <span className="ml-2 text-xs font-normal text-slate-600">
-                {s.counts.reviewed} of {s.counts.total} reviewed{s.counts.toReview > 0 ? `, ${s.counts.toReview} still to review` : ""}
+                {filter === "all" ? `${s.counts.reviewed} of ${s.counts.total} reviewed` : `${s.counts.total} shown`}{s.counts.toReview > 0 ? `, ${s.counts.toReview} still to review` : ""}
               </span>
             </h3>
             <div className="mt-2 overflow-x-auto">
@@ -114,7 +115,12 @@ export default async function IndexPage({ params, searchParams }: { params: Prom
                     <tr key={`${e.reference ?? ""}|${e.title}|${e.href}`} className="border-b border-slate-200 align-top">
                       <td className="py-2 pr-3 whitespace-nowrap tabular-nums">{e.reference ?? <span className="text-slate-500">None</span>}</td>
                       <td className="py-2 pr-3">
-                        <Link href={e.href} className="text-blue-700 underline">{e.title}</Link>
+                        {e.kind === "file" ? (
+                          // A plain link: the route streams the file and logs a download, so it must not be prefetched.
+                          <a href={e.href} className="text-blue-700 underline">{e.title}</a>
+                        ) : (
+                          <Link href={e.href} className="text-blue-700 underline">{e.title}</Link>
+                        )}
                         <div className="text-xs text-slate-600">{KIND_LABEL[e.kind]}{e.note ? `. ${e.note}` : ""}</div>
                       </td>
                       <td className="py-2 pr-3"><Who name={e.preparedBy} on={e.preparedOn} /></td>

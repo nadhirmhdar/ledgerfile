@@ -97,12 +97,14 @@ export async function setFileFiling(tx: Tx, s: Session, id: string, input: { ref
   if (row.targetKind === "engagement" && reference && !sectionCode) sectionCode = reference.split("-")[0];
 
   const home = homeOfFile({ targetKind: row.targetKind, target: row.target, procedureTemplate: row.template, sectionCode });
+  if (reference && !home) throw new Error("This file is not filed under an area or checklist (what it supported is no longer on the file), so it cannot take a reference. File it under one first.");
   if (reference && home && reference.split("-")[0] !== home) throw new Error(`The reference ${reference} does not match where this file is filed (${home}). Start it with ${home}.`);
 
   if (reference) {
     const taken = await tx.query("select 1 from working_papers where engagement_id = $1 and reference = $2 and id::text <> $3", [row.engagementId, reference, id]);
     if (taken.rows.length > 0) throw new Error(`Another file already has the reference ${reference}.`);
   }
+  if (reference === row.reference && sectionCode === row.sectionCode) return row.engagementId; // nothing changed: no write, no log entry
   await tx.query("update working_papers set reference = $2, section_code = $3 where id::text = $1", [id, reference, sectionCode]);
   await log(tx, s, "file", "working_paper", id, { engagementId: row.engagementId, reference, sectionCode, previousReference: row.reference, previousSectionCode: row.sectionCode });
   return row.engagementId;

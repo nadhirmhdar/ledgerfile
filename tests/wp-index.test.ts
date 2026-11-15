@@ -8,6 +8,7 @@ import {
   countEntries,
   filterIndex,
   homeOfFile,
+  isToReview,
   leadSheetReference,
   leadSheetStatus,
   naturalCompare,
@@ -164,7 +165,7 @@ describe("status rules", () => {
     expect(stepsStatus({ total: 5, open: 2, notApplicable: 0, unreviewed: 3 })).toBe("in_progress");
     expect(stepsStatus({ total: 5, open: 0, notApplicable: 0, unreviewed: 2 })).toBe("prepared");
     expect(stepsStatus({ total: 5, open: 0, notApplicable: 1, unreviewed: 0 })).toBe("reviewed");
-    expect(stepsStatus({ total: 3, open: 0, notApplicable: 3, unreviewed: 3 })).toBe("not_applicable");
+    expect(stepsStatus({ total: 3, open: 0, notApplicable: 3, unreviewed: 0 })).toBe("not_applicable");
   });
 
   it("treats a lead sheet as reviewed once a reviewer signed, in progress while review points are open", () => {
@@ -225,5 +226,40 @@ describe("summary counts and filters", () => {
     expect(filterIndex(index, "unreviewed").flatMap((s) => s.entries.map((x) => x.reference))).toEqual(["C2.L1", "C5.P", "C10.L1"]);
     expect(filterIndex(index, "not_started").map((s) => s.code)).toEqual(["C2"]);
     expect(filterIndex(index, "all")).toHaveLength(4);
+  });
+});
+
+describe("review corrections", () => {
+  it("does not call finished-but-unreviewed not-applicable steps not applicable, as the lock still counts them", () => {
+    expect(stepsStatus({ total: 3, open: 0, notApplicable: 3, unreviewed: 3 })).toBe("prepared");
+    expect(stepsStatus({ total: 3, open: 0, notApplicable: 3, unreviewed: 0 })).toBe("not_applicable");
+    expect(stepsStatus({ total: 3, open: 1, notApplicable: 2, unreviewed: 2 })).toBe("in_progress");
+  });
+
+  it("keeps a reviewed schedule with an unexplained difference unfinished, so it still shows as to be reviewed", () => {
+    const s = { hasLines: true, hasConclusion: true, reviewed: true, differenceUnexplained: true };
+    expect(scheduleStatus(s)).toBe("in_progress");
+    expect(scheduleStatus({ ...s, differenceUnexplained: false })).toBe("reviewed");
+    expect(isToReview({ reviewable: true, status: scheduleStatus(s) })).toBe(true);
+  });
+
+  it("refuses leading zeros in a file reference, so C5-F1 and C5-F01 cannot both exist", () => {
+    expect(() => cleanFileReference("C5-F01")).toThrow(/-F/);
+    expect(() => cleanFileReference("C5-F0")).toThrow(/-F/);
+    expect(cleanFileReference("C5-F10")).toBe("C5-F10");
+  });
+
+  it("recounts each section for the entries a filter leaves, so headings match the rows", () => {
+    const e = [
+      entry({ section: "C5", reference: "C5.L1", status: "reviewed" }),
+      entry({ section: "C5", reference: "C5.P", status: "in_progress" }),
+      entry({ section: "C5", reference: "C5-1", kind: "schedule", status: "prepared" }),
+    ];
+    const index = buildIndex(e);
+    expect(index.sections[0].counts.total).toBe(3);
+    const shown = filterIndex(index, "unreviewed");
+    expect(shown[0].entries).toHaveLength(2);
+    expect(shown[0].counts).toMatchObject({ total: 2, reviewed: 0, toReview: 2 });
+    expect(index.overall.total).toBe(3); // the whole-file totals are untouched
   });
 });

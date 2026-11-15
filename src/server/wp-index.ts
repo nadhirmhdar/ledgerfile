@@ -104,6 +104,10 @@ export async function buildWorkingPaperIndex(tx: Tx, engagementId: string): Prom
   });
 
   const counts = (await requestCounts(tx, engagementId)).overall;
+  const askers = await tx.query<{ people: string[] | null; on: string | null }>(
+    `select array_agg(distinct u.name) as people, to_char(max(r.requested_on), 'YYYY-MM-DD') as "on" from client_requests r join users u on u.id = r.requested_by where r.engagement_id = $1`,
+    [engagementId],
+  );
   add({
     reference: "G4",
     section: GENERAL,
@@ -112,6 +116,8 @@ export async function buildWorkingPaperIndex(tx: Tx, engagementId: string): Prom
     href: `${base}/requests`,
     status: counts.total === 0 ? "not_started" : counts.open > 0 ? "in_progress" : "prepared",
     reviewable: false,
+    preparedBy: peopleLabel(askers.rows[0].people ?? []),
+    preparedOn: counts.total === 0 ? null : askers.rows[0].on,
     note: counts.total === 0 ? "No requests recorded." : `${counts.received} received, ${counts.notApplicable} not applicable, ${counts.open} open${counts.overdue > 0 ? ` (${counts.overdue} overdue)` : ""}.`,
   });
 
@@ -130,8 +136,8 @@ export async function buildWorkingPaperIndex(tx: Tx, engagementId: string): Prom
   });
 
   // --- Lead sheets: sign-off is per lead sheet group, on every engagement ----------------------------------------------------------
-  const signOffs = await tx.query<{ target: string; level: "preparer" | "reviewer"; name: string; at: string }>(
-    `select s.target, s.level, u.name, to_char(s.signed_at, 'YYYY-MM-DD') as at from sign_offs s join users u on u.id = s.user_id where s.engagement_id = $1`,
+  const signOffs = await tx.query<{ target: string; level: "preparer" | "reviewer"; name: string; at: string; userId: string }>(
+    `select s.target, s.level, s.user_id as "userId", u.name, to_char(s.signed_at, 'YYYY-MM-DD') as at from sign_offs s join users u on u.id = s.user_id where s.engagement_id = $1`,
     [engagementId],
   );
   const points = await tx.query<{ target: string; n: number }>(
@@ -158,7 +164,7 @@ export async function buildWorkingPaperIndex(tx: Tx, engagementId: string): Prom
       preparedOn: prep?.at ?? null,
       reviewedBy: rev?.name ?? null,
       reviewedOn: rev?.at ?? null,
-      note: open > 0 ? `${open} open review point(s).` : null,
+      note: [open > 0 ? `${open} open review point(s).` : null, prep && rev && prep.userId === rev.userId ? "Self-reviewed." : null].filter(Boolean).join(" ") || null,
     });
   }
 
@@ -168,7 +174,7 @@ export async function buildWorkingPaperIndex(tx: Tx, engagementId: string): Prom
             p.template_id as template, u.name as by, to_char(w.uploaded_at, 'YYYY-MM-DD') as "on"
      from working_papers w join users u on u.id = w.uploaded_by
      left join audit_procedures p on w.target_kind = 'procedure' and p.id::text = w.target
-     where w.engagement_id = $1`,
+     where w.engagement_id = $1 order by w.reference nulls last, w.file_name, w.id`,
     [engagementId],
   );
   for (const f of files.rows) {
@@ -194,13 +200,14 @@ export async function buildWorkingPaperIndex(tx: Tx, engagementId: string): Prom
 
     // Procedures and checklist steps, rolled up per area or checklist.
     const rollup = await tx.query<{
-      code: string; total: number; open: number; na: number; done: number; unreviewed: number; reviewedN: number;
+      code: string; total: number; open: number; na: number; done: number; unreviewed: number; reviewedN: number; selfN: number;
       performers: string[] | null; performedOn: string | null; reviewers: string[] | null; reviewedOn: string | null;
     }>(
       `select p.area_code as code, count(*)::int as total, count(*) filter (where p.status = 'open')::int as open, count(*) filter (where p.status = 'na')::int as na,
               count(*) filter (where p.status <> 'open')::int as done,
               count(*) filter (where p.status <> 'open' and p.reviewed_by is null and p.evidence !~* '^Partner sign-off')::int as unreviewed,
               count(*) filter (where p.reviewed_by is not null)::int as "reviewedN",
+              count(*) filter (where p.reviewed_by is not null and p.reviewed_by = p.performed_by)::int as "selfN",
               array_agg(distinct pu.name) filter (where pu.name is not null) as performers, to_char(max(p.performed_at), 'YYYY-MM-DD') as "performedOn",
               array_agg(distinct ru.name) filter (where ru.name is not null) as reviewers, to_char(max(p.reviewed_at), 'YYYY-MM-DD') as "reviewedOn"
        from audit_procedures p left join users pu on pu.id = p.performed_by left join users ru on ru.id = p.reviewed_by
@@ -217,9 +224,9 @@ export async function buildWorkingPaperIndex(tx: Tx, engagementId: string): Prom
         reviewable: true,
         preparedBy: peopleLabel(r?.performers ?? []),
         preparedOn: r?.performedOn ?? null,
-        reviewedBy: status === "reviewed" ? peopleLabel(r?.reviewers ?? []) : null,
-        reviewedOn: status === "reviewed" ? (r?.reviewedOn ?? null) : null,
-        note: !r || r.total === 0 ? "Programme not loaded." : `${r.done} of ${r.total} steps finished, ${r.reviewedN} reviewed${r.na > 0 ? `, ${r.na} not applicable` : ""}.`,
+        reviewedBy: status === "reviewed" || status === "not_applicable" ? peopleLabel(r?.reviewers ?? []) : null,
+        reviewedOn: status === "reviewed" || status === "not_applicable" ? (r?.reviewedOn ?? null) : null,
+        note: !r || r.total === 0 ? "Programme not loaded." : `${r.done} of ${r.total} steps finished, ${r.reviewedN} reviewed${r.na > 0 ? `, ${r.na} not applicable` : ""}.${r.selfN > 0 ? ` ${r.selfN} self-reviewed.` : ""}`,
       });
     };
     for (const c of CHECKLISTS) {
@@ -363,11 +370,11 @@ export async function buildWorkingPaperIndex(tx: Tx, engagementId: string): Prom
     // Test schedules.
     const sched = await tx.query<{
       id: string; areaCode: string; groupCode: string | null; reference: string; title: string; conclusion: string | null; explanation: string | null;
-      preparedBy: string | null; preparedOn: string | null; reviewedBy: string | null; reviewedOn: string | null; lines: number | null; total: number | null;
+      preparedBy: string | null; preparedOn: string | null; reviewedBy: string | null; reviewedOn: string | null; lines: number | null; total: number | null; selfReviewed: boolean;
     }>(
       `select s.id, s.area_code as "areaCode", s.group_code as "groupCode", s.reference, s.title, s.conclusion, s.explanation_of_difference as explanation,
               pu.name as "preparedBy", to_char(s.prepared_at, 'YYYY-MM-DD') as "preparedOn", ru.name as "reviewedBy", to_char(s.reviewed_at, 'YYYY-MM-DD') as "reviewedOn",
-              l.n as lines, l.total
+              l.n as lines, l.total, coalesce(s.reviewed_by = s.prepared_by, false) as "selfReviewed"
        from test_schedules s
        left join users pu on pu.id = s.prepared_by left join users ru on ru.id = s.reviewed_by
        left join (select schedule_id, count(*)::int as n, sum(amount_minor)::float8 as total from test_schedule_lines group by schedule_id) l on l.schedule_id = s.id
@@ -397,7 +404,7 @@ export async function buildWorkingPaperIndex(tx: Tx, engagementId: string): Prom
         preparedOn: s.preparedOn,
         reviewedBy: s.reviewedBy,
         reviewedOn: s.reviewedOn,
-        note: unexplained ? "The listing does not agree to the balance and the difference is not explained." : null,
+        note: [unexplained ? (reviewed ? "Reviewed, but the listing does not agree to the balance and the difference is not explained." : "The listing does not agree to the balance and the difference is not explained.") : null, s.selfReviewed ? "Self-reviewed." : null].filter(Boolean).join(" ") || null,
       });
     }
   }
