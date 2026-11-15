@@ -12,6 +12,7 @@ import {
   leadSheetReference,
   leadSheetStatus,
   naturalCompare,
+  notApplicableNote,
   peopleLabel,
   riskStatus,
   scheduleStatus,
@@ -261,5 +262,13 @@ describe("review corrections", () => {
     expect(shown[0].entries).toHaveLength(2);
     expect(shown[0].counts).toMatchObject({ total: 2, reviewed: 0, toReview: 2 });
     expect(index.overall.total).toBe(3); // the whole-file totals are untouched
+  });
+});
+
+describe("not-applicable note", () => {
+  it("is absent for none, singular for one, plural for more", () => {
+    expect(notApplicableNote(0)).toBeNull();
+    expect(notApplicableNote(1)).toBe("1 more is marked not applicable.");
+    expect(notApplicableNote(2)).toBe("2 more are marked not applicable.");
   });
 });

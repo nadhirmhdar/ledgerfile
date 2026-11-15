@@ -311,3 +311,9 @@ export function filterIndex(index: WorkingPaperIndex, filter: IndexFilter): Inde
 
 /** Every checklist the index can list, in file order. Exposed so tests can check no reference repeats. */
 export const CHECKLIST_CODES = CHECKLISTS.map((c) => c.code);
+
+/** The line under the summary about papers marked not applicable; null when there are none. */
+export function notApplicableNote(n: number): string | null {
+  if (n <= 0) return null;
+  return `${n} more ${n === 1 ? "is" : "are"} marked not applicable.`;
+}

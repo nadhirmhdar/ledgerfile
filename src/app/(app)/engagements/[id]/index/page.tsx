@@ -4,7 +4,7 @@ import { getDb, withFirm } from "@/server/db";
 import { getSession } from "@/server/session";
 import { buildWorkingPaperIndex } from "@/server/wp-index";
 import * as repo from "@/server/repo";
-import { filterIndex, isIndexFilter, KIND_LABEL, STATUS_LABEL, type Status } from "@/domain/wp-index";
+import { filterIndex, isIndexFilter, KIND_LABEL, notApplicableNote, STATUS_LABEL, type Status } from "@/domain/wp-index";
 import { EngagementNav } from "../nav";
 
 export const dynamic = "force-dynamic";
@@ -77,7 +77,7 @@ export default async function IndexPage({ params, searchParams }: { params: Prom
           </div>
         ))}
       </section>
-      {o.notApplicable > 0 && <p className="mt-2 text-xs text-slate-600">{o.notApplicable} more are marked not applicable. &ldquo;Still to review&rdquo; counts only papers that have a review step.</p>}
+      {notApplicableNote(o.notApplicable) && <p className="mt-2 text-xs text-slate-600">{notApplicableNote(o.notApplicable)} &ldquo;Still to review&rdquo; counts only papers that have a review step.</p>}
 
       <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
         <a href={`/engagements/${id}/index/export`} className="text-blue-700 underline">Download index (Excel)</a>
