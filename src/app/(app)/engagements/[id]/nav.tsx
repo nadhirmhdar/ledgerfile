@@ -6,6 +6,7 @@ const TABS = [
   { key: "statements", label: "Financial statements", path: "/statements" },
   { key: "audit", label: "Audit", path: "/audit" },
   { key: "papers", label: "Working papers", path: "/papers" },
+  { key: "requests", label: "Client requests", path: "/requests" },
   { key: "review", label: "Review and sign-off", path: "/review" },
 ] as const;
 

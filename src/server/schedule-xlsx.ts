@@ -19,7 +19,7 @@ const BOLD = { bold: true } as const;
  * description that begins with =, +, - or @ would still be taken as a formula by anyone who saves the sheet as CSV or retypes
  * the cell, so those cells also carry the text format.
  */
-function setText(cell: ExcelJS.Cell, value: string | null | undefined) {
+export function setText(cell: ExcelJS.Cell, value: string | null | undefined) {
   const text = value ?? "";
   cell.value = text;
   cell.numFmt = "@";
