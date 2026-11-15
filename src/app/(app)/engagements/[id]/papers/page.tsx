@@ -8,7 +8,8 @@ import { buildLeadSheets } from "@/domain/leadsheet";
 import { canReview } from "@/domain/signoff";
 import { ActionForm } from "@/app/action-form";
 import { FileInput } from "@/app/file-input";
-import { removeWorkingPaperAction, uploadWorkingPaperAction } from "@/app/papers-actions";
+import { fileWorkingPaperAction, removeWorkingPaperAction, uploadWorkingPaperAction } from "@/app/papers-actions";
+import { AREAS, CHECKLISTS } from "@/domain/audit";
 import { EngagementNav } from "../nav";
 
 export const dynamic = "force-dynamic";
@@ -87,6 +88,7 @@ export default async function PapersPage({ params }: { params: Promise<{ id: str
                   <th className="py-2 pl-4 font-medium">Supports</th>
                   <th className="py-2 pl-4 text-right font-medium">Size</th>
                   <th className="py-2 pl-4 font-medium">Uploaded</th>
+                  <th className="py-2 pl-4 font-medium">Index reference</th>
                   <th className="py-2 pl-4 font-medium" />
                 </tr>
               </thead>
@@ -101,6 +103,32 @@ export default async function PapersPage({ params }: { params: Promise<{ id: str
                     <td className="py-2 pl-4 text-right tabular-nums whitespace-nowrap">{size(w.sizeBytes)}</td>
                     <td className="py-2 pl-4 whitespace-nowrap">
                       {w.uploadedByName} <span className="text-xs text-slate-600">{w.uploadedAt}</span>
+                    </td>
+                    <td className="py-2 pl-4">
+                      {open ? (
+                        <ActionForm action={fileWorkingPaperAction} fields={{ paperId: w.id }}>
+                          <div className="flex flex-wrap items-center gap-1">
+                            <input
+                              name="reference"
+                              defaultValue={w.reference ?? ""}
+                              maxLength={8}
+                              placeholder="C5-F1"
+                              aria-label={`Index reference for ${w.fileName}`}
+                              className="w-20 rounded border border-slate-300 bg-white px-1.5 py-1 text-xs text-slate-900"
+                            />
+                            {w.targetKind === "engagement" && (
+                              <select name="sectionCode" defaultValue={w.sectionCode ?? ""} aria-label={`Filed under, for ${w.fileName}`} className="rounded border border-slate-300 bg-white px-1.5 py-1 text-xs text-slate-900">
+                                <option value="">Unfiled</option>
+                                {AREAS.map((a) => <option key={a.code} value={a.code}>{a.code} {a.title}</option>)}
+                                {CHECKLISTS.map((c) => <option key={c.code} value={c.code}>{c.code} {c.title}</option>)}
+                              </select>
+                            )}
+                            <button className={small}>Save</button>
+                          </div>
+                        </ActionForm>
+                      ) : (
+                        <span className="tabular-nums">{w.reference ?? "None"}</span>
+                      )}
                     </td>
                     <td className="py-2 pl-4">
                       {open && (w.uploadedBy === session.userId || canReview(session.role)) && (

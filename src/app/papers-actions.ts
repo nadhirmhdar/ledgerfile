@@ -55,3 +55,17 @@ export async function removeWorkingPaperAction(_prev: FormState, form: FormData)
   revalidatePath(`/engagements/${engagementId}`, "layout");
   return { ok: true, message: "" };
 }
+
+export async function fileWorkingPaperAction(_prev: FormState, form: FormData): Promise<FormState> {
+  const session = await getSession();
+  const id = field(form, "paperId");
+  if (!UUID.test(id)) return { ok: false, message: "Working paper not found." };
+  let engagementId: string;
+  try {
+    engagementId = await withFirm(await getDb(), session.firmId, (tx) => papers.setFileFiling(tx, session, id, { reference: field(form, "reference"), sectionCode: field(form, "sectionCode") }));
+  } catch (e) {
+    return failure(e, "The reference was not saved.");
+  }
+  revalidatePath(`/engagements/${engagementId}`, "layout");
+  return { ok: true, message: "Saved." };
+}
