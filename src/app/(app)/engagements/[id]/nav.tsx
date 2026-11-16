@@ -1,10 +1,11 @@
 import Link from "next/link";
-import { Callout } from "@/ui/feedback";
+import { Callout } from "../../../../ui/feedback";
 
 /** The sections in work order. Keys are what pages pass as `current`. */
 const GROUPS = [
-  { title: "Overview", items: [{ key: "home", label: "Home", path: "" }] },
+  { id: "overview", title: "Overview", items: [{ key: "home", label: "Home", path: "" }] },
   {
+    id: "setup",
     title: "Set up",
     items: [
       { key: "tb", label: "Trial balance and mapping", path: "/trial-balance" },
@@ -12,6 +13,7 @@ const GROUPS = [
     ],
   },
   {
+    id: "audit",
     title: "Audit",
     items: [
       { key: "audit", label: "Planning", path: "/audit" },
@@ -20,6 +22,7 @@ const GROUPS = [
     ],
   },
   {
+    id: "file",
     title: "File",
     items: [
       { key: "papers", label: "Working papers", path: "/papers" },
@@ -27,7 +30,7 @@ const GROUPS = [
       { key: "statements", label: "Financial statements", path: "/statements" },
     ],
   },
-  { title: "Finish", items: [{ key: "review", label: "Review and sign-off", path: "/review" }] },
+  { id: "finish", title: "Finish", items: [{ key: "review", label: "Review and sign-off", path: "/review" }] },
 ] as const;
 
 export type EngagementTab = (typeof GROUPS)[number]["items"][number]["key"];
@@ -50,9 +53,9 @@ export function EngagementNav({ id, current, status }: { id: string; current: En
         <div className="lg:sticky lg:top-4">
           <nav aria-label="Engagement sections" className="-mx-4 flex gap-4 overflow-x-auto border-b border-border px-4 lg:mx-0 lg:flex-col lg:gap-5 lg:overflow-visible lg:border-b-0 lg:px-0">
             {GROUPS.map((g) => {
-              const heading = `nav-group-${g.title.toLowerCase().replace(/s+/g, "-")}`;
+              const heading = `nav-group-${g.id}`;
               return (
-                <div key={g.title} className="shrink-0">
+                <div key={g.id} className="shrink-0">
                   <h2 id={heading} className="hidden px-3 pb-1 text-xs font-medium text-ink-subtle lg:block">
                     {g.title}
                   </h2>
