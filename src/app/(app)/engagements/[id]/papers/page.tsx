@@ -5,28 +5,26 @@ import { getSession } from "@/server/session";
 import * as repo from "@/server/repo";
 import * as papers from "@/server/working-papers";
 import { buildLeadSheets } from "@/domain/leadsheet";
-import { canReview } from "@/domain/signoff";
 import { ActionForm } from "@/app/action-form";
 import { FileInput } from "@/app/file-input";
 import { fileWorkingPaperAction, removeWorkingPaperAction, uploadWorkingPaperAction } from "@/app/papers-actions";
 import { AREAS, CHECKLISTS } from "@/domain/audit";
+import { Button, buttonClass } from "@/ui/button";
+import { ctl, Disclosure, fieldLabel } from "@/ui/controls";
+import { EmptyState } from "@/ui/feedback";
+import { PageHeader, Section } from "@/ui/layout";
+import { fileSize, filingText, filterPapers, paperControls, paperCounts, paperResults, papersSentence, parsePapersSearch, parsePapersShow, type PapersShow } from "@/ui/papers-view";
+import { TwoLineRow } from "@/ui/two-line-row";
 import { EngagementNav } from "../nav";
 
 export const dynamic = "force-dynamic";
 
-const input = "rounded border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-900";
-const label = "flex flex-col gap-1 text-sm text-slate-700";
-const small = "rounded border border-slate-400 px-2 py-1 text-xs hover:bg-slate-100";
-
-function size(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
-  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
-}
-
-export default async function PapersPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function PapersPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const { id } = await params;
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
+  const query = await searchParams;
+  const show = parsePapersShow(query.show);
+  const q = parsePapersSearch(query.q);
 
   const session = await getSession();
   const { engagement, accounts, list } = await withFirm(await getDb(), session.firmId, async (tx) => ({
@@ -38,115 +36,206 @@ export default async function PapersPage({ params }: { params: Promise<{ id: str
 
   const open = engagement.status === "open";
   const sheets = buildLeadSheets(accounts).sheets;
+  const base = `/engagements/${id}/papers`;
+  const view = filterPapers(list, { show, q });
+  const chips = paperCounts(list, q);
+  const link = (s: PapersShow) => {
+    const p = new URLSearchParams();
+    if (s) p.set("show", s);
+    if (q) p.set("q", q);
+    const str = p.toString();
+    return `${base}${str ? `?${str}` : ""}`;
+  };
+  const chipList: { key: PapersShow; label: string; n: number }[] = [
+    { key: "", label: "All", n: chips.all },
+    { key: "notfiled", label: "Not filed", n: chips.notfiled },
+    { key: "noreference", label: "No reference", n: chips.noreference },
+    { key: "leadsheet", label: "Lead sheet", n: chips.leadsheet },
+    { key: "procedure", label: "Procedure", n: chips.procedure },
+  ];
 
   return (
-    <div className="py-8 text-slate-900">
-      <Link href="/" className="text-sm text-blue-700 underline">All engagements</Link>
-      <h1 className="mt-2 text-2xl font-semibold">{engagement.clientName}</h1>
-      <p className="mt-1 text-sm text-slate-600">{engagement.periodStart} to {engagement.periodEnd}</p>
+    <div className="py-8 text-ink">
+      <PageHeader
+        breadcrumb={[{ label: "All engagements", href: "/" }]}
+        title="Working papers"
+        meta={
+          <>
+            <span>{engagement.clientName}</span>
+            <span aria-hidden="true">·</span>
+            <span>
+              {engagement.periodStart} to {engagement.periodEnd}
+            </span>
+          </>
+        }
+        subtitle={papersSentence(list)}
+      />
       <EngagementNav id={id} current="papers" status={engagement.status} />
 
-      {open && (
-        <ActionForm action={uploadWorkingPaperAction} fields={{ engagementId: id }} className="mt-6 rounded border border-slate-200 bg-slate-50 p-4">
-          <h2 className="text-base font-semibold">Upload a working paper</h2>
-          <div className="mt-3 flex flex-wrap items-end gap-3">
-            <label className={label}>
-              File
-              <FileInput maxBytes={papers.MAX_FILE_BYTES} accept={papers.ALLOWED_EXTENSIONS.map((e) => `.${e}`).join(",")} className="text-sm text-slate-900" />
-            </label>
-            <label className={label}>
-              Supports
-              <select name="supports" defaultValue="engagement" className={input}>
-                <option value="engagement">The engagement generally</option>
-                {sheets.map((sh) => (
-                  <option key={sh.groupCode} value={`lead_sheet:${sh.groupCode}`}>Lead sheet: {sh.groupName}</option>
-                ))}
-              </select>
-            </label>
-            <label className={`${label} min-w-56 flex-1`}>
-              Description (optional)
-              <input name="description" maxLength={500} className={input} />
-            </label>
-            <button className="rounded bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-700">Upload</button>
-          </div>
-          <p className="mt-2 text-xs text-slate-600">
-            Up to 10 MB. Accepted types: {papers.ALLOWED_EXTENSIONS.join(", ")}. To attach evidence to an audit procedure, upload it from that procedure on the Audit tab.
-          </p>
-        </ActionForm>
-      )}
-
-      <section className="mt-8">
-        <h2 className="text-lg font-semibold">Working papers</h2>
-        {list.length === 0 ? (
-          <p className="mt-2 text-sm text-slate-600">No files have been uploaded to this engagement.</p>
-        ) : (
-          <div className="mt-3 overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="border-b border-slate-300 text-slate-600">
-                <tr>
-                  <th className="py-2 font-medium">File</th>
-                  <th className="py-2 pl-4 font-medium">Supports</th>
-                  <th className="py-2 pl-4 text-right font-medium">Size</th>
-                  <th className="py-2 pl-4 font-medium">Uploaded</th>
-                  <th className="py-2 pl-4 font-medium">Index reference</th>
-                  <th className="py-2 pl-4 font-medium" />
-                </tr>
-              </thead>
-              <tbody>
-                {list.map((w) => (
-                  <tr key={w.id} className="border-b border-slate-200 align-top">
-                    <td className="py-2">
-                      <a href={`/engagements/${id}/files/${w.id}`} className="text-blue-700 underline">{w.fileName}</a>
-                      {w.description && <div className="text-xs text-slate-600">{w.description}</div>}
-                    </td>
-                    <td className="py-2 pl-4">{w.targetLabel}</td>
-                    <td className="py-2 pl-4 text-right tabular-nums whitespace-nowrap">{size(w.sizeBytes)}</td>
-                    <td className="py-2 pl-4 whitespace-nowrap">
-                      {w.uploadedByName} <span className="text-xs text-slate-600">{w.uploadedAt}</span>
-                    </td>
-                    <td className="py-2 pl-4">
-                      {open ? (
-                        <ActionForm action={fileWorkingPaperAction} fields={{ paperId: w.id }}>
-                          <div className="flex flex-wrap items-center gap-1">
-                            <input
-                              name="reference"
-                              defaultValue={w.reference ?? ""}
-                              maxLength={8}
-                              placeholder="C5-F1"
-                              aria-label={`Index reference for ${w.fileName}`}
-                              className="w-20 rounded border border-slate-300 bg-white px-1.5 py-1 text-xs text-slate-900"
-                            />
-                            {w.targetKind === "engagement" && (
-                              <select name="sectionCode" defaultValue={w.sectionCode ?? ""} aria-label={`Filed under, for ${w.fileName}`} className="rounded border border-slate-300 bg-white px-1.5 py-1 text-xs text-slate-900">
-                                <option value="">Unfiled</option>
-                                {AREAS.map((a) => <option key={a.code} value={a.code}>{a.code} {a.title}</option>)}
-                                {CHECKLISTS.map((c) => <option key={c.code} value={c.code}>{c.code} {c.title}</option>)}
-                              </select>
-                            )}
-                            <button className={small}>Save</button>
-                          </div>
-                        </ActionForm>
-                      ) : (
-                        <span className="tabular-nums">{w.reference ?? "None"}</span>
-                      )}
-                    </td>
-                    <td className="py-2 pl-4">
-                      {open && (w.uploadedBy === session.userId || canReview(session.role)) && (
-                        <ActionForm action={removeWorkingPaperAction} fields={{ paperId: w.id }}>
-                          <button className={small}>Remove</button>
-                        </ActionForm>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+      <div className="mt-6 space-y-8">
+        {open && (
+          <Disclosure summary="Upload a file" open={list.length === 0}>
+            <ActionForm action={uploadWorkingPaperAction} fields={{ engagementId: id }}>
+              <div className="flex flex-wrap items-end gap-3">
+                <label className={fieldLabel}>
+                  File
+                  <FileInput
+                    maxBytes={papers.MAX_FILE_BYTES}
+                    accept={papers.ALLOWED_EXTENSIONS.map((e) => `.${e}`).join(",")}
+                    className="text-sm font-normal text-ink file:mr-3 file:min-h-10 file:cursor-pointer file:rounded-md file:border file:border-border-strong file:bg-surface file:px-4 file:text-sm file:font-medium file:text-ink hover:file:bg-surface-muted"
+                  />
+                </label>
+                <label className={fieldLabel}>
+                  Supports
+                  <select name="supports" defaultValue="engagement" className={ctl}>
+                    <option value="engagement">The engagement generally</option>
+                    {sheets.map((sh) => (
+                      <option key={sh.groupCode} value={`lead_sheet:${sh.groupCode}`}>
+                        Lead sheet: {sh.groupName}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className={`${fieldLabel} min-w-56 flex-1`}>
+                  Description (optional)
+                  <input name="description" maxLength={500} className={ctl} />
+                </label>
+                <Button variant="primary">Upload</Button>
+              </div>
+              <p className="mt-3 text-sm text-ink-muted">Up to 10 MB. Accepted types: {papers.ALLOWED_EXTENSIONS.join(", ")}. To attach evidence to an audit procedure, upload it from that procedure on the audit page.</p>
+            </ActionForm>
+          </Disclosure>
         )}
-        <p className="mt-3 text-xs text-slate-600">
-          Files can be removed by the person who uploaded them, or by a reviewer or partner, until the engagement is locked. Every upload, download and removal is recorded in the audit log.
-        </p>
-      </section>
+
+        {list.length === 0 ? (
+          <EmptyState
+            title="No files yet"
+            description="Working papers are the files that support the work on this engagement: client documents, schedules and evidence, each filed against the index."
+            action={open ? <p className="text-sm text-ink-muted">Open Upload a file above to add the first one.</p> : undefined}
+          />
+        ) : (
+          <Section title="Files">
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <nav aria-label="Filter files">
+                <ul className="flex flex-wrap gap-2">
+                  {chipList.map((c) => {
+                    const active = show === c.key;
+                    return (
+                      <li key={c.key || "all"}>
+                        <Link
+                          href={link(c.key)}
+                          aria-current={active ? "true" : undefined}
+                          className={`inline-flex min-h-10 items-center rounded-full border px-4 text-sm font-medium ${active ? "border-accent bg-accent text-surface" : "border-border-strong bg-surface text-ink hover:bg-surface-muted"}`}
+                        >
+                          {c.label} {c.n}
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </nav>
+              <form action={base} method="get" role="search" className="flex w-full flex-wrap items-end gap-2 sm:w-auto">
+                {show && <input type="hidden" name="show" value={show} />}
+                <label className={fieldLabel}>
+                  Search
+                  <input name="q" type="search" defaultValue={q} placeholder="File name or description" className={`${ctl} w-full sm:w-64`} />
+                </label>
+                <Button variant="secondary">Search</Button>
+              </form>
+            </div>
+            <p role="status" className="mt-3 text-sm text-ink-muted">
+              {paperResults(view.shown, view.total)}
+            </p>
+
+            {view.rows.length === 0 ? (
+              <div className="mt-3">
+                <EmptyState
+                  title="No files match"
+                  description="Nothing fits this filter and search."
+                  action={
+                    <Link href={base} className={buttonClass("secondary")}>
+                      Show all
+                    </Link>
+                  }
+                />
+              </div>
+            ) : (
+              <ul className="mt-3 divide-y divide-border rounded-lg border border-border bg-surface shadow-card">
+                {view.rows.map((w) => {
+                  const ctrl = paperControls(w, { open, role: session.role, userId: session.userId });
+                  return (
+                    <TwoLineRow
+                      key={w.id}
+                      label="More"
+                      accessibleName={`More for ${w.fileName}`}
+                      line1={
+                        <>
+                          {/* A plain link: the route streams the file and logs a download, so it must not be prefetched. */}
+                          <a href={`/engagements/${id}/files/${w.id}`} className="min-w-40 flex-1 truncate font-semibold text-accent hover:underline">
+                            {w.fileName}
+                          </a>
+                          <span className="rounded-full bg-surface-muted px-2.5 py-0.5 text-sm text-ink-muted">{w.targetLabel}</span>
+                          {w.reference && <span className="rounded-full border border-border-strong px-2.5 py-0.5 text-sm font-medium tabular-nums">{w.reference}</span>}
+                        </>
+                      }
+                      detail={[w.description, fileSize(w.sizeBytes), `Uploaded by ${w.uploadedByName}, ${w.uploadedAt}`, filingText(w)].filter(Boolean).join(" · ")}
+                    >
+                      <div className="space-y-4 text-sm">
+                        {ctrl.filing ? (
+                          <ActionForm action={fileWorkingPaperAction} fields={{ paperId: w.id }}>
+                            <div className="flex flex-wrap items-end gap-3">
+                              <label className={fieldLabel}>
+                                Index reference
+                                <input name="reference" defaultValue={w.reference ?? ""} maxLength={8} placeholder="C5-F1" aria-label={`Index reference for ${w.fileName}`} className={`${ctl} w-32`} />
+                              </label>
+                              {ctrl.sectionSelect && (
+                                <label className={fieldLabel}>
+                                  Filed under
+                                  <select name="sectionCode" defaultValue={w.sectionCode ?? ""} aria-label={`Filed under, for ${w.fileName}`} className={ctl}>
+                                    <option value="">Unfiled</option>
+                                    {AREAS.map((a) => (
+                                      <option key={a.code} value={a.code}>
+                                        {a.code} {a.title}
+                                      </option>
+                                    ))}
+                                    {CHECKLISTS.map((c) => (
+                                      <option key={c.code} value={c.code}>
+                                        {c.code} {c.title}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </label>
+                              )}
+                              <Button variant="primary" size="sm">
+                                Save filing
+                              </Button>
+                            </div>
+                          </ActionForm>
+                        ) : (
+                          <p>
+                            <span className="font-medium">Index reference:</span> <span className="tabular-nums">{w.reference ?? "None"}</span>. {filingText(w)}.
+                          </p>
+                        )}
+                        <p className="text-ink-muted">Every upload, download and removal is recorded in the audit log.</p>
+                        {ctrl.remove && (
+                          <div className="border-t border-border pt-3">
+                            <ActionForm action={removeWorkingPaperAction} fields={{ paperId: w.id }}>
+                              <Button variant="danger" size="sm">
+                                Remove
+                              </Button>
+                            </ActionForm>
+                            <p className="mt-1 text-ink-muted">The person who uploaded a file, or a reviewer or partner, can remove it until the engagement is locked.</p>
+                          </div>
+                        )}
+                      </div>
+                    </TwoLineRow>
+                  );
+                })}
+              </ul>
+            )}
+          </Section>
+        )}
+      </div>
     </div>
   );
 }
