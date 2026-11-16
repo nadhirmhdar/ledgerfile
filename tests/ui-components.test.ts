@@ -87,7 +87,7 @@ describe("components render the accessibility attributes they promise", () => {
     const labels = [...out.matchAll(/aria-labelledby="([^"]*)"/g)].map((m) => m[1]);
     expect(labels).toHaveLength(5);
     for (const l of labels) {
-      expect(l).not.toMatch(/s/);
+      expect(l).not.toMatch(/\s/);
       expect(out).toContain(`id="${l}"`);
     }
     expect(new Set(labels).size).toBe(5);
