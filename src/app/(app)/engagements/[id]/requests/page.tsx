@@ -28,6 +28,7 @@ import { Callout, EmptyState } from "@/ui/feedback";
 import { Card, PageHeader, Section, Stat } from "@/ui/layout";
 import { filterRequests, parseAreaFilter, parseSearch, parseStatus, requestMeta, requestResults, requestsSentence, rowControls, statusCounts, STATUS_PILL, type StatusFilter } from "@/ui/request-view";
 import { count } from "@/ui/text";
+import { TwoLineRow } from "@/ui/two-line-row";
 import { EngagementNav } from "../nav";
 
 export const dynamic = "force-dynamic";
@@ -64,9 +65,8 @@ export default async function RequestsPage({ params, searchParams }: { params: P
     const str = p.toString();
     return `${base}${str ? `?${str}` : ""}`;
   };
-  // With an area chosen, the tiles count that area (general requests under "general"), so they match the list below.
-  const none = { total: 0, open: 0, overdue: 0, received: 0, notApplicable: 0 };
-  const c = areaFilter ? (counts.byArea.get(areaFilter) ?? none) : counts.overall;
+  // The tiles use the chips' counts (the chosen area and search), so the two never disagree.
+  const c = chips;
 
   const chipList: { key: StatusFilter; label: string; n: number }[] = [
     { key: "", label: "All", n: chips.all },
@@ -191,11 +191,11 @@ export default async function RequestsPage({ params, searchParams }: { params: P
                   })}
                 </ul>
               </nav>
-              <form action={base} method="get" role="search" className="flex flex-wrap items-end gap-2">
+              <form action={base} method="get" role="search" className="flex w-full flex-wrap items-end gap-2 sm:w-auto">
                 {statusFilter && <input type="hidden" name="status" value={statusFilter} />}
                 <label className={fieldLabel}>
                   Area
-                  <select name="area" defaultValue={areaFilter} className={ctl}>
+                  <select name="area" defaultValue={areaFilter} className={`${ctl} w-full sm:w-64`}>
                     <option value="">All areas</option>
                     <option value="general">General</option>
                     {AREAS.map((a) => (
@@ -207,7 +207,7 @@ export default async function RequestsPage({ params, searchParams }: { params: P
                 </label>
                 <label className={fieldLabel}>
                   Search
-                  <input name="q" type="search" defaultValue={q} placeholder="Reference or wording" className={`${ctl} w-52`} />
+                  <input name="q" type="search" defaultValue={q} placeholder="Reference or wording" className={`${ctl} w-full sm:w-52`} />
                 </label>
                 <Button variant="secondary">Show</Button>
               </form>
@@ -235,34 +235,36 @@ export default async function RequestsPage({ params, searchParams }: { params: P
                   const ctrl = rowControls({ status: r.status, files: r.files.length, unlinkedAvailable: unlinked.length }, !open);
                   const pill = STATUS_PILL[r.status];
                   return (
-                    <li key={r.id} className="px-4 py-3">
-                      <div className="flex flex-wrap items-start gap-x-3 gap-y-1">
-                        <span className="font-semibold tabular-nums">{r.reference}</span>
-                        <p className="min-w-48 flex-1 font-semibold line-clamp-2">{r.description}</p>
-                        <span className="flex flex-wrap items-center gap-2">
-                          <span className="rounded-full bg-surface-muted px-2.5 py-0.5 text-sm text-ink-muted">{r.areaTitle}</span>
-                          <Badge tone={pill.tone}>{pill.label}</Badge>
-                          {r.overdue && <Badge tone="danger">Overdue</Badge>}
-                        </span>
-                      </div>
-                      <p className="mt-1 text-sm text-ink-muted">{requestMeta({ requestedByName: r.requestedByName, requestedOn: r.requestedOn, dueOn: r.dueOn, receivedOn: r.receivedOn, files: r.files.length })}</p>
-
-                      {ctrl.inlineReceived && (
-                        <ActionForm action={markReceivedAction} fields={{ requestId: r.id }} className="mt-2">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <input type="date" name="receivedOn" defaultValue={today} max={today} min={r.requestedOn} aria-label={`Received on, ${r.reference}`} className={ctl} />
-                            <Button variant="secondary" size="sm">
-                              Mark received
-                            </Button>
-                          </div>
-                        </ActionForm>
-                      )}
-
-                      <details className="group mt-1">
-                        <summary aria-label={`More for ${r.reference}`} className="inline-flex min-h-10 cursor-pointer items-center text-sm font-medium text-accent hover:underline">
-                          More
-                        </summary>
-                        <div className="mt-2 space-y-4 border-t border-border pt-3 text-sm">
+                    <TwoLineRow
+                      key={r.id}
+                      label="More"
+                      accessibleName={`More for ${r.reference}`}
+                      line1={
+                        <>
+                          <span className="font-semibold tabular-nums">{r.reference}</span>
+                          <p className="min-w-48 flex-1 truncate font-semibold">{r.description}</p>
+                          <span className="flex flex-wrap items-center gap-2">
+                            <span className="rounded-full bg-surface-muted px-2.5 py-0.5 text-sm text-ink-muted">{r.areaTitle}</span>
+                            <Badge tone={pill.tone}>{pill.label}</Badge>
+                            {r.overdue && <Badge tone="danger">Overdue</Badge>}
+                          </span>
+                        </>
+                      }
+                      detail={requestMeta({ requestedByName: r.requestedByName, requestedOn: r.requestedOn, dueOn: r.dueOn, receivedOn: r.receivedOn, files: r.files.length })}
+                      quick={
+                        ctrl.inlineReceived ? (
+                          <ActionForm action={markReceivedAction} fields={{ requestId: r.id }}>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <input type="date" name="receivedOn" defaultValue={today} max={today} min={r.requestedOn} aria-label={`Received on, ${r.reference}`} className={`${ctl} min-h-8 py-0.5`} />
+                              <Button variant="secondary" size="sm">
+                                Mark received
+                              </Button>
+                            </div>
+                          </ActionForm>
+                        ) : undefined
+                      }
+                    >
+                        <div className="space-y-4 text-sm">
                           <p>{r.description}</p>
                           {r.note && (
                             <p className="text-ink-muted">
@@ -376,8 +378,7 @@ export default async function RequestsPage({ params, searchParams }: { params: P
                             </div>
                           )}
                         </div>
-                      </details>
-                    </li>
+                    </TwoLineRow>
                   );
                 })}
               </ul>
