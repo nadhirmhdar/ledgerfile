@@ -40,7 +40,7 @@ export default async function PapersPage({ params }: { params: Promise<{ id: str
   const sheets = buildLeadSheets(accounts).sheets;
 
   return (
-    <main className="mx-auto w-full max-w-6xl px-4 py-8 text-slate-900">
+    <div className="py-8 text-slate-900">
       <Link href="/" className="text-sm text-blue-700 underline">All engagements</Link>
       <h1 className="mt-2 text-2xl font-semibold">{engagement.clientName}</h1>
       <p className="mt-1 text-sm text-slate-600">{engagement.periodStart} to {engagement.periodEnd}</p>
@@ -147,6 +147,6 @@ export default async function PapersPage({ params }: { params: Promise<{ id: str
           Files can be removed by the person who uploaded them, or by a reviewer or partner, until the engagement is locked. Every upload, download and removal is recorded in the audit log.
         </p>
       </section>
-    </main>
+    </div>
   );
 }

@@ -49,7 +49,7 @@ export default async function JournalTestingPage({ params, searchParams }: { par
   const chip = (active: boolean) => `rounded-full border px-3 py-1 text-xs ${active ? "border-slate-900 bg-slate-900 text-white" : "border-slate-300 text-blue-700 hover:bg-slate-100"}`;
 
   return (
-    <main className="mx-auto w-full max-w-6xl px-4 py-8 text-slate-900">
+    <div className="py-8 text-slate-900">
       <Link href="/" className="text-sm text-blue-700 underline">All engagements</Link>
       <h1 className="mt-2 text-2xl font-semibold">{engagement.clientName}</h1>
       <p className="mt-1 text-sm text-slate-600">{engagement.periodStart} to {engagement.periodEnd}</p>
@@ -242,6 +242,6 @@ export default async function JournalTestingPage({ params, searchParams }: { par
           )}
         </>
       )}
-    </main>
+    </div>
   );
 }

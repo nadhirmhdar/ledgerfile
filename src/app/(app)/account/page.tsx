@@ -11,7 +11,7 @@ const label = "flex flex-col gap-1 text-sm text-slate-700";
 export default async function AccountPage() {
   const session = await getSession();
   return (
-    <main className="mx-auto w-full max-w-md px-4 py-8 text-slate-900">
+    <div className="mx-auto w-full max-w-md py-8 text-slate-900">
       <h1 className="text-2xl font-semibold">Account</h1>
       <p className="mt-1 text-sm text-slate-600">
         {session.name} · {session.email} · <span className="capitalize">{session.role}</span> at {session.firmName}
@@ -38,6 +38,6 @@ export default async function AccountPage() {
           </div>
         </ActionForm>
       </section>
-    </main>
+    </div>
   );
 }

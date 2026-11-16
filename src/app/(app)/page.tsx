@@ -3,7 +3,12 @@ import { getDb, withFirm } from "@/server/db";
 import { getSession } from "@/server/session";
 import * as repo from "@/server/repo";
 import { NewClientForm, NewEngagementForm } from "@/app/forms";
-import { canCreateClient, canCreateEngagement, CLIENT_REFUSAL, ENGAGEMENT_REFUSAL } from "@/domain/permissions";
+import { canCreateClient, canCreateEngagement } from "@/domain/permissions";
+import { StatusBadge } from "@/ui/badge";
+import { EngagementsHeader } from "@/ui/create-panels";
+import { EmptyState } from "@/ui/feedback";
+import { Table, TCell, THead, TRow } from "@/ui/table";
+import { count } from "@/ui/text";
 
 export const dynamic = "force-dynamic";
 
@@ -13,60 +18,55 @@ export default async function Home() {
     clients: await repo.listClients(tx),
     engagements: await repo.listEngagements(tx),
   }));
+  const mayCreateEngagement = canCreateEngagement(session.role);
+  const mayCreateClient = canCreateClient(session.role);
+  const open = engagements.filter((e) => e.status === "open").length;
 
   return (
-    <main className="mx-auto w-full max-w-5xl px-4 py-8 text-slate-900">
-      <h1 className="text-2xl font-semibold">Engagements</h1>
+    <div className="py-8 text-ink">
+      <EngagementsHeader
+        subtitle={engagements.length === 0 ? "No engagements yet." : `${count(engagements.length, "engagement")}, ${open} open.`}
+        engagementForm={mayCreateEngagement ? clients.length === 0 ? <p className="text-sm text-ink-muted">Add a client first.</p> : <NewEngagementForm clients={clients} /> : undefined}
+        clientForm={mayCreateClient ? <NewClientForm /> : undefined}
+      />
 
-      <section className="mt-4">
-        <h2 className="sr-only">Engagement list</h2>
+      <section aria-label="Engagement list" className="mt-6">
         {engagements.length === 0 ? (
-          <p className="mt-2 text-sm text-slate-600">No engagements yet. Add a client, then create an engagement for it.</p>
+          <EmptyState
+            title="No engagements yet"
+            description={mayCreateEngagement ? "Add a client, then create an engagement for it." : "A reviewer or partner creates engagements. They will appear here."}
+          />
         ) : (
-          <table className="mt-3 w-full text-left text-sm">
-            <thead className="border-b border-slate-300 text-slate-600">
-              <tr>
-                <th className="py-2 font-medium">Client</th>
-                <th className="py-2 font-medium">Period</th>
-                <th className="py-2 font-medium">Status</th>
-                <th className="py-2 font-medium">Prior year linked</th>
-              </tr>
-            </thead>
+          <Table caption="Engagements">
+            <THead>
+              <TRow>
+                <TCell header="col">Client</TCell>
+                <TCell header="col">Period</TCell>
+                <TCell header="col">Status</TCell>
+                <TCell header="col">Prior year linked</TCell>
+              </TRow>
+            </THead>
             <tbody>
               {engagements.map((e) => (
-                <tr key={e.id} className="border-b border-slate-200">
-                  <td className="py-2">
-                    <Link href={`/engagements/${e.id}`} className="font-medium text-blue-700 underline">{e.clientName}</Link>
-                  </td>
-                  <td className="py-2">{e.periodStart} to {e.periodEnd}</td>
-                  <td className="py-2 capitalize">{e.status}</td>
-                  <td className="py-2">{e.priorEngagementId ? "Yes" : "No"}</td>
-                </tr>
+                <TRow key={e.id}>
+                  <TCell header="row">
+                    <Link href={`/engagements/${e.id}`} className="rounded-sm text-accent hover:underline">
+                      {e.clientName}
+                    </Link>
+                  </TCell>
+                  <TCell>
+                    {e.periodStart} to {e.periodEnd}
+                  </TCell>
+                  <TCell>
+                    <StatusBadge status={e.status === "open" ? "in_progress" : "locked"} label={e.status === "open" ? "Open" : "Locked"} />
+                  </TCell>
+                  <TCell>{e.priorEngagementId ? "Yes" : "No"}</TCell>
+                </TRow>
               ))}
             </tbody>
-          </table>
+          </Table>
         )}
       </section>
-
-      <section className="mt-8 rounded border border-slate-200 bg-slate-50 p-4">
-        <h2 className="text-base font-semibold">New engagement</h2>
-        <div className="mt-3">
-          {!canCreateEngagement(session.role) ? (
-            <p className="text-sm text-slate-600">{ENGAGEMENT_REFUSAL}</p>
-          ) : clients.length === 0 ? (
-            <p className="text-sm text-slate-600">Add a client first.</p>
-          ) : (
-            <NewEngagementForm clients={clients} />
-          )}
-        </div>
-      </section>
-
-      <section className="mt-4 rounded border border-slate-200 bg-slate-50 p-4">
-        <h2 className="text-base font-semibold">New client</h2>
-        <div className="mt-3">
-          {canCreateClient(session.role) ? <NewClientForm /> : <p className="text-sm text-slate-600">{CLIENT_REFUSAL}</p>}
-        </div>
-      </section>
-    </main>
+    </div>
   );
 }

@@ -49,7 +49,7 @@ export default async function IndexPage({ params, searchParams }: { params: Prom
   const link = (show: string) => `/engagements/${id}/index${show === "all" ? "" : `?show=${show}`}`;
 
   return (
-    <main className="mx-auto w-full max-w-6xl px-4 py-8 text-slate-900">
+    <div className="py-8 text-slate-900">
       <Link href="/" className="text-sm text-blue-700 underline">All engagements</Link>
       <h1 className="mt-2 text-2xl font-semibold">{engagement.clientName}</h1>
       <p className="mt-1 text-sm text-slate-600">{engagement.periodStart} to {engagement.periodEnd}</p>
@@ -142,6 +142,6 @@ export default async function IndexPage({ params, searchParams }: { params: Prom
         .L1 for a lead sheet and .P for the procedures of an area, and C5-F1 for an uploaded file you reference on the Working papers tab. The scheme is a default for the firm to confirm.
         Where the product holds no preparer or reviewer for a paper, none is shown rather than a guess.
       </p>
-    </main>
+    </div>
   );
 }
