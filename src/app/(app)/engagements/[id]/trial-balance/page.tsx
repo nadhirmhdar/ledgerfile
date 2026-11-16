@@ -22,10 +22,10 @@ import { EngagementNav } from "../nav";
 export const dynamic = "force-dynamic";
 
 const SOURCE_LABEL: Record<string, string> = {
-  prior_year: "From the prior year",
+  prior_year: "Prior year",
   rule: "Suggested",
   ai: "AI suggested",
-  manual: "Set by a person",
+  manual: "Set by hand",
 };
 
 type Params = { show?: string | string[]; q?: string | string[] };
@@ -63,11 +63,12 @@ export default async function TrialBalancePage({ params, searchParams }: { param
 
   const statusCell = (a: (typeof accounts)[number]) => {
     const state = mappingState(a);
-    const basis = a.source ? SOURCE_LABEL[a.source] : null;
+    // A suggestion that a person has accepted says so, so "Suggested" never reads as still pending.
+    const basis = a.source ? (state === "mapped" && (a.source === "rule" || a.source === "ai") ? `${SOURCE_LABEL[a.source]}, accepted` : SOURCE_LABEL[a.source]) : null;
     return (
       <div className="flex flex-col items-start gap-0.5">
         {state === "to_map" ? <Badge tone="danger">To map</Badge> : state === "to_check" ? <Badge tone="warning">To check</Badge> : <Badge tone="success">Mapped</Badge>}
-        {state !== "to_map" && basis && <span className="text-sm text-ink-muted">{basis}</span>}
+        {state !== "to_map" && basis && <span className="text-sm whitespace-nowrap text-ink-muted">{basis}</span>}
       </div>
     );
   };
@@ -254,7 +255,7 @@ export default async function TrialBalancePage({ params, searchParams }: { param
             </Section>
 
             <Card title="Lead sheets" description="The accounts, grouped by lead sheet, with prior-year movement.">
-              <p className="mb-3 text-sm text-ink-muted">{ties ? "Lead sheet totals agree to the trial balance." : "Lead sheet totals do not agree to the trial balance."}</p>
+              <p className="mb-3">{ties ? <Badge tone="success">Agrees to the trial balance</Badge> : <Badge tone="danger">Does not agree</Badge>}</p>
               <LinkButton href={`${base}/lead-sheets`}>
                 Open the lead sheets
                 <ArrowRightIcon />
@@ -266,7 +267,7 @@ export default async function TrialBalancePage({ params, searchParams }: { param
                 <summary className={`${buttonClass("secondary")} m-3 w-fit cursor-pointer list-none [&::-webkit-details-marker]:hidden`}>Replace the trial balance</summary>
                 <div className="border-t border-border px-4 py-4 sm:px-5">
                   <Callout variant="warning" className="mb-4">
-                    Replacing re-reads every balance from the new file. Accounts keep their mappings where the account code is unchanged.
+                    Replacing re-reads every balance and removes all lead-sheet sign-offs. Mappings are kept for account codes that stay the same. It cannot be done while there are journal entries.
                   </Callout>
                   <UploadForm engagementId={id} hasAccounts />
                 </div>

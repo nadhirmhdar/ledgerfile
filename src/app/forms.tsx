@@ -77,7 +77,7 @@ export function UploadForm({ engagementId, hasAccounts }: { engagementId: string
       <div className="flex flex-wrap items-end gap-3">
         <label className="flex flex-col gap-1 text-sm font-medium text-ink">
           Trial balance file (.xlsx or .csv)
-          <input type="file" name="file" accept=".xlsx,.csv" required className="text-sm font-normal text-ink" />
+          <input type="file" name="file" accept=".xlsx,.csv" required className="text-sm font-normal text-ink file:mr-3 file:min-h-10 file:cursor-pointer file:rounded-md file:border file:border-border-strong file:bg-surface file:px-4 file:text-sm file:font-medium file:text-ink hover:file:bg-surface-muted" />
         </label>
         <button className={buttonClass("primary")} disabled={pending}>{pending ? "Importing…" : hasAccounts ? "Replace trial balance" : "Import trial balance"}</button>
       </div>
@@ -112,7 +112,7 @@ export function MappingSelect({
         aria-label={label}
         defaultValue={value ?? ""}
         onChange={(e) => e.currentTarget.form?.requestSubmit()}
-        className={`min-h-10 w-full rounded-md border bg-surface px-3 py-1.5 text-sm text-ink sm:w-64 ${value ? "border-border-strong" : "border-warning bg-warning-soft"}`}
+        className={`min-h-10 w-full rounded-md border bg-surface px-3 py-1.5 text-sm text-ink sm:w-80 ${value ? "border-border-strong" : "border-warning bg-warning-soft"}`}
       >
         <option value="">Not mapped</option>
         {groups.map((g) => (
