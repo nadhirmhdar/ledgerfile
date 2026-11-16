@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { sampleSize, type SamplingRisk } from "@/domain/sampling";
 
-const input = "rounded border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-900";
-const label = "flex flex-col gap-1 text-sm text-slate-700";
+const input = "min-h-10 rounded-md border border-border-strong bg-surface px-3 py-1.5 text-sm text-ink";
+const label = "flex flex-col gap-1 text-sm font-medium text-ink";
 
 /** Works out a sample size as the auditor types. Nothing is saved: record the result under work done. */
 export function SamplingCalculator({ performanceMaterialityMinor }: { performanceMaterialityMinor: number }) {
@@ -17,9 +17,9 @@ export function SamplingCalculator({ performanceMaterialityMinor }: { performanc
   const money = (minor: number) => (minor / 100).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   return (
-    <details className="mt-4 rounded border border-slate-200 bg-slate-50 p-4">
-      <summary className="cursor-pointer text-sm font-semibold">Sample size calculator</summary>
-      <p className="mt-2 text-xs text-slate-600">
+    <details className="rounded-lg border border-border bg-surface p-4 shadow-card">
+      <summary className="cursor-pointer text-base font-semibold">Sample size calculator</summary>
+      <p className="mt-2 text-sm text-ink-muted">
         First remove and test in full every item above performance materiality ({money(performanceMaterialityMinor)}), and anything unusual, old or related-party.
         Then enter the value of what remains. The factors are a proposal from the draft methodology, not a requirement of any standard.
       </p>
@@ -36,15 +36,15 @@ export function SamplingCalculator({ performanceMaterialityMinor }: { performanc
             <option value="high">High or significant</option>
           </select>
         </label>
-        <label className="flex items-center gap-2 pb-1.5 text-sm text-slate-700">
-          <input type="checkbox" checked={otherEvidence} onChange={(e) => setOtherEvidence(e.target.checked)} />
+        <label className="flex min-h-10 items-center gap-2 text-sm text-ink">
+          <input type="checkbox" className="size-4" checked={otherEvidence} onChange={(e) => setOtherEvidence(e.target.checked)} />
           Analytical or other procedures also give evidence
         </label>
       </div>
       {result && (
         <p role="status" className="mt-3 text-sm">
           {"error" in result ? (
-            <span className="text-red-800">{result.error}</span>
+            <span className="font-medium text-danger-strong">{result.error}</span>
           ) : (
             <>
               <span className="font-semibold">Sample size: {result.size} item(s).</span> Population ÷ performance materiality × factor {result.factor} = {result.calculated}.{" "}
