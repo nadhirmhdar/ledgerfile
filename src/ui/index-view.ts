@@ -38,11 +38,11 @@ export function chipCounts(index: WorkingPaperIndex, q: string): Record<IndexFil
 
 /**
  * Whether a section starts open. With a chip other than All, or a search, every section that has matches is open (the others are
- * not listed). With All and no search, a section is closed unless it holds work in progress or work waiting for review.
+ * not listed). With All and no search every section starts closed: its summary line already shows how many are reviewed and how
+ * many are still to review.
  */
-export function sectionOpen(counts: Pick<Counts, "inProgress" | "prepared">, ctx: { filter: IndexFilter; q: string }): boolean {
-  if (ctx.filter !== "all" || ctx.q.trim() !== "") return true;
-  return counts.inProgress > 0 || counts.prepared > 0;
+export function sectionOpen(_counts: Pick<Counts, "inProgress" | "prepared">, ctx: { filter: IndexFilter; q: string }): boolean {
+  return ctx.filter !== "all" || ctx.q.trim() !== "";
 }
 
 /** "5 of 12 reviewed" for the whole file, or "3 shown" when a filter or search narrows it. */

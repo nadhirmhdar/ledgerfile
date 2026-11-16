@@ -59,20 +59,21 @@ describe("chips", () => {
 
 describe("which sections start open", () => {
   const c = (inProgress: number, prepared: number) => ({ inProgress, prepared });
-  it("keeps a quiet section closed, and opens one with work in progress or waiting for review", () => {
+  it("starts every section closed with All and no search, whatever work it holds", () => {
     expect(sectionOpen(c(0, 0), { filter: "all", q: "" })).toBe(false);
-    expect(sectionOpen(c(1, 0), { filter: "all", q: "" })).toBe(true);
-    expect(sectionOpen(c(0, 2), { filter: "all", q: "" })).toBe(true);
+    expect(sectionOpen(c(3, 0), { filter: "all", q: "" })).toBe(false);
+    expect(sectionOpen(c(0, 2), { filter: "all", q: "   " })).toBe(false);
   });
   it("opens every listed section when a chip other than All, or a search, is on", () => {
     expect(sectionOpen(c(0, 0), { filter: "unreviewed", q: "" })).toBe(true);
     expect(sectionOpen(c(0, 0), { filter: "not_started", q: "" })).toBe(true);
     expect(sectionOpen(c(0, 0), { filter: "all", q: "bank" })).toBe(true);
-    expect(sectionOpen(c(0, 0), { filter: "all", q: "   " })).toBe(false);
   });
-  it("applies to the real index: only sections with work in progress or prepared papers start open", () => {
-    const open = index.sections.filter((s) => sectionOpen(s.counts, { filter: "all", q: "" })).map((s) => s.code);
-    expect(open.sort()).toEqual(["B", "C6", "G"]);
+  it("applies to the real index: no section is open by default, and all the matching ones are open under a chip", () => {
+    expect(index.sections.filter((s) => sectionOpen(s.counts, { filter: "all", q: "" }))).toEqual([]);
+    const shown = viewIndex(index, "unreviewed", "").sections;
+    expect(shown.length).toBeGreaterThan(0);
+    expect(shown.every((s) => sectionOpen(s.counts, { filter: "unreviewed", q: "" }))).toBe(true);
   });
 });
 
