@@ -16,6 +16,7 @@ import { Callout, EmptyState, ProgressBar } from "@/ui/feedback";
 import { Card, ListRow, ListRows, PageHeader, Section, Stat } from "@/ui/layout";
 import { Table, TCell, THead, TRow } from "@/ui/table";
 import { approvalView, checklistPill, mayDo, planningSentence, planningSteps, programmeProgress, riskSummary, stepTone, waitingFor } from "@/ui/audit-view";
+import { ExpandRow } from "@/ui/area-row";
 import { count } from "@/ui/text";
 import { EngagementNav } from "../nav";
 
@@ -195,37 +196,41 @@ export default async function AuditPage({ params }: { params: Promise<{ id: stri
             <Section
               title="Risk assessment and programmes"
               id="areas"
-              description="Rate each assertion for each area. Saving loads the area's programme: core procedures always, extended procedures for assertions rated moderate or above, and significant-risk procedures for assertions flagged significant. Procedures with work recorded are never removed."
+              description="Rating an area's assertions loads its programme; ratings of moderate or above add procedures. Procedures with work recorded are never removed."
             >
-              <ul className="space-y-3">
+              <ul className="divide-y divide-border rounded-lg border border-border bg-surface shadow-card">
                 {overview.areas.map((area) => {
                   const risk = riskSummary({ assessed: area.assessed, fixedRisk: area.fixedRisk, risks: area.risks });
                   const prog = programmeProgress(area);
-                  return (
-                    <li key={area.code} className="rounded-lg border border-border bg-surface p-4 shadow-card">
-                      <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
-                        <h3 className="font-semibold">
-                          <Link href={`${base}/audit/${area.code}`} className="rounded-sm text-accent hover:underline">
-                            {area.code} {area.title}
-                          </Link>
-                        </h3>
-                        <Badge tone={risk.tone}>{risk.label}</Badge>
-                      </div>
-                      <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2">
-                        {prog.loaded ? (
-                          <div className="min-w-48 flex-1 sm:max-w-sm">
+                  const label = area.fixedRisk ? (open && reviewer && area.procedures === 0 ? "Load programme" : "Details") : open && reviewer ? (area.assessed ? "Change ratings" : "Assess risk") : "View ratings";
+                  const head = (
+                    <>
+                      <h3 className="min-w-0 basis-full font-semibold sm:basis-64">
+                        <Link href={`${base}/audit/${area.code}`} className="rounded-sm text-accent hover:underline">
+                          {area.code} {area.title}
+                        </Link>
+                      </h3>
+                      <Badge tone={risk.tone}>{risk.label}</Badge>
+                      {prog.loaded ? (
+                        <span className="flex min-w-40 flex-1 items-center gap-2 sm:max-w-xs">
+                          <span className="min-w-16 flex-1">
                             <ProgressBar value={prog.done} max={prog.total} label={`${area.code} programme: ${prog.label}`} showText={false} />
-                            <p className="mt-1 text-sm text-ink-muted">{prog.label}</p>
-                          </div>
-                        ) : (
-                          <p className="text-sm text-ink-muted">{prog.label}</p>
-                        )}
-                        {prog.toReview && <Badge tone="warning">{prog.toReview}</Badge>}
-                        {prog.toFinish && <Badge tone="warning">{prog.toFinish}</Badge>}
-                      </div>
-
+                          </span>
+                          <span className="text-sm whitespace-nowrap text-ink-muted">
+                            {prog.done} of {prog.total}
+                          </span>
+                        </span>
+                      ) : (
+                        <span className="text-sm text-ink-muted">{prog.label}</span>
+                      )}
+                      {prog.toReview && <Badge tone="warning">{prog.toReview}</Badge>}
+                      {prog.toFinish && <Badge tone="warning">{prog.toFinish}</Badge>}
+                    </>
+                  );
+                  return (
+                    <ExpandRow key={area.code} head={head} label={label}>
                       {area.fixedRisk ? (
-                        <div className="mt-3 text-sm">
+                        <div className="text-sm">
                           <p>
                             Treated as a significant risk on every audit, so there is nothing to rate.{" "}
                             <Link href={`${base}/audit/journals`} className="font-medium text-accent hover:underline">
@@ -240,39 +245,37 @@ export default async function AuditPage({ params }: { params: Promise<{ id: stri
                           )}
                         </div>
                       ) : open && reviewer ? (
-                        <details className="mt-3">
-                          <summary className="inline-flex min-h-10 cursor-pointer items-center text-sm font-medium text-accent hover:underline">{area.assessed ? "Change risk ratings" : "Assess risk"}</summary>
-                          <ActionForm action={setAreaRisksAction} fields={{ engagementId: id, areaCode: area.code }} className="mt-2">
-                            <div className="flex flex-wrap items-end gap-3">
-                              {area.assertions.map((a) => (
-                                <label key={a} className={fieldLabel}>
-                                  {assertionLabel.get(a)}
-                                  <select name={`risk-${a}`} required defaultValue={area.risks[a] ?? ""} className={area.risks[a] ? ctl : ctlWarn}>
-                                    <option value="" disabled>
-                                      Not assessed
+                        <ActionForm action={setAreaRisksAction} fields={{ engagementId: id, areaCode: area.code }}>
+                          <div className="flex flex-wrap items-end gap-3">
+                            {area.assertions.map((a) => (
+                              <label key={a} className={fieldLabel}>
+                                {assertionLabel.get(a)}
+                                <select name={`risk-${a}`} required defaultValue={area.risks[a] ?? ""} className={area.risks[a] ? ctl : ctlWarn}>
+                                  <option value="" disabled>
+                                    Not assessed
+                                  </option>
+                                  {RISK_LEVELS.map((l) => (
+                                    <option key={l.code} value={l.code}>
+                                      {l.label}
                                     </option>
-                                    {RISK_LEVELS.map((l) => (
-                                      <option key={l.code} value={l.code}>
-                                        {l.label}
-                                      </option>
-                                    ))}
-                                  </select>
-                                </label>
-                              ))}
-                              <Button variant="primary">Save and load programme</Button>
-                            </div>
-                          </ActionForm>
-                        </details>
+                                  ))}
+                                </select>
+                              </label>
+                            ))}
+                            <Button variant="primary">Save and load programme</Button>
+                          </div>
+                        </ActionForm>
                       ) : (
-                        <details className="mt-3">
-                          <summary className="inline-flex min-h-10 cursor-pointer items-center text-sm font-medium text-accent hover:underline">View risk ratings</summary>
-                          <p className="mt-1 text-sm">
-                            {area.assessed ? area.assertions.map((a) => `${assertionLabel.get(a)}: ${levelLabel.get(area.risks[a]!)}`).join(" · ") : "Not yet assessed."}
-                          </p>
-                          {open && !reviewer && !area.assessed && <p className="mt-1"><Badge tone="warning">{waitingFor("reviewer")}</Badge></p>}
-                        </details>
+                        <div className="text-sm">
+                          <p>{area.assessed ? area.assertions.map((a) => `${assertionLabel.get(a)}: ${levelLabel.get(area.risks[a]!)}`).join(" · ") : "Not yet assessed."}</p>
+                          {open && !reviewer && !area.assessed && (
+                            <p className="mt-1">
+                              <Badge tone="neutral">{waitingFor("reviewer")}</Badge>
+                            </p>
+                          )}
+                        </div>
                       )}
-                    </li>
+                    </ExpandRow>
                   );
                 })}
               </ul>
@@ -303,34 +306,49 @@ export default async function AuditPage({ params }: { params: Promise<{ id: stri
               title="Checklists"
               description="Every step applies to every audit, except in the checklists marked optional. Only a reviewer or partner can mark a required step not applicable, and only a partner can complete a partner's sign-off step."
             >
-              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                {STAGES.map((stage) => (
-                  <div key={stage.code}>
-                    <h3 className="mb-2 font-semibold">{stage.label}</h3>
-                    <ListRows>
-                      {overview.checklists
-                        .filter((c) => c.stage === stage.code)
-                        .map((c) => {
-                          const pill = checklistPill(c);
-                          return (
-                            <ListRow
-                              key={c.code}
-                              title={`${c.code} ${c.title}`}
-                              href={`${base}/audit/${c.code}`}
-                              meta={
-                                <span className="flex flex-wrap items-center justify-end gap-2">
-                                  <span className="whitespace-nowrap">
-                                    {c.completed} of {c.steps}
+              <div className="space-y-3">
+                {STAGES.map((stage) => {
+                  const items = overview.checklists.filter((c) => c.stage === stage.code);
+                  const steps = items.reduce((n, c) => n + c.steps, 0);
+                  const done = items.reduce((n, c) => n + c.completed, 0);
+                  const toReview = items.reduce((n, c) => n + c.unreviewed, 0);
+                  const stagePill = checklistPill({ steps, completed: done, unreviewed: toReview });
+                  // Open when something here needs attention: work to review, or steps started and not finished.
+                  const active = toReview > 0 || (done > 0 && done < steps);
+                  return (
+                    <details key={stage.code} open={active} className="rounded-lg border border-border bg-surface shadow-card">
+                      <summary className="flex min-h-12 cursor-pointer flex-wrap items-center gap-x-4 gap-y-1 px-4 py-2 font-semibold">
+                        <span>{stage.label}</span>
+                        <span className="text-sm font-normal text-ink-muted">
+                          {done} of {steps}
+                        </span>
+                        {stagePill && <Badge tone={stagePill.tone}>{stagePill.label}</Badge>}
+                      </summary>
+                      <div className="border-t border-border">
+                        <ListRows className="rounded-none border-0">
+                          {items.map((c) => {
+                            const pill = checklistPill(c);
+                            return (
+                              <ListRow
+                                key={c.code}
+                                title={`${c.code} ${c.title}`}
+                                href={`${base}/audit/${c.code}`}
+                                meta={
+                                  <span className="flex flex-wrap items-center justify-end gap-2">
+                                    <span className="whitespace-nowrap">
+                                      {c.completed} of {c.steps}
+                                    </span>
+                                    {pill && <Badge tone={pill.tone}>{pill.label}</Badge>}
                                   </span>
-                                  {pill && <Badge tone={pill.tone}>{pill.label}</Badge>}
-                                </span>
-                              }
-                            />
-                          );
-                        })}
-                    </ListRows>
-                  </div>
-                ))}
+                                }
+                              />
+                            );
+                          })}
+                        </ListRows>
+                      </div>
+                    </details>
+                  );
+                })}
               </div>
             </Section>
 

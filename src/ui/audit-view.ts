@@ -145,7 +145,7 @@ export function planningSteps(i: PlanningInput): PlanningStep[] {
 }
 
 /** The tone of a step's pill. */
-export const stepTone = (s: PlanningStep): Tone => (s.state === "done" ? "success" : s.state === "needs_attention" ? "warning" : s.waiting ? "warning" : "neutral");
+export const stepTone = (s: PlanningStep): Tone => (s.state === "done" ? "success" : s.state === "needs_attention" ? "warning" : "neutral");
 
 /** One sentence for the top of the page. */
 export function planningSentence(i: { enabled: boolean; materialitySet: boolean; materialityStale: boolean; areasAssessed: number; areasTotal: number; approval: "none" | "current" | "lapsed" }): string {

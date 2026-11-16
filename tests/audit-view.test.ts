@@ -81,7 +81,8 @@ describe("planning steps", () => {
     expect(stepTone(step({ ...base, materialitySet: true }, "materiality"))).toBe("success");
     expect(stepTone(step({ ...base, materialitySet: true, materialityStale: true }, "materiality"))).toBe("warning");
     expect(stepTone(step(base, "materiality"))).toBe("neutral");
-    expect(stepTone(step({ ...base, role: "preparer" }, "materiality"))).toBe("warning");
+    // Waiting on someone else is not an alarm: the pill stays neutral.
+    expect(stepTone(step({ ...base, role: "preparer" }, "materiality"))).toBe("neutral");
   });
   it("links each step to its section", () => {
     expect(planningSteps(base).map((s) => s.anchor)).toEqual(["#materiality", "#areas", "#approval"]);
