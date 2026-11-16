@@ -119,13 +119,13 @@ describe("stages", () => {
     expect(stage(i, "review")).toMatchObject({ done: 2 + 6, total: 2 + 10, status: "needs_review" });
   });
   it("finish is not started, ready to lock, or locked", () => {
-    expect(stage(input("partner"), "finish")).toMatchObject({ status: "not_started", summary: "2 things to do before this file can be locked." });
+    expect(stage(input("partner"), "finish")).toMatchObject({ status: "not_started", summary: "2 things still open before the file can be locked." });
     expect(stage(input("partner", { review: { leadSheets: [], openPoints: 0, ready: true, blockers: [] } }), "finish")).toMatchObject({ status: "done", statusLabel: "Ready to lock" });
     expect(stage(input("partner", { status: "locked", lockedAt: "2026-11-02 09:15 UTC", lockedByName: "Dana Partner" }), "finish")).toMatchObject({
       status: "locked",
       summary: "Locked on 2026-11-02 09:15 UTC by Dana Partner.",
     });
-    expect(stage(input("partner", { review: { leadSheets: [], openPoints: 0, ready: false, blockers: ["1 review point(s) are still open."] } }), "finish").summary).toBe("1 thing to do before this file can be locked.");
+    expect(stage(input("partner", { review: { leadSheets: [], openPoints: 0, ready: false, blockers: ["1 review point(s) are still open."] } }), "finish").summary).toBe("1 thing still open before the file can be locked.");
   });
   it("links each stage to where its work is done", () => {
     const hrefs = stagesFor(input("preparer", { audit: audited() })).map((s) => s.href);
@@ -239,6 +239,7 @@ describe("to do", () => {
     expect(at("No trial balance has been imported.").href).toBe(`${BASE}/trial-balance`);
     expect(at("Statement check failed: Balance sheet balances.").href).toBe(`${BASE}/statements`);
     expect(at("Audit: materiality has not been set.")).toEqual({ text: "Set materiality", href: `${BASE}/audit`, owner: "reviewer" });
+    expect(at("Audit: the programme has not been loaded for 2 area(s).")).toEqual({ text: "Load the audit programme for 2 areas", href: `${BASE}/audit`, owner: "reviewer" });
     expect(at("Audit: the partner has not approved the risk assessment.").owner).toBe("partner");
     expect(at("Audit: 2 journal entry(ies) selected for testing have no conclusion.")).toMatchObject({ text: "2 journal entries to conclude on", href: `${BASE}/audit/journals` });
     expect(at("Audit: 2 significant movement(s) in the analytical review have no explanation.").href).toBe(`${BASE}/audit/analytics`);
@@ -308,8 +309,8 @@ describe("counts", () => {
 
 describe("summary sentence", () => {
   it("counts the things to do, ready, or empty", () => {
-    expect(buildHomeModel(input("partner")).summary).toBe("2 things to do before this file can be locked.");
-    expect(buildHomeModel(input("partner", { review: { leadSheets: [], openPoints: 0, ready: false, blockers: ["1 review point(s) are still open."] } })).summary).toBe("1 thing to do before this file can be locked.");
+    expect(buildHomeModel(input("partner")).summary).toBe("2 things still open before the file can be locked.");
+    expect(buildHomeModel(input("partner", { review: { leadSheets: [], openPoints: 0, ready: false, blockers: ["1 review point(s) are still open."] } })).summary).toBe("1 thing still open before the file can be locked.");
     expect(buildHomeModel(input("partner", { review: { leadSheets: [], openPoints: 0, ready: true, blockers: [] } })).summary).toBe("Ready to lock.");
   });
 });

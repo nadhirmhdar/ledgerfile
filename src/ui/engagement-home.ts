@@ -124,7 +124,7 @@ const RULES: { re: RegExp; where: Where; owner?: "reviewer" | "partner"; say: (m
   { re: /^Audit: materiality has not been set\.$/, where: "audit", owner: "reviewer", say: () => "Set materiality" },
   { re: /^Audit: the benchmark figure has changed since materiality was set\./, where: "audit", owner: "reviewer", say: () => "Revise or confirm materiality again" },
   { re: /^Audit: risk has not been assessed for (\d+) area\(s\)\.$/, where: "audit", owner: "reviewer", say: (m) => `Assess risk in ${count(+m[1], "area")}` },
-  { re: /^Audit: the programme has not been loaded for (\d+) area\(s\)\.$/, where: "audit", say: (m) => `Load the audit programme for ${count(+m[1], "area")}` },
+  { re: /^Audit: the programme has not been loaded for (\d+) area\(s\)\.$/, where: "audit", owner: "reviewer", say: (m) => `Load the audit programme for ${count(+m[1], "area")}` },
   { re: /^Audit: the partner has not approved the risk assessment\.$/, where: "audit", owner: "partner", say: () => "Get the risk assessment approved by a partner" },
   { re: /^Audit: the risk assessment has changed since the partner approved it\./, where: "audit", owner: "partner", say: () => "Approve the risk assessment again" },
   { re: /^Audit: (\d+) procedure\(s\) and checklist step\(s\) are not yet completed\.$/, where: "audit", say: (m) => `${count(+m[1], "audit procedure or checklist step", "audit procedures or checklist steps")} to complete` },
@@ -328,7 +328,7 @@ export function stagesFor(i: HomeInput): Stage[] {
     ? { key: "finish", title: "Finish", status: "locked", done: 1, total: 1, summary: `Locked${i.lockedAt ? ` on ${i.lockedAt}` : ""}${i.lockedByName ? ` by ${i.lockedByName}` : ""}.`, href: p.review }
     : i.review.ready
       ? { key: "finish", title: "Finish", status: "done", statusLabel: "Ready to lock", done: 1, total: 1, summary: "Everything is prepared and reviewed. A partner can lock the file.", href: p.review }
-      : { key: "finish", title: "Finish", status: "not_started", done: 0, total: 1, summary: `${count(i.review.blockers.length, "thing")} to do before this file can be locked.`, href: p.review };
+      : { key: "finish", title: "Finish", status: "not_started", done: 0, total: 1, summary: `${count(i.review.blockers.length, "thing")} still open before the file can be locked.`, href: p.review };
 
   return [setup, plan, fieldwork, review, finish];
 }
@@ -346,7 +346,7 @@ export function buildHomeModel(i: HomeInput): HomeModel {
   if (locked) summary = `Locked${i.lockedAt ? ` on ${i.lockedAt}` : ""}${i.lockedByName ? ` by ${i.lockedByName}` : ""}. Nothing can be changed until a partner unlocks it.`;
   else if (empty) summary = "Start by importing the trial balance.";
   else if (i.review.ready) summary = "Ready to lock.";
-  else summary = `${count(blockers.length, "thing")} to do before this file can be locked.`;
+  else summary = `${count(blockers.length, "thing")} still open before the file can be locked.`;
 
   const tiles: Tile[] = [
     { key: "papers", label: "Papers reviewed", value: `${i.papers.reviewed} of ${i.papers.total}`, hint: i.papers.total === 0 ? "No papers yet" : null, href: p.index },

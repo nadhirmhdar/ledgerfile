@@ -92,7 +92,7 @@ export function StepList({ steps }: { steps: Step[] }) {
               <StatusBadge status={s.status} label={s.statusLabel} />
             </div>
             <p className="mt-0.5 text-sm text-ink-muted">{s.summary}</p>
-            {s.total > 0 && (
+            {s.total > 1 && (
               <div className="mt-2 max-w-md">
                 <ProgressBar value={s.done} max={s.total} label={`${s.title}: ${s.done} of ${s.total} done`} tone={s.status === "done" ? "success" : "accent"} />
               </div>

@@ -137,7 +137,7 @@ export default async function EngagementHome({ params }: { params: Promise<{ id:
           </Card>
         ) : null}
 
-        <Section title="Where things stand" description="These update from the work you record. Nothing to tick by hand.">
+        <Section title="Where things stand" description="Worked out from what is recorded on the file.">
           <ul className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
             {model.tiles.map((t) => (
               <li key={t.key}>
@@ -150,7 +150,7 @@ export default async function EngagementHome({ params }: { params: Promise<{ id:
 
         {!model.locked && model.toDo.length > 0 && (
           <Section
-            title="To do before this file can be locked"
+            title="Still open before the file can be locked"
             description={count(model.toDoTotal, "thing") + " left."}
             actions={
               more && (

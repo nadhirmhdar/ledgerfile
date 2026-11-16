@@ -5,9 +5,8 @@ import * as repo from "@/server/repo";
 import { NewClientForm, NewEngagementForm } from "@/app/forms";
 import { canCreateClient, canCreateEngagement } from "@/domain/permissions";
 import { StatusBadge } from "@/ui/badge";
-import { buttonClass } from "@/ui/button";
+import { EngagementsHeader } from "@/ui/create-panels";
 import { EmptyState } from "@/ui/feedback";
-import { PageHeader } from "@/ui/layout";
 import { Table, TCell, THead, TRow } from "@/ui/table";
 import { count } from "@/ui/text";
 
@@ -25,31 +24,11 @@ export default async function Home() {
 
   return (
     <div className="py-8 text-ink">
-      <PageHeader
-        title="Engagements"
+      <EngagementsHeader
         subtitle={engagements.length === 0 ? "No engagements yet." : `${count(engagements.length, "engagement")}, ${open} open.`}
+        engagementForm={mayCreateEngagement ? clients.length === 0 ? <p className="text-sm text-ink-muted">Add a client first.</p> : <NewEngagementForm clients={clients} /> : undefined}
+        clientForm={mayCreateClient ? <NewClientForm /> : undefined}
       />
-
-      {(mayCreateEngagement || mayCreateClient) && (
-        <div className="mt-6 space-y-3">
-          {mayCreateEngagement && (
-            <details className="group rounded-lg border border-border bg-surface shadow-card">
-              <summary className={`${buttonClass("primary")} m-3 w-fit cursor-pointer list-none [&::-webkit-details-marker]:hidden`}>New engagement</summary>
-              <div className="border-t border-border px-4 py-4 sm:px-5">
-                {clients.length === 0 ? <p className="text-sm text-ink-muted">Add a client first.</p> : <NewEngagementForm clients={clients} />}
-              </div>
-            </details>
-          )}
-          {mayCreateClient && (
-            <details className="group rounded-lg border border-border bg-surface shadow-card">
-              <summary className={`${buttonClass("secondary")} m-3 w-fit cursor-pointer list-none [&::-webkit-details-marker]:hidden`}>New client</summary>
-              <div className="border-t border-border px-4 py-4 sm:px-5">
-                <NewClientForm />
-              </div>
-            </details>
-          )}
-        </div>
-      )}
 
       <section aria-label="Engagement list" className="mt-6">
         {engagements.length === 0 ? (

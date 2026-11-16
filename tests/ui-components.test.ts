@@ -59,6 +59,7 @@ describe("components render the accessibility attributes they promise", () => {
         steps: [
           { key: "a", title: "Set up", summary: "s", status: "done", done: 3, total: 3, href: "/a" },
           { key: "b", title: "Plan", summary: "s", status: "not_applicable", statusLabel: "Not being audited", done: 0, total: 0, href: "/b" },
+          { key: "c", title: "Finish", summary: "s", status: "not_started", done: 0, total: 1, href: "/c" },
         ],
       }),
     );
