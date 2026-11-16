@@ -100,6 +100,8 @@ export const paths = (id: string) => {
   return {
     base,
     trialBalance: `${base}/trial-balance`,
+    toMap: `${base}/trial-balance?show=unmapped`,
+    toCheck: `${base}/trial-balance?show=review`,
     audit: `${base}/audit`,
     confirmations: `${base}/audit/confirmations`,
     journals: `${base}/audit/journals`,
@@ -180,9 +182,9 @@ function pendingActions(i: HomeInput): Action[] {
     return out;
   }
   if (i.accounts.unmapped > 0)
-    out.push({ who: "any", title: `Map ${count(i.accounts.unmapped, "account")}`, description: "Each account needs a lead sheet group before the lead sheets and statements are right.", href: p.trialBalance, label: "Map the accounts", waiting: "" });
+    out.push({ who: "any", title: `Map ${count(i.accounts.unmapped, "account")}`, description: "Each account needs a lead sheet group before the lead sheets and statements are right.", href: p.toMap, label: "Show the accounts to map", waiting: "" });
   if (i.accounts.toAccept > 0)
-    out.push({ who: "any", title: `Check ${count(i.accounts.toAccept, "suggested mapping")}`, description: "Suggested mappings are only suggestions until someone accepts them.", href: p.trialBalance, label: "Check the suggestions", waiting: "" });
+    out.push({ who: "any", title: `Check ${count(i.accounts.toAccept, "suggested mapping")}`, description: "Suggested mappings are only suggestions until someone accepts them.", href: p.toCheck, label: "Check the suggestions", waiting: "" });
 
   if (a.enabled) {
     const unassessed = a.areas.filter((x) => !x.assessed).length;
@@ -264,7 +266,7 @@ export function stagesFor(i: HomeInput): Stage[] {
       : setupDone === 3
         ? `${count(accounts.total, "account")} imported, mapped and checked.`
         : [accounts.unmapped > 0 && `${accounts.unmapped} not mapped`, accounts.toAccept > 0 && `${count(accounts.toAccept, "suggested mapping")} to check`].filter(Boolean).join(", ") + ".",
-    href: p.trialBalance,
+    href: accounts.unmapped > 0 ? p.toMap : accounts.toAccept > 0 ? p.toCheck : p.trialBalance,
   };
 
   // Plan: the audit's planning steps. Not being audited is not a problem and blocks nothing.

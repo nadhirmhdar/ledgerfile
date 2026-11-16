@@ -183,6 +183,10 @@ describe("the next step respects the role", () => {
   it("follows the work order: trial balance, mapping, planning, fieldwork, review, lock", () => {
     const title = (o: Partial<HomeInput>, role: Role = "partner") => nextStepFor(input(role, o))?.title;
     expect(title({ accounts: { total: 9, unmapped: 3, toAccept: 2 } })).toBe("Map 3 accounts");
+    expect(nextStepFor(input("partner", { accounts: { total: 9, unmapped: 3, toAccept: 2 } }))?.href).toBe(`${BASE}/trial-balance?show=unmapped`);
+    expect(nextStepFor(input("partner", { accounts: { total: 9, unmapped: 0, toAccept: 2 } }))?.href).toBe(`${BASE}/trial-balance?show=review`);
+    expect(stage(input("partner", { accounts: { total: 9, unmapped: 3, toAccept: 2 } }), "setup").href).toBe(`${BASE}/trial-balance?show=unmapped`);
+    expect(stage(input("partner", { accounts: { total: 9, unmapped: 0, toAccept: 2 } }), "setup").href).toBe(`${BASE}/trial-balance?show=review`);
     expect(title({ accounts: { total: 9, unmapped: 0, toAccept: 1 } })).toBe("Check 1 suggested mapping");
     expect(title({ audit: audited({ materialitySet: false }) })).toBe("Set materiality");
     expect(title({ audit: audited({ areas: [area({ procedures: 3, completed: 1, schedules: 2, schedulesToFinish: 2 })] }) })).toBe("Complete 2 audit procedures");

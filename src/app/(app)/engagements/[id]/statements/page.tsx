@@ -54,7 +54,7 @@ export default async function StatementsPage({ params, searchParams }: { params:
     return (
       <tr className={line.kind === "line" ? "" : "font-semibold"}>
         <td className="py-1.5">
-          {line.groupCode ? <Link href={`${base}/trial-balance#ls-${line.groupCode}`} className="text-blue-700 underline">{line.label}</Link> : line.label}
+          {line.groupCode ? <Link href={`${base}/lead-sheets#ls-${line.groupCode}`} className="text-blue-700 underline">{line.label}</Link> : line.label}
         </td>
         <td className="py-1.5 pl-4 text-right font-normal">{note ? <a href={`#note-${note}`} className="text-blue-700 underline">{note}</a> : ""}</td>
         <td className={`${num} ${ruleFor(line.kind)}`}>{fmt(line.current)}</td>

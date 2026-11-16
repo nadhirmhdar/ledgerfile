@@ -9,6 +9,7 @@ const GROUPS = [
     title: "Set up",
     items: [
       { key: "tb", label: "Trial balance and mapping", path: "/trial-balance" },
+      { key: "leadsheets", label: "Lead sheets", path: "/lead-sheets" },
       { key: "journals", label: "Journal entries", path: "/journals" },
     ],
   },

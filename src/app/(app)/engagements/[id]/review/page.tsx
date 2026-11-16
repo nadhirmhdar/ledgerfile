@@ -150,7 +150,7 @@ export default async function ReviewPage({ params }: { params: Promise<{ id: str
                 {sheets.map((sheet) => (
                   <tr key={sheet.groupCode} className="border-b border-slate-200 align-top">
                     <td className="py-2">
-                      <Link href={`/engagements/${id}/trial-balance#ls-${sheet.groupCode}`} className="text-blue-700 underline">{sheet.groupName}</Link>
+                      <Link href={`/engagements/${id}/lead-sheets#ls-${sheet.groupCode}`} className="text-blue-700 underline">{sheet.groupName}</Link>
                     </td>
                     <td className="py-2 pl-4 text-right tabular-nums whitespace-nowrap">{formatAmount(sheet.closingMinor)}</td>
                     <td className="py-2 pl-4">{cell(sheet, "preparer")}</td>

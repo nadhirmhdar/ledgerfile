@@ -19,18 +19,18 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         Skip to main content
       </a>
       <header className="border-b border-border bg-surface">
-        <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-3 px-4 sm:px-6">
-          <div className="flex items-center gap-4">
+        <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-2 px-4 sm:gap-3 sm:px-6">
+          <div className="flex min-w-0 items-center gap-2 sm:gap-4">
             <Link href="/" className="py-3 text-lg font-bold tracking-tight text-accent">
               LedgerFile
             </Link>
             <TopNav />
           </div>
           <details className="group relative">
-            <summary className="inline-flex min-h-10 cursor-pointer list-none items-center gap-2 rounded-md px-2 text-sm font-medium text-ink hover:bg-surface-muted [&::-webkit-details-marker]:hidden">
+            <summary aria-label={session.name} className="inline-flex min-h-10 min-w-10 shrink-0 cursor-pointer justify-center list-none items-center gap-2 rounded-md px-2 text-sm font-medium text-ink hover:bg-surface-muted [&::-webkit-details-marker]:hidden">
               <UserIcon />
-              <span className="max-w-40 truncate">{session.name}</span>
-              <ChevronDownIcon className="transition-transform group-open:rotate-180" />
+              <span className="hidden max-w-40 truncate sm:inline">{session.name}</span>
+              <ChevronDownIcon className="hidden transition-transform group-open:rotate-180 sm:block" />
             </summary>
             <div className="absolute right-0 z-40 mt-1 w-64 rounded-lg border border-border bg-surface p-3 shadow-pop">
               <p className="font-semibold text-ink">{session.name}</p>
