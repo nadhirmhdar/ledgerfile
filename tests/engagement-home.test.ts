@@ -259,6 +259,9 @@ describe("to do", () => {
   });
   it("tidies a blocker it does not know and sends it to Review and sign-off", () => {
     expect(explainBlocker("Audit: 3 thing(s) are odd.", ID)).toEqual({ text: "3 things are odd.", href: `${BASE}/review`, owner: null });
+    // The fallback now agrees the verb for one, and rewrites every noun in a phrase joined by "and".
+    expect(explainBlocker("Audit: 1 thing(s) and extra item(s) are odd.", ID).text).toBe("1 thing and extra item is odd.");
+    expect(explainBlocker("Audit: 2 odd entry(ies) have no note.", ID).text).toBe("2 odd entries have no note.");
   });
   it("recognises every blocker the domain writes, so a reworded blocker cannot silently fall back", () => {
     const real = [

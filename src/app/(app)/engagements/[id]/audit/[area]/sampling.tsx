@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { sampleSize, type SamplingRisk } from "@/domain/sampling";
+import { count } from "@/ui/text";
 
 const input = "min-h-10 rounded-md border border-border-strong bg-surface px-3 py-1.5 text-sm text-ink";
 const label = "flex flex-col gap-1 text-sm font-medium text-ink";
@@ -47,7 +48,7 @@ export function SamplingCalculator({ performanceMaterialityMinor }: { performanc
             <span className="font-medium text-danger-strong">{result.error}</span>
           ) : (
             <>
-              <span className="font-semibold">Sample size: {result.size} item(s).</span> Population ÷ performance materiality × factor {result.factor} = {result.calculated}.{" "}
+              <span className="font-semibold">Sample size: {count(result.size, "item")}.</span> Population ÷ performance materiality × factor {result.factor} = {result.calculated}.{" "}
               {result.notes.join(" ")} Select so that every item has a chance of selection, and record the method under work done.
             </>
           )}

@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import type { FormState } from "./actions";
+import { plainCount } from "@/ui/text";
 
 const initial: FormState = { ok: true, message: "" };
 
@@ -31,11 +32,11 @@ export function ActionForm({
       </fieldset>
       {state.message && (
         <div role="status" className={`mt-1 text-sm font-medium ${state.ok ? "text-success-strong" : "text-danger-strong"}`}>
-          <p>{state.message}</p>
+          <p>{plainCount(state.message)}</p>
           {state.details && state.details.length > 0 && (
             <ul className="mt-1 list-disc pl-5">
               {state.details.map((d) => (
-                <li key={d}>{d}</li>
+                <li key={d}>{plainCount(d)}</li>
               ))}
             </ul>
           )}

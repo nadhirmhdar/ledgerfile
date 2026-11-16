@@ -1,6 +1,6 @@
 import { canLock, canReview, type Role } from "../domain/signoff";
 import type { Status } from "./status";
-import { capitalise, count } from "./text";
+import { capitalise, count, plainCount } from "./text";
 
 /**
  * What the engagement home shows, worked out from reads the app already has: no new queries, and no rules of its own about the
@@ -150,7 +150,7 @@ export function explainBlocker(blocker: string, engagementId: string): ToDo {
     const m = blocker.match(r.re);
     if (m) return { text: r.say(m), href: p[r.where], owner: r.owner ?? null };
   }
-  const tidy = blocker.replace(/^Audit: /, "").replace(/y\(ies\)/g, "ies").replace(/\(s\)/g, "s");
+  const tidy = plainCount(blocker.replace(/^Audit: /, ""));
   return { text: capitalise(tidy), href: p.review, owner: null };
 }
 
