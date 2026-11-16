@@ -497,7 +497,7 @@ export default async function ConfirmationsPage({ params, searchParams }: { para
                                     <ActionForm action={saveReconciliationAction} fields={{ confirmationId: c.id }} className="space-y-2">
                                       <h4 className={heading}>Reconciliation of the difference</h4>
                                       <label className={fieldLabel}>
-                                        Reconciliation of the difference
+                                        How the difference was reconciled
                                         <textarea name="text" defaultValue={c.reconciliation ?? ""} rows={3} maxLength={4000} className={`${ctl} min-h-20`} />
                                       </label>
                                       <Button variant="secondary" size="sm">
@@ -509,7 +509,7 @@ export default async function ConfirmationsPage({ params, searchParams }: { para
                                     <ActionForm action={saveAlternativeProceduresAction} fields={{ confirmationId: c.id }} className="space-y-2">
                                       <h4 className={heading}>Alternative procedures performed</h4>
                                       <label className={fieldLabel}>
-                                        Alternative procedures performed
+                                        What was done instead
                                         <textarea name="text" defaultValue={c.alternativeProcedures ?? ""} rows={3} maxLength={4000} className={`${ctl} min-h-20`} />
                                       </label>
                                       <Button variant="secondary" size="sm">

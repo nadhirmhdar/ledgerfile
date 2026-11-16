@@ -123,8 +123,10 @@ describe("the heading when a filter is applied", () => {
     expect(requestsHeading({ overall, area: "", areaTitle: null, q: "bank" }).scope).toBe("The tiles and filters below count the search “bank”.");
     expect(requestsHeading({ overall, area: "C6", areaTitle: "C6 Cash and bank", q: "bank" }).scope).toBe("The tiles and filters below count C6 Cash and bank and the search “bank”.");
   });
-  it("falls back to the code when the area title is unknown, and still says whole list for an empty list", () => {
+  it("falls back to the code when the area title is unknown, and drops the prefix and scope for an empty list", () => {
     expect(requestsHeading({ overall, area: "C99", areaTitle: null, q: "" }).scope).toBe("The tiles and filters below count C99.");
-    expect(requestsHeading({ overall: { total: 0, open: 0, overdue: 0, received: 0, notApplicable: 0 }, area: "C6", areaTitle: null, q: "" }).subtitle).toBe("Whole list: No requests yet.");
+    // With no requests at all, a filter changes nothing: the plain sentence, no prefix and no scope line.
+    const none = { total: 0, open: 0, overdue: 0, received: 0, notApplicable: 0 };
+    expect(requestsHeading({ overall: none, area: "C6", areaTitle: "C6 Cash and bank", q: "bank" })).toEqual({ subtitle: "No requests yet.", scope: null });
   });
 });

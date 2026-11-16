@@ -119,6 +119,8 @@ export function requestsHeading(i: {
   q: string;
 }): { subtitle: string; scope: string | null } {
   const whole = requestsSentence(i.overall);
+  // With no requests at all there is nothing for a filter to be a part of.
+  if (i.overall.total === 0) return { subtitle: whole, scope: null };
   const parts = [i.area ? (i.area === "general" ? "general requests" : (i.areaTitle ?? i.area)) : null, i.q ? `the search “${i.q}”` : null].filter(Boolean) as string[];
   if (parts.length === 0) return { subtitle: whole, scope: null };
   return { subtitle: `Whole list: ${whole}`, scope: `The tiles and filters below count ${parts.join(" and ")}.` };
