@@ -21,7 +21,8 @@ import { Button } from "@/ui/button";
 import { ctl, Disclosure, fieldLabel } from "@/ui/controls";
 import { explainBlocker } from "@/ui/engagement-home";
 import { Callout, EmptyState, ProgressBar } from "@/ui/feedback";
-import { Card, ListRow, ListRows, PageHeader, Section } from "@/ui/layout";
+import { Card, PageHeader, Section } from "@/ui/layout";
+import { ToDoRows } from "@/ui/todo-rows";
 import { openPointsPill, pointControls, readinessView, signCell, signOffProgress, type Level } from "@/ui/review-view";
 import { Table, TCell, THead, TRow } from "@/ui/table";
 import { count } from "@/ui/text";
@@ -155,12 +156,7 @@ export default async function ReviewPage({ params }: { params: Promise<{ id: str
           </Card>
         ) : (
           <Section title="Still open" description="Each item links to where it is dealt with.">
-            <ListRows>
-              {overview.readiness.blockers.map((b) => {
-                const t = explainBlocker(b, id);
-                return <ListRow key={b} title={t.text} href={t.href} subtitle={t.owner ? `For a ${t.owner}` : undefined} />;
-              })}
-            </ListRows>
+            <ToDoRows items={overview.readiness.blockers.map((b) => explainBlocker(b, id))} />
           </Section>
         )}
 
