@@ -8,7 +8,7 @@ import { ChevronDownIcon } from "./icons";
  * quick action and a button that opens the rest of the row as a panel below, full width. The panel is passed in already built,
  * so any form in it keeps its own action.
  */
-export function TwoLineRow({ line1, detail, quick, label, accessibleName, children }: { line1: ReactNode; detail: ReactNode; quick?: ReactNode; label: string; accessibleName: string; children: ReactNode }) {
+export function TwoLineRow({ line1, detail, quick, openLabel, label, accessibleName, children }: { line1: ReactNode; detail: ReactNode; quick?: ReactNode; openLabel?: string; label: string; accessibleName: string; children: ReactNode }) {
   const [open, setOpen] = useState(false);
   return (
     <li className="px-4 py-1">
@@ -17,6 +17,11 @@ export function TwoLineRow({ line1, detail, quick, label, accessibleName, childr
         <div className="min-w-0 text-sm text-ink-muted">{detail}</div>
         <div className="flex flex-wrap items-center gap-2">
           {quick}
+          {openLabel && (
+            <button type="button" onClick={() => setOpen(true)} className="inline-flex min-h-8 items-center rounded-md border border-accent bg-accent px-3 text-sm font-medium text-surface hover:bg-accent-hover">
+              {openLabel}
+            </button>
+          )}
           <button
             type="button"
             aria-expanded={open}

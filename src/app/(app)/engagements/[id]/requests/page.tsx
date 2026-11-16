@@ -26,7 +26,7 @@ import { Button, LinkButton } from "@/ui/button";
 import { ctl, Disclosure, fieldLabel } from "@/ui/controls";
 import { Callout, EmptyState } from "@/ui/feedback";
 import { Card, PageHeader, Section, Stat } from "@/ui/layout";
-import { filterRequests, parseAreaFilter, parseSearch, parseStatus, requestMeta, requestResults, requestsSentence, rowControls, statusCounts, STATUS_PILL, type StatusFilter } from "@/ui/request-view";
+import { filterRequests, parseAreaFilter, parseSearch, parseStatus, requestMeta, requestResults, requestsHeading, rowControls, statusCounts, STATUS_PILL, type StatusFilter } from "@/ui/request-view";
 import { count } from "@/ui/text";
 import { TwoLineRow } from "@/ui/two-line-row";
 import { EngagementNav } from "../nav";
@@ -68,6 +68,7 @@ export default async function RequestsPage({ params, searchParams }: { params: P
   // The tiles use the chips' counts (the chosen area and search), so the two never disagree.
   const c = chips;
 
+  const heading = requestsHeading({ overall: counts.overall, area: areaFilter, areaTitle: AREAS.find((a) => a.code === areaFilter) ? `${areaFilter} ${AREAS.find((a) => a.code === areaFilter)!.title}` : null, q });
   const chipList: { key: StatusFilter; label: string; n: number }[] = [
     { key: "", label: "All", n: chips.all },
     { key: "open", label: "Open", n: chips.open },
@@ -90,7 +91,7 @@ export default async function RequestsPage({ params, searchParams }: { params: P
             </span>
           </>
         }
-        subtitle={requestsSentence(counts.overall)}
+        subtitle={heading.subtitle}
         actions={
           <a href={`${base}/export`} className="inline-flex min-h-10 items-center justify-center rounded-md border border-border-strong bg-surface px-4 text-sm font-medium whitespace-nowrap text-ink hover:bg-surface-muted">
             Download as Excel
@@ -100,6 +101,7 @@ export default async function RequestsPage({ params, searchParams }: { params: P
       <EngagementNav id={id} current="requests" status={engagement.status} />
 
       <div className="mt-6 space-y-6">
+        {heading.scope && <p className="text-sm text-ink-muted">{heading.scope}</p>}
         <ul className="grid grid-cols-2 gap-3 sm:grid-cols-4" aria-label="Summary">
           <li>
             <Stat label="Open" value={c.open} href={link("open")} />
