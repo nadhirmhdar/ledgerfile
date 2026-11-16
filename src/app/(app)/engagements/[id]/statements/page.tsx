@@ -25,8 +25,8 @@ import { EngagementNav } from "../nav";
 
 export const dynamic = "force-dynamic";
 
-const num = "px-4 py-1.5 text-right tabular-nums whitespace-nowrap";
-const th = "px-4 py-2 font-medium";
+const num = "px-2 py-1.5 sm:px-4 text-right tabular-nums whitespace-nowrap";
+const th = "px-2 py-2 font-medium sm:px-4";
 const ruleFor = (kind: string) => (kind === "total" ? "border-t border-b-2 border-ink" : kind === "subtotal" ? "border-t border-border-strong" : "");
 const chip = "inline-flex min-h-10 items-center rounded-full border px-4 text-sm font-medium";
 
@@ -51,10 +51,12 @@ function Brackets({ text }: { text: string }) {
 function Statement({ id, title, sub, open, children }: { id: string; title: string; sub: string; open: boolean; children: ReactNode }) {
   return (
     <details id={id} open={open} className="group scroll-mt-4 rounded-lg border border-border bg-surface shadow-card">
-      <summary className={`${summaryRow} flex-wrap font-semibold`}>
+      <summary className={`${summaryRow} font-semibold`}>
         <SummaryChevron />
-        <h2 className="text-lg font-semibold">{title}</h2>
-        <span className="text-sm font-normal text-ink-muted">{sub}</span>
+        <span className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-0.5">
+          <h2 className="text-lg font-semibold">{title}</h2>
+          <span className="text-sm font-normal text-ink-muted">{sub}</span>
+        </span>
       </summary>
       <div className="border-t border-border">{children}</div>
     </details>
@@ -118,7 +120,7 @@ export default async function StatementsPage({ params, searchParams }: { params:
     const note = line.groupCode ? pack.noteByGroup[line.groupCode] : undefined;
     return (
       <tr className={line.kind === "line" ? "" : "font-semibold"}>
-        <td className="min-w-44 px-4 py-1.5">
+        <td className="px-2 py-1.5 sm:min-w-44 sm:px-4">
           {line.groupCode ? (
             <Link href={`${base}/lead-sheets#ls-${line.groupCode}`} className="text-accent underline decoration-accent/40 underline-offset-2 hover:decoration-accent">
               {line.label}
@@ -127,9 +129,9 @@ export default async function StatementsPage({ params, searchParams }: { params:
             line.label
           )}
         </td>
-        <td className="px-2 py-1.5 text-center font-normal">
+        <td className="px-1 py-1.5 text-center font-normal sm:px-2">
           {note ? (
-            <a href={`#note-${note}`} aria-label={`Note ${note}`} className="inline-flex min-w-7 justify-center rounded-full bg-accent-soft px-2 py-0.5 text-sm font-medium text-accent hover:bg-border">
+            <a href={`#note-${note}`} aria-label={`Note ${note}`} className="inline-flex min-w-6 justify-center rounded-full bg-accent-soft px-1.5 py-0.5 text-sm font-medium text-accent hover:bg-border">
               {note}
             </a>
           ) : (
@@ -148,7 +150,7 @@ export default async function StatementsPage({ params, searchParams }: { params:
         <th scope="col" className={th}>
           <span className="sr-only">Line</span>
         </th>
-        <th scope="col" className="px-2 py-2 text-center font-medium">
+        <th scope="col" className="px-1 py-2 text-center font-medium sm:px-2">
           Note
         </th>
         <th scope="col" className={`${num} font-medium`}>
@@ -190,12 +192,11 @@ export default async function StatementsPage({ params, searchParams }: { params:
 
       <div className="mt-6 space-y-5">
         {pack.clean ? (
-          <div>
-            <div className="flex items-center gap-3 rounded-lg border border-success bg-success-soft px-4 py-3 text-sm font-semibold text-success-strong">
-              <CheckIcon className="shrink-0" />
-              <p>{checksSentence(pack.checks)}</p>
-            </div>
-            <Disclosure summary={`Show the ${count(pack.checks.length, "check")}`} className="mt-2">
+          <div className="flex flex-wrap items-start gap-3">
+            <span className="mt-4 shrink-0 text-success-strong">
+              <CheckIcon aria-label="All checks pass" role="img" />
+            </span>
+            <Disclosure summary={`Show the ${count(pack.checks.length, "check")}`} className="min-w-0 flex-1">
               <ul className="divide-y divide-border">
                 {checks.map((c) => (
                   <li key={c.label} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2 first:pt-0 last:pb-0">
@@ -207,7 +208,7 @@ export default async function StatementsPage({ params, searchParams }: { params:
             </Disclosure>
           </div>
         ) : (
-          <Callout variant="warning" title={checksSentence(pack.checks)}>
+          <Callout variant="warning" title="Checks to put right">
             <ul className="mt-2 divide-y divide-warning/30">
               {checks.map((c) => {
                 const fix = c.passed ? null : checkFix(c.label, id);
@@ -320,7 +321,7 @@ export default async function StatementsPage({ params, searchParams }: { params:
                   ...(section.title
                     ? [
                         <tr key={`t${i}`}>
-                          <th colSpan={noteAmountCols} scope="row" className="px-4 pt-4 pb-1 text-left font-semibold">
+                          <th colSpan={noteAmountCols} scope="row" className="px-2 pt-4 pb-1 text-left font-semibold sm:px-4">
                             {section.title}
                           </th>
                         </tr>,
@@ -403,27 +404,27 @@ export default async function StatementsPage({ params, searchParams }: { params:
                 <tbody>
                   {pack.cashFlow.sections.flatMap((section) => [
                     <tr key={section.title}>
-                      <th colSpan={2} scope="row" className="px-4 pt-4 pb-1 text-left font-semibold">
+                      <th colSpan={2} scope="row" className="px-2 pt-4 pb-1 text-left font-semibold sm:px-4">
                         {section.title}
                       </th>
                     </tr>,
                     ...section.lines.map((l) => (
                       <tr key={l.key} className={l.kind === "line" ? "" : "font-semibold"}>
-                        <td className="min-w-44 px-4 py-1.5">{l.label}</td>
+                        <td className="px-2 py-1.5 sm:min-w-44 sm:px-4">{l.label}</td>
                         <td className={`${num} ${ruleFor(l.kind)}`}>{fmt(l.current)}</td>
                       </tr>
                     )),
                   ])}
                   <tr className="font-semibold">
-                    <td className="px-4 pt-4 pb-1.5">Net increase/(decrease) in cash and cash equivalents</td>
+                    <td className="px-2 pt-4 pb-1.5 sm:px-4">Net increase/(decrease) in cash and cash equivalents</td>
                     <td className={`${num} pt-4 ${ruleFor("subtotal")}`}>{fmt(pack.cashFlow.netChange)}</td>
                   </tr>
                   <tr>
-                    <td className="px-4 py-1.5">Cash and cash equivalents at the start of the year</td>
+                    <td className="px-2 py-1.5 sm:px-4">Cash and cash equivalents at the start of the year</td>
                     <td className={num}>{fmt(pack.cashFlow.opening)}</td>
                   </tr>
                   <tr className="font-semibold">
-                    <td className="px-4 py-1.5">Cash and cash equivalents at the end of the year</td>
+                    <td className="px-2 py-1.5 sm:px-4">Cash and cash equivalents at the end of the year</td>
                     <td className={`${num} ${ruleFor("total")}`}>{fmt(pack.cashFlow.closing)}</td>
                   </tr>
                 </tbody>
@@ -444,13 +445,15 @@ export default async function StatementsPage({ params, searchParams }: { params:
               const toComplete = placeholderCount([...note.paragraphs, ...(note.subsections ?? []).map((x) => x.text)]);
               return (
                 <details key={note.number} id={`note-${note.number}`} className="group scroll-mt-4 rounded-lg border border-border bg-surface shadow-card">
-                  <summary className={`${summaryRow} flex-wrap font-semibold`}>
+                  <summary className={`${summaryRow} font-semibold`}>
                     <SummaryChevron />
-                    <h3 className="font-semibold">
-                      {note.number}. {note.title}
-                    </h3>
-                    {toComplete > 0 && <Badge tone="warning">{toComplete} to complete</Badge>}
-                    {note.table && <span className="ml-auto text-sm font-normal text-ink-muted tabular-nums">Total {fmt(note.table.totalCurrent)}</span>}
+                    <span className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1">
+                      <h3 className="font-semibold">
+                        {note.number}. {note.title}
+                      </h3>
+                      {toComplete > 0 && <Badge tone="warning">{toComplete} to complete</Badge>}
+                      {note.table && <span className="ml-auto text-sm font-normal text-ink-muted tabular-nums">Total {fmt(note.table.totalCurrent)}</span>}
+                    </span>
                   </summary>
                   <div className="space-y-3 border-t border-border px-4 py-4 text-sm">
                     {note.paragraphs.map((p, i) =>
@@ -499,13 +502,13 @@ export default async function StatementsPage({ params, searchParams }: { params:
                         <tbody>
                           {note.table.rows.map((r, i) => (
                             <tr key={i}>
-                              <td className="min-w-44 px-4 py-1.5">{r.label}</td>
+                              <td className="px-2 py-1.5 sm:min-w-44 sm:px-4">{r.label}</td>
                               <td className={num}>{fmt(r.current)}</td>
                               {s.hasComparatives && <td className={num}>{r.prior === null ? "" : fmt(r.prior)}</td>}
                             </tr>
                           ))}
                           <tr className="font-semibold">
-                            <td className="px-4 py-1.5">Total</td>
+                            <td className="px-2 py-1.5 sm:px-4">Total</td>
                             <td className={`${num} ${ruleFor("total")}`}>{fmt(note.table.totalCurrent)}</td>
                             {s.hasComparatives && <td className={`${num} ${ruleFor("total")}`}>{fmt(note.table.totalPrior)}</td>}
                           </tr>
