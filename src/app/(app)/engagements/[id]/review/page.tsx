@@ -4,7 +4,6 @@ import { getDb, withFirm } from "@/server/db";
 import { getSession } from "@/server/session";
 import * as repo from "@/server/repo";
 import * as review from "@/server/review";
-import { canLock, canReview } from "@/domain/signoff";
 import { GROUPS } from "@/domain/groups";
 import { formatAmount } from "@/domain/money";
 import { ActionForm } from "@/app/action-form";
@@ -17,13 +16,18 @@ import {
   unlockAction,
   withdrawSignOffAction,
 } from "@/app/review-actions";
+import { Badge } from "@/ui/badge";
+import { Button } from "@/ui/button";
+import { ctl, Disclosure, fieldLabel } from "@/ui/controls";
+import { explainBlocker } from "@/ui/engagement-home";
+import { Callout, EmptyState, ProgressBar } from "@/ui/feedback";
+import { Card, ListRow, ListRows, PageHeader, Section } from "@/ui/layout";
+import { openPointsPill, pointControls, readinessView, signCell, signOffProgress, type Level } from "@/ui/review-view";
+import { Table, TCell, THead, TRow } from "@/ui/table";
+import { count } from "@/ui/text";
 import { EngagementNav } from "../nav";
 
 export const dynamic = "force-dynamic";
-
-const small = "rounded border border-slate-400 px-2 py-1 text-xs hover:bg-slate-100";
-const primary = "rounded bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-700";
-const input = "rounded border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-900";
 
 export default async function ReviewPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -37,207 +41,302 @@ export default async function ReviewPage({ params }: { params: Promise<{ id: str
   if (!engagement || !overview) notFound();
 
   const open = overview.status === "open";
-  const reviewer = canReview(session.role);
+  const base = `/engagements/${id}`;
+  const view = readinessView({ open, ready: overview.readiness.ready, blockers: overview.readiness.blockers.length, role: session.role, lockedByName: overview.lockedByName, lockedAt: overview.lockedAt });
+  const points = pointControls({ open, role: session.role });
   const openPoints = overview.points.filter((p) => p.status === "open");
   const clearedPoints = overview.points.filter((p) => p.status === "cleared");
   const targets = [{ code: review.GENERAL, name: "General (whole engagement)" }, ...overview.leadSheets.map((l) => ({ code: l.groupCode, name: l.groupName }))];
   const sortOf = new Map(GROUPS.map((g) => [g.code, g.sort]));
   const sheets = [...overview.leadSheets].sort((a, b) => (sortOf.get(a.groupCode) ?? 0) - (sortOf.get(b.groupCode) ?? 0));
+  const progress = signOffProgress(sheets);
 
-  const cell = (sheet: review.LeadSheetReview, level: "preparer" | "reviewer") => {
-    const signed = sheet[level];
+  // One cell of the table or card: who signed and when, a sign button, or who it is waiting on.
+  const cell = (sheet: review.LeadSheetReview, level: Level) => {
+    const c = signCell({ level, preparer: sheet.preparer, reviewer: sheet.reviewer, openPoints: sheet.openPoints, solePractitioner: overview.solePractitioner, open, role: session.role, userId: session.userId });
     const fields = { engagementId: id, groupCode: sheet.groupCode, level };
-    if (signed) {
+    if (c.kind === "signed") {
       return (
         <div>
-          <span>{signed.name}</span> <span className="text-xs text-slate-600">{signed.at}</span>
-          {open && signed.userId === session.userId && (
+          <span className="font-medium">{c.name}</span> <span className="text-sm text-ink-muted">{c.at}</span>
+          {c.canWithdraw && (
             <ActionForm action={withdrawSignOffAction} fields={fields} className="mt-1">
-              <button className={small}>Withdraw</button>
+              <Button variant="secondary" size="sm">
+                Withdraw
+              </Button>
             </ActionForm>
           )}
         </div>
       );
     }
-    if (!open) return <span className="text-slate-500">Not signed</span>;
-    if (level === "reviewer" && !reviewer) return <span className="text-slate-500">Awaiting reviewer</span>;
-    return (
-      <ActionForm action={signOffAction} fields={fields}>
-        <button className={small}>{level === "preparer" ? "Sign as prepared" : "Sign as reviewed"}</button>
-      </ActionForm>
-    );
+    if (c.kind === "sign") {
+      return (
+        <ActionForm action={signOffAction} fields={fields}>
+          <Button variant="secondary" size="sm">
+            {c.label}
+          </Button>
+        </ActionForm>
+      );
+    }
+    if (c.kind === "waiting") return <Badge tone="neutral">{c.label}</Badge>;
+    if (c.kind === "blocked") return <Badge tone="warning">{c.label}</Badge>;
+    return <span className="text-ink-muted">{c.label}</span>;
+  };
+  const pointsCell = (n: number) => {
+    const pill = openPointsPill(n);
+    return pill ? <Badge tone={pill.tone}>{pill.label}</Badge> : <span className="text-ink-muted">None</span>;
   };
 
   return (
-    <div className="py-8 text-slate-900">
-      <Link href="/" className="text-sm text-blue-700 underline">All engagements</Link>
-      <h1 className="mt-2 text-2xl font-semibold">{engagement.clientName}</h1>
-      <p className="mt-1 text-sm text-slate-600">{engagement.periodStart} to {engagement.periodEnd}</p>
+    <div className="py-8 text-ink">
+      <PageHeader
+        breadcrumb={[{ label: "All engagements", href: "/" }]}
+        title="Review and sign-off"
+        meta={
+          <>
+            <span>{engagement.clientName}</span>
+            <span aria-hidden="true">·</span>
+            <span>
+              {engagement.periodStart} to {engagement.periodEnd}
+            </span>
+          </>
+        }
+        subtitle={view.sentence}
+      />
       <EngagementNav id={id} current="review" status={engagement.status} />
 
-      <section className={`mt-6 rounded border p-4 ${!open ? "border-slate-400 bg-slate-100" : overview.readiness.ready ? "border-emerald-300 bg-emerald-50" : "border-amber-400 bg-amber-50"}`}>
-        {!open ? (
-          <>
-            <h2 className="text-base font-semibold">Locked</h2>
-            <p className="mt-1 text-sm">
-              Locked by {overview.lockedByName} on {overview.lockedAt}. Nothing on this engagement can be changed while it is locked.
+      <div className="mt-6 space-y-8">
+        {view.state === "locked" ? (
+          <Card title="Locked">
+            <p className="flex flex-wrap items-center gap-2">
+              <Badge tone="slate">Locked</Badge>
+              <span className="text-sm">
+                Locked by {overview.lockedByName} on {overview.lockedAt}. Nothing on this engagement can be changed while it is locked.
+              </span>
             </p>
-            {canLock(session.role) && (
-              <ActionForm action={unlockAction} fields={{ engagementId: id }} className="mt-3">
-                <div className="flex flex-wrap items-end gap-2">
-                  <label className="flex flex-col gap-1 text-sm">
-                    Reason for unlocking (recorded in the audit log)
-                    <input name="reason" required minLength={5} maxLength={500} className={`${input} w-80`} />
-                  </label>
-                  <button className={small}>Unlock</button>
-                </div>
-              </ActionForm>
-            )}
-          </>
-        ) : overview.readiness.ready ? (
-          <>
-            <h2 className="text-base font-semibold">Ready to lock</h2>
-            <p className="mt-1 text-sm">Every lead sheet is prepared and reviewed, no review points are open, and the statement checks pass.</p>
-            {(overview.auditNotApplicable ?? 0) > 0 && (
-              <p className="mt-1 text-sm font-medium">
-                {overview.auditNotApplicable} audit procedure(s) were marked not applicable. Review the reasons on the{" "}
-                <Link href={`/engagements/${id}/audit`} className="text-blue-700 underline">Audit tab</Link> before locking.
-              </p>
-            )}
-            {canLock(session.role) ? (
-              <ActionForm action={lockAction} fields={{ engagementId: id }} className="mt-3">
-                <button className={primary}>Lock engagement</button>
-              </ActionForm>
-            ) : (
-              <p className="mt-2 text-sm text-slate-700">A partner can now lock the engagement.</p>
-            )}
-          </>
-        ) : (
-          <>
-            <h2 className="text-base font-semibold">Not ready to lock</h2>
-            <ul className="mt-2 list-disc pl-5 text-sm">
-              {overview.readiness.blockers.map((b) => (
-                <li key={b}>{b}</li>
-              ))}
-            </ul>
-          </>
-        )}
-      </section>
-
-      <section className="mt-8">
-        <h2 className="text-lg font-semibold">Lead sheet sign-off</h2>
-        <p className="mt-1 text-sm text-slate-600">
-          A sign-off is removed automatically if the lead sheet&apos;s figures change afterwards.{" "}
-          {overview.solePractitioner
-            ? "You are the firm's only user, so you may review your own lead sheets; each self-review is recorded in the audit log."
-            : "The reviewer must be a different person from the preparer."}
-        </p>
-        {sheets.length === 0 ? (
-          <p className="mt-3 text-sm text-slate-600">Import a trial balance and map its accounts to see lead sheets here.</p>
-        ) : (
-          <div className="mt-3 overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="border-b border-slate-300 text-slate-600">
-                <tr>
-                  <th className="py-2 font-medium">Lead sheet</th>
-                  <th className="py-2 pl-4 text-right font-medium">Balance</th>
-                  <th className="py-2 pl-4 font-medium">Prepared by</th>
-                  <th className="py-2 pl-4 font-medium">Reviewed by</th>
-                  <th className="py-2 pl-4 font-medium">Open points</th>
-                </tr>
-              </thead>
-              <tbody>
-                {sheets.map((sheet) => (
-                  <tr key={sheet.groupCode} className="border-b border-slate-200 align-top">
-                    <td className="py-2">
-                      <Link href={`/engagements/${id}/lead-sheets#ls-${sheet.groupCode}`} className="text-blue-700 underline">{sheet.groupName}</Link>
-                    </td>
-                    <td className="py-2 pl-4 text-right tabular-nums whitespace-nowrap">{formatAmount(sheet.closingMinor)}</td>
-                    <td className="py-2 pl-4">{cell(sheet, "preparer")}</td>
-                    <td className="py-2 pl-4">{cell(sheet, "reviewer")}</td>
-                    <td className="py-2 pl-4">{sheet.openPoints > 0 ? <span className="font-semibold text-red-800">{sheet.openPoints}</span> : "0"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
-
-      <section className="mt-10">
-        <h2 className="text-lg font-semibold">Review points</h2>
-
-        {open && reviewer && (
-          <ActionForm action={addReviewPointAction} fields={{ engagementId: id }} className="mt-3 rounded border border-slate-200 bg-slate-50 p-3">
-            <div className="flex flex-wrap items-end gap-2">
-              <label className="flex flex-col gap-1 text-sm text-slate-700">
-                Relates to
-                <select name="target" className={input} defaultValue={review.GENERAL}>
-                  {targets.map((t) => (
-                    <option key={t.code} value={t.code}>{t.name}</option>
-                  ))}
-                </select>
-              </label>
-              <label className="flex min-w-72 flex-1 flex-col gap-1 text-sm text-slate-700">
-                Review point
-                <input name="body" required minLength={3} maxLength={2000} className={input} />
-              </label>
-              <button className={primary}>Raise point</button>
-            </div>
-          </ActionForm>
-        )}
-        {open && !reviewer && <p className="mt-2 text-sm text-slate-600">Reviewers and partners raise review points; you can respond to them here.</p>}
-
-        {overview.points.length === 0 && <p className="mt-3 text-sm text-slate-600">No review points have been raised.</p>}
-
-        {openPoints.map((p) => (
-          <div key={p.id} className="mt-3 rounded border border-amber-400 bg-amber-50 p-3 text-sm">
-            <p className="text-xs text-slate-700">
-              {p.targetName} · raised by {p.authorName} on {p.createdAt}
-            </p>
-            <p className="mt-1 font-medium">{p.body}</p>
-            {p.response && (
-              <p className="mt-2 border-l-2 border-slate-400 pl-2">
-                {p.response} <span className="text-xs text-slate-600">— {p.responderName}</span>
-              </p>
-            )}
-            {open && (
-              <div className="mt-2 flex flex-wrap items-start gap-3">
-                <ActionForm action={respondReviewPointAction} fields={{ engagementId: id, pointId: p.id }} className="flex-1">
-                  <div className="flex gap-2">
-                    <input name="response" required minLength={2} maxLength={2000} aria-label="Response" placeholder={p.response ? "Replace the response" : "Respond"} className={`${input} min-w-56 flex-1`} />
-                    <button className={small}>Save response</button>
+            {view.canUnlock && (
+              <Disclosure summary="Unlock this engagement" className="mt-4">
+                <ActionForm action={unlockAction} fields={{ engagementId: id }}>
+                  <div className="flex flex-wrap items-end gap-3">
+                    <label className={`${fieldLabel} min-w-72 flex-1`}>
+                      Reason for unlocking (recorded in the audit log)
+                      <input name="reason" required minLength={5} maxLength={500} className={ctl} />
+                    </label>
+                    <Button variant="secondary">Unlock</Button>
                   </div>
                 </ActionForm>
-                {reviewer && (
-                  <ActionForm action={clearReviewPointAction} fields={{ engagementId: id, pointId: p.id }}>
-                    <button className={small}>Clear point</button>
-                  </ActionForm>
-                )}
+              </Disclosure>
+            )}
+          </Card>
+        ) : view.state === "ready" ? (
+          <Card title="Ready to lock">
+            <p className="flex flex-wrap items-center gap-2">
+              <Badge tone="success">Ready to lock</Badge>
+              <span className="text-sm">Every lead sheet is prepared and reviewed, no review points are open, and the statement checks pass.</span>
+            </p>
+            {(overview.auditNotApplicable ?? 0) > 0 && (
+              <Callout variant="warning" className="mt-3">
+                {count(overview.auditNotApplicable ?? 0, "audit procedure")} {overview.auditNotApplicable === 1 ? "was" : "were"} marked not applicable. Review the reasons on the{" "}
+                <Link href={`${base}/audit`} className="font-medium underline">
+                  audit planning page
+                </Link>{" "}
+                before locking.
+              </Callout>
+            )}
+            <div className="mt-4">
+              {view.lock === "lock" ? (
+                <ActionForm action={lockAction} fields={{ engagementId: id }}>
+                  <Button variant="primary">Lock engagement</Button>
+                </ActionForm>
+              ) : (
+                <Badge tone="neutral">Waiting for a partner to lock</Badge>
+              )}
+            </div>
+          </Card>
+        ) : (
+          <Section title="Still open" description="Each item links to where it is dealt with.">
+            <ListRows>
+              {overview.readiness.blockers.map((b) => {
+                const t = explainBlocker(b, id);
+                return <ListRow key={b} title={t.text} href={t.href} subtitle={t.owner ? `For a ${t.owner}` : undefined} />;
+              })}
+            </ListRows>
+          </Section>
+        )}
+
+        <Section
+          title="Lead sheet sign-off"
+          description={`A sign-off is removed automatically if the lead sheet's figures change afterwards. ${
+            overview.solePractitioner
+              ? "You are the firm's only user, so you may review your own lead sheets; each self-review is recorded in the audit log."
+              : "The reviewer must be a different person from the preparer."
+          }`}
+        >
+          {sheets.length === 0 ? (
+            <EmptyState title="No lead sheets yet" description="Import a trial balance and map its accounts to see lead sheets here." />
+          ) : (
+            <>
+              <div className="mb-3 max-w-xl">
+                <p className="mb-1 text-sm text-ink-muted">{progress.text}</p>
+                <ProgressBar value={progress.prepared + progress.reviewed} max={progress.total * 2} label={`Lead sheets signed: ${progress.text}`} showText={false} />
               </div>
+              <div className="hidden sm:block">
+                <Table caption="Lead sheet sign-off">
+                  <THead>
+                    <TRow>
+                      <TCell header="col">Lead sheet</TCell>
+                      <TCell header="col" numeric>
+                        Balance
+                      </TCell>
+                      <TCell header="col">Prepared by</TCell>
+                      <TCell header="col">Reviewed by</TCell>
+                      <TCell header="col">Open points</TCell>
+                    </TRow>
+                  </THead>
+                  <tbody>
+                    {sheets.map((sheet) => (
+                      <TRow key={sheet.groupCode} className="align-top">
+                        <TCell header="row">
+                          <Link href={`${base}/lead-sheets#ls-${sheet.groupCode}`} className="rounded-sm text-accent hover:underline">
+                            {sheet.groupName}
+                          </Link>
+                        </TCell>
+                        <TCell numeric>{formatAmount(sheet.closingMinor)}</TCell>
+                        <TCell>{cell(sheet, "preparer")}</TCell>
+                        <TCell>{cell(sheet, "reviewer")}</TCell>
+                        <TCell>{pointsCell(sheet.openPoints)}</TCell>
+                      </TRow>
+                    ))}
+                  </tbody>
+                </Table>
+              </div>
+              <ul className="space-y-3 sm:hidden">
+                {sheets.map((sheet) => (
+                  <li key={sheet.groupCode} className="rounded-lg border border-border bg-surface p-4 shadow-card">
+                    <p className="font-semibold">
+                      <Link href={`${base}/lead-sheets#ls-${sheet.groupCode}`} className="text-accent hover:underline">
+                        {sheet.groupName}
+                      </Link>
+                    </p>
+                    <p className="text-sm text-ink-muted tabular-nums">{formatAmount(sheet.closingMinor)}</p>
+                    <dl className="mt-3 space-y-3 text-sm">
+                      <div>
+                        <dt className="text-ink-muted">Prepared by</dt>
+                        <dd>{cell(sheet, "preparer")}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-ink-muted">Reviewed by</dt>
+                        <dd>{cell(sheet, "reviewer")}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-ink-muted">Open points</dt>
+                        <dd>{pointsCell(sheet.openPoints)}</dd>
+                      </div>
+                    </dl>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+        </Section>
+
+        <Section
+          title="Review points"
+          description={points.raise ? "Raise a point against a lead sheet or the whole engagement. Anyone can reply; a reviewer clears it once it is dealt with." : "Points raised by reviewers appear here for a reply."}
+        >
+          <div className="space-y-4">
+            {points.raise && (
+              <Disclosure summary="Raise a review point">
+                <ActionForm action={addReviewPointAction} fields={{ engagementId: id }}>
+                  <div className="flex flex-wrap items-end gap-3">
+                    <label className={fieldLabel}>
+                      Relates to
+                      <select name="target" className={ctl} defaultValue={review.GENERAL}>
+                        {targets.map((t) => (
+                          <option key={t.code} value={t.code}>
+                            {t.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className={`${fieldLabel} min-w-72 flex-1`}>
+                      Review point
+                      <input name="body" required minLength={3} maxLength={2000} className={ctl} />
+                    </label>
+                    <Button variant="primary">Raise point</Button>
+                  </div>
+                </ActionForm>
+              </Disclosure>
+            )}
+
+            {overview.points.length === 0 && <EmptyState title="No review points" description="No review points have been raised on this engagement." />}
+
+            {openPoints.length > 0 && (
+              <ul className="space-y-3">
+                {openPoints.map((p) => (
+                  <li key={p.id}>
+                    <Card>
+                      <div className="flex flex-wrap items-start justify-between gap-2">
+                        <p className="text-sm text-ink-muted">
+                          {p.targetName} · raised by {p.authorName} on {p.createdAt}
+                        </p>
+                        <Badge tone="warning">Open</Badge>
+                      </div>
+                      <p className="mt-1 font-semibold">{p.body}</p>
+                      {p.response && (
+                        <p className="mt-2 border-l-2 border-border-strong pl-3 text-sm">
+                          {p.response} <span className="text-ink-muted">— {p.responderName}</span>
+                        </p>
+                      )}
+                      {points.respond && (
+                        <ActionForm action={respondReviewPointAction} fields={{ engagementId: id, pointId: p.id }} className="mt-3">
+                          <div className="flex flex-wrap items-end gap-2">
+                            <label className={`${fieldLabel} min-w-56 flex-1`}>
+                              {p.response ? "Replace the response" : "Response"}
+                              <input name="response" required minLength={2} maxLength={2000} className={ctl} />
+                            </label>
+                            <Button variant="secondary">Save response</Button>
+                          </div>
+                        </ActionForm>
+                      )}
+                      {points.clear && (
+                        <div className="mt-4 flex justify-end border-t border-border pt-3">
+                          <ActionForm action={clearReviewPointAction} fields={{ engagementId: id, pointId: p.id }}>
+                            <Button variant="primary" size="sm">
+                              Clear point
+                            </Button>
+                          </ActionForm>
+                        </div>
+                      )}
+                    </Card>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            {clearedPoints.length > 0 && (
+              <details className="rounded-lg border border-border bg-surface px-4 py-3 shadow-card">
+                <summary className="cursor-pointer text-sm font-semibold">{count(clearedPoints.length, "cleared point")}</summary>
+                <ul className="mt-3 space-y-2">
+                  {clearedPoints.map((p) => (
+                    <li key={p.id} className="rounded-md border border-border bg-surface-muted p-3 text-sm">
+                      <p className="text-ink-muted">
+                        {p.targetName} · raised by {p.authorName} on {p.createdAt} · cleared by {p.clearedByName}
+                      </p>
+                      <p className="mt-1">{p.body}</p>
+                      {p.response && (
+                        <p className="mt-1 border-l-2 border-border-strong pl-3 text-ink-muted">
+                          {p.response} <span>— {p.responderName}</span>
+                        </p>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </details>
             )}
           </div>
-        ))}
-
-        {clearedPoints.length > 0 && (
-          <details className="mt-4">
-            <summary className="cursor-pointer text-sm text-blue-700 underline">{clearedPoints.length} cleared point(s)</summary>
-            {clearedPoints.map((p) => (
-              <div key={p.id} className="mt-2 rounded border border-slate-200 p-3 text-sm">
-                <p className="text-xs text-slate-600">
-                  {p.targetName} · raised by {p.authorName} on {p.createdAt} · cleared by {p.clearedByName}
-                </p>
-                <p className="mt-1">{p.body}</p>
-                {p.response && (
-                  <p className="mt-1 border-l-2 border-slate-300 pl-2 text-slate-700">
-                    {p.response} <span className="text-xs">— {p.responderName}</span>
-                  </p>
-                )}
-              </div>
-            ))}
-          </details>
-        )}
-      </section>
+        </Section>
+      </div>
     </div>
   );
 }

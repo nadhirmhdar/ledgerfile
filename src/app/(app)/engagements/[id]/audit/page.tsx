@@ -17,7 +17,7 @@ import { Card, ListRow, ListRows, PageHeader, Section, Stat } from "@/ui/layout"
 import { Table, TCell, THead, TRow } from "@/ui/table";
 import { approvalView, checklistPill, mayDo, planningSentence, planningSteps, programmeProgress, riskSummary, stepTone, waitingFor } from "@/ui/audit-view";
 import { ExpandRow } from "@/ui/area-row";
-import { count } from "@/ui/text";
+import { count, plainCount } from "@/ui/text";
 import { EngagementNav } from "../nav";
 
 export const dynamic = "force-dynamic";
@@ -118,7 +118,7 @@ export default async function AuditPage({ params }: { params: Promise<{ id: stri
                     key={s.key}
                     title={s.title}
                     href={s.anchor}
-                    subtitle={s.waiting ?? s.detail ?? undefined}
+                    subtitle={s.waiting ?? (s.detail ? plainCount(s.detail) : undefined)}
                     meta={<Badge tone={stepTone(s)}>{s.label}</Badge>}
                   />
                 ))}
@@ -296,7 +296,7 @@ export default async function AuditPage({ params }: { params: Promise<{ id: stri
                   </span>
                 </p>
                 <p className="mt-2 text-sm text-ink-muted">The approval covers materiality and the risk ratings above, as recorded here. It lapses by itself if any of them changes.</p>
-                {approvalShown.note && <p className="mt-2 text-sm">{approvalShown.note}</p>}
+                {approvalShown.note && <p className="mt-2 text-sm">{plainCount(approvalShown.note)}</p>}
                 {approvalShown.action === "approve" && (
                   <ActionForm action={approveRiskAssessmentAction} fields={{ engagementId: id }} className="mt-3">
                     <Button variant="primary">{approval.state === "lapsed" ? "Approve again" : "Approve risk assessment"}</Button>
