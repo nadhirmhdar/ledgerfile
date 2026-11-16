@@ -89,15 +89,19 @@ export default async function AuditPage({ params }: { params: Promise<{ id: stri
             }
           />
         ) : !overview.enabled ? (
-          <Card title="This engagement is not being audited" description="Turning the audit on lets you set materiality, assess risk and load audit programmes. Accounts-preparation engagements can leave it off.">
-            {open &&
-              (reviewer ? (
+          <Card
+            title="This engagement is not being audited"
+            description={open ? "Turning the audit on lets you set materiality, assess risk and load audit programmes. Accounts-preparation engagements can leave it off." : "The audit was not turned on for this engagement before it was locked."}
+          >
+            {open ? (
+              reviewer ? (
                 <ActionForm action={setAuditEnabledAction} fields={{ engagementId: id, on: "true" }}>
                   <Button variant="primary">Turn the audit on</Button>
                 </ActionForm>
               ) : (
-                <Badge tone="warning">Waiting for a reviewer or partner to turn the audit on</Badge>
-              ))}
+                <Badge tone="neutral">Waiting for a reviewer or partner to turn the audit on</Badge>
+              )
+            ) : undefined}
           </Card>
         ) : (
           <>
@@ -152,7 +156,7 @@ export default async function AuditPage({ params }: { params: Promise<{ id: stri
               ) : (
                 <p className="text-sm text-ink-muted">Materiality has not been set.</p>
               )}
-              {open && !reviewer && !m && <p className="mt-3"><Badge tone="warning">{waitingFor("reviewer")}</Badge></p>}
+              {open && !reviewer && !m && <p className="mt-3"><Badge tone="neutral">{waitingFor("reviewer")}</Badge></p>}
               {open && reviewer && (
                 <Disclosure summary={m ? "Revise materiality" : "Set materiality"} open={!m} className="mt-4">
                   <ActionForm action={setMaterialityAction} fields={{ engagementId: id }}>
@@ -298,7 +302,7 @@ export default async function AuditPage({ params }: { params: Promise<{ id: stri
                     <Button variant="primary">{approval.state === "lapsed" ? "Approve again" : "Approve risk assessment"}</Button>
                   </ActionForm>
                 )}
-                {approvalShown.action === "waiting" && <p className="mt-3"><Badge tone="warning">{waitingFor("partner")}</Badge></p>}
+                {approvalShown.action === "waiting" && <p className="mt-3"><Badge tone="neutral">{waitingFor("partner")}</Badge></p>}
               </Card>
             </Section>
 
