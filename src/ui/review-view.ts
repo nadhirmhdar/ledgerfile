@@ -1,4 +1,4 @@
-import { canLock, canReview, type Role } from "../domain/signoff";
+import { canLock, canReview, signOffBlocker, type Role } from "../domain/signoff";
 import type { Tone } from "./status";
 import { count } from "./text";
 
@@ -49,19 +49,36 @@ export type SignCell =
   | { kind: "signed"; name: string; at: string; canWithdraw: boolean }
   | { kind: "sign"; label: string }
   | { kind: "waiting"; label: string }
+  | { kind: "blocked"; label: string }
   | { kind: "none"; label: string };
 
+type Signature = { userId: string; name: string; at: string } | null;
+
+/**
+ * What one cell of the table shows. A sign button appears only when the rules would accept the click: the domain's own
+ * signOffBlocker decides that, and when it refuses, the cell says why in a pill instead.
+ */
 export function signCell(c: {
   level: Level;
-  signed: { userId: string; name: string; at: string } | null;
+  preparer: Signature;
+  reviewer: Signature;
+  openPoints: number;
+  solePractitioner: boolean;
   open: boolean;
   role: Role;
   userId: string;
 }): SignCell {
-  if (c.signed) return { kind: "signed", name: c.signed.name, at: c.signed.at, canWithdraw: c.open && c.signed.userId === c.userId };
+  const signed = c.level === "preparer" ? c.preparer : c.reviewer;
+  if (signed) return { kind: "signed", name: signed.name, at: signed.at, canWithdraw: c.open && signed.userId === c.userId };
   if (!c.open) return { kind: "none", label: "Not signed" };
   if (c.level === "reviewer" && !canReview(c.role)) return { kind: "waiting", label: "Waiting for a reviewer" };
-  return { kind: "sign", label: c.level === "preparer" ? "Sign as prepared" : "Sign as reviewed" };
+
+  const blocker = signOffBlocker(c.level, { id: c.userId, role: c.role }, { preparerId: c.preparer?.userId ?? null, reviewerId: c.reviewer?.userId ?? null, openPoints: c.openPoints, solePractitioner: c.solePractitioner });
+  if (blocker === null) return { kind: "sign", label: c.level === "preparer" ? "Sign as prepared" : "Sign as reviewed" };
+  if (!c.preparer) return { kind: "waiting", label: "Waiting for preparation" };
+  if (c.preparer.userId === c.userId && !c.solePractitioner) return { kind: "waiting", label: "Needs another reviewer" };
+  if (c.openPoints > 0) return { kind: "blocked", label: `Clear ${count(c.openPoints, "open point")} first` };
+  return { kind: "none", label: "Not signed" };
 }
 
 /** How many lead sheets are prepared and reviewed, for the summary above the table. */

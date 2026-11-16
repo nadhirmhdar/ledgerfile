@@ -53,7 +53,7 @@ export default async function ReviewPage({ params }: { params: Promise<{ id: str
 
   // One cell of the table or card: who signed and when, a sign button, or who it is waiting on.
   const cell = (sheet: review.LeadSheetReview, level: Level) => {
-    const c = signCell({ level, signed: sheet[level], open, role: session.role, userId: session.userId });
+    const c = signCell({ level, preparer: sheet.preparer, reviewer: sheet.reviewer, openPoints: sheet.openPoints, solePractitioner: overview.solePractitioner, open, role: session.role, userId: session.userId });
     const fields = { engagementId: id, groupCode: sheet.groupCode, level };
     if (c.kind === "signed") {
       return (
@@ -79,6 +79,7 @@ export default async function ReviewPage({ params }: { params: Promise<{ id: str
       );
     }
     if (c.kind === "waiting") return <Badge tone="neutral">{c.label}</Badge>;
+    if (c.kind === "blocked") return <Badge tone="warning">{c.label}</Badge>;
     return <span className="text-ink-muted">{c.label}</span>;
   };
   const pointsCell = (n: number) => {
@@ -288,21 +289,23 @@ export default async function ReviewPage({ params }: { params: Promise<{ id: str
                         </p>
                       )}
                       {points.respond && (
-                        <div className="mt-3 flex flex-wrap items-end gap-x-6 gap-y-3">
-                          <ActionForm action={respondReviewPointAction} fields={{ engagementId: id, pointId: p.id }} className="min-w-72 flex-1">
-                            <div className="flex flex-wrap items-end gap-2">
-                              <label className={`${fieldLabel} min-w-56 flex-1`}>
-                                {p.response ? "Replace the response" : "Response"}
-                                <input name="response" required minLength={2} maxLength={2000} className={ctl} />
-                              </label>
-                              <Button variant="secondary">Save response</Button>
-                            </div>
+                        <ActionForm action={respondReviewPointAction} fields={{ engagementId: id, pointId: p.id }} className="mt-3">
+                          <div className="flex flex-wrap items-end gap-2">
+                            <label className={`${fieldLabel} min-w-56 flex-1`}>
+                              {p.response ? "Replace the response" : "Response"}
+                              <input name="response" required minLength={2} maxLength={2000} className={ctl} />
+                            </label>
+                            <Button variant="secondary">Save response</Button>
+                          </div>
+                        </ActionForm>
+                      )}
+                      {points.clear && (
+                        <div className="mt-4 flex justify-end border-t border-border pt-3">
+                          <ActionForm action={clearReviewPointAction} fields={{ engagementId: id, pointId: p.id }}>
+                            <Button variant="primary" size="sm">
+                              Clear point
+                            </Button>
                           </ActionForm>
-                          {points.clear && (
-                            <ActionForm action={clearReviewPointAction} fields={{ engagementId: id, pointId: p.id }}>
-                              <Button variant="secondary">Clear point</Button>
-                            </ActionForm>
-                          )}
                         </div>
                       )}
                     </Card>

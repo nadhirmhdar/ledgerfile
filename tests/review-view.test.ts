@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { signOffBlocker } from "../src/domain/signoff";
 import { openPointsPill, pointControls, readinessView, signCell, signOffProgress } from "../src/ui/review-view";
 
-const who = { userId: "u1", name: "Rae Reviewer", at: "2026-02-01" };
 
 describe("readiness", () => {
   it("is locked, with who and when, and only a partner can unlock", () => {
@@ -25,26 +25,59 @@ describe("readiness", () => {
 });
 
 describe("a lead sheet cell", () => {
-  const cell = (level: "preparer" | "reviewer", o: { signed?: typeof who | null; open?: boolean; role?: "preparer" | "reviewer" | "partner"; userId?: string } = {}) =>
-    signCell({ level, signed: o.signed ?? null, open: o.open ?? true, role: o.role ?? "preparer", userId: o.userId ?? "u1" });
+  const rae = { userId: "u1", name: "Rae Reviewer", at: "2026-02-01" };
+  const pat = { userId: "u2", name: "Pat Preparer", at: "2026-01-30" };
+  type O = { preparer?: typeof rae | null; reviewer?: typeof rae | null; openPoints?: number; sole?: boolean; open?: boolean; role?: "preparer" | "reviewer" | "partner"; userId?: string };
+  const cell = (level: "preparer" | "reviewer", o: O = {}) =>
+    signCell({ level, preparer: o.preparer ?? null, reviewer: o.reviewer ?? null, openPoints: o.openPoints ?? 0, solePractitioner: o.sole ?? false, open: o.open ?? true, role: o.role ?? "preparer", userId: o.userId ?? "u1" });
 
   it("shows who signed, and a withdraw button only for the signer on an open engagement", () => {
-    expect(cell("preparer", { signed: who })).toEqual({ kind: "signed", name: "Rae Reviewer", at: "2026-02-01", canWithdraw: true });
-    expect(cell("preparer", { signed: who, userId: "u2" })).toMatchObject({ kind: "signed", canWithdraw: false });
-    expect(cell("reviewer", { signed: who, open: false })).toMatchObject({ kind: "signed", canWithdraw: false });
+    expect(cell("preparer", { preparer: rae })).toEqual({ kind: "signed", name: "Rae Reviewer", at: "2026-02-01", canWithdraw: true });
+    expect(cell("preparer", { preparer: rae, userId: "u3" })).toMatchObject({ kind: "signed", canWithdraw: false });
+    expect(cell("reviewer", { preparer: pat, reviewer: rae, open: false })).toMatchObject({ kind: "signed", canWithdraw: false });
   });
-  it("offers a preparer, or anyone, a button to sign as prepared", () => {
+  it("offers anyone a button to sign as prepared", () => {
     expect(cell("preparer", { role: "preparer" })).toEqual({ kind: "sign", label: "Sign as prepared" });
     expect(cell("preparer", { role: "partner" })).toEqual({ kind: "sign", label: "Sign as prepared" });
   });
-  it("offers only a reviewer or partner the button to sign as reviewed, and tells a preparer to wait", () => {
-    expect(cell("reviewer", { role: "reviewer" })).toEqual({ kind: "sign", label: "Sign as reviewed" });
-    expect(cell("reviewer", { role: "partner" })).toEqual({ kind: "sign", label: "Sign as reviewed" });
+  it("offers a reviewer the button to sign as reviewed only when the rules would accept it", () => {
+    expect(cell("reviewer", { role: "reviewer", preparer: pat })).toEqual({ kind: "sign", label: "Sign as reviewed" });
+    expect(cell("reviewer", { role: "partner", preparer: pat })).toEqual({ kind: "sign", label: "Sign as reviewed" });
+  });
+  it("tells a preparer looking at the reviewer column to wait for a reviewer", () => {
+    expect(cell("reviewer", { role: "preparer", preparer: pat })).toEqual({ kind: "waiting", label: "Waiting for a reviewer" });
     expect(cell("reviewer", { role: "preparer" })).toEqual({ kind: "waiting", label: "Waiting for a reviewer" });
+  });
+  it("shows a neutral pill, not a button, when nobody has prepared the lead sheet", () => {
+    expect(cell("reviewer", { role: "reviewer" })).toEqual({ kind: "waiting", label: "Waiting for preparation" });
+  });
+  it("shows a neutral pill when the reviewer prepared it and the firm has someone else to review", () => {
+    expect(cell("reviewer", { role: "reviewer", preparer: rae })).toEqual({ kind: "waiting", label: "Needs another reviewer" });
+  });
+  it("offers the button for a reviewer's own work in a sole practice", () => {
+    expect(cell("reviewer", { role: "reviewer", preparer: rae, sole: true })).toEqual({ kind: "sign", label: "Sign as reviewed" });
+  });
+  it("shows a warning pill with the count while review points are open", () => {
+    expect(cell("reviewer", { role: "reviewer", preparer: pat, openPoints: 1 })).toEqual({ kind: "blocked", label: "Clear 1 open point first" });
+    expect(cell("reviewer", { role: "partner", preparer: pat, openPoints: 3 })).toEqual({ kind: "blocked", label: "Clear 3 open points first" });
+  });
+  it("never offers a button the domain rule would refuse", () => {
+    for (const role of ["preparer", "reviewer", "partner"] as const) {
+      for (const preparer of [null, pat, rae]) {
+        for (const openPoints of [0, 2]) {
+          for (const sole of [false, true]) {
+            const c = cell("reviewer", { role, preparer, openPoints, sole });
+            const refused = signOffBlocker("reviewer", { id: "u1", role }, { preparerId: preparer?.userId ?? null, reviewerId: null, openPoints, solePractitioner: sole }) !== null;
+            if (refused) expect(c.kind).not.toBe("sign");
+            else expect(c.kind).toBe("sign");
+          }
+        }
+      }
+    }
   });
   it("shows nothing to sign on a locked engagement", () => {
     expect(cell("preparer", { open: false })).toEqual({ kind: "none", label: "Not signed" });
-    expect(cell("reviewer", { open: false, role: "partner" })).toEqual({ kind: "none", label: "Not signed" });
+    expect(cell("reviewer", { open: false, role: "partner", preparer: pat })).toEqual({ kind: "none", label: "Not signed" });
   });
 });
 
