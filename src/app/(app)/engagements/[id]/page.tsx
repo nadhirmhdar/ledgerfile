@@ -13,7 +13,8 @@ import { LinkButton } from "@/ui/button";
 import { buildHomeModel, paths, seeAllLabel, type HomeInput } from "@/ui/engagement-home";
 import { Callout, EmptyState, StepList } from "@/ui/feedback";
 import { ArrowRightIcon } from "@/ui/icons";
-import { Card, ListRow, ListRows, PageHeader, Section, Stat } from "@/ui/layout";
+import { Card, PageHeader, Section, Stat } from "@/ui/layout";
+import { ToDoRows } from "@/ui/todo-rows";
 import { count } from "@/ui/text";
 import { EngagementNav } from "./nav";
 
@@ -160,11 +161,7 @@ export default async function EngagementHome({ params }: { params: Promise<{ id:
               )
             }
           >
-            <ListRows>
-              {model.toDo.map((t) => (
-                <ListRow key={t.text} title={t.text} subtitle={t.owner ? `For ${t.owner === "partner" ? "a partner" : "a reviewer"}` : undefined} href={t.href} meta={<ArrowRightIcon />} />
-              ))}
-            </ListRows>
+            <ToDoRows items={model.toDo} />
           </Section>
         )}
 
