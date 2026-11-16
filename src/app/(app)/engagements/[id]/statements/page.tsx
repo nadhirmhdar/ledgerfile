@@ -17,7 +17,7 @@ import { Callout, EmptyState } from "@/ui/feedback";
 import { CheckIcon } from "@/ui/icons";
 import { PageHeader } from "@/ui/layout";
 import { OpenOnHash } from "@/ui/open-on-hash";
-import { BORROWINGS_ANCHOR, checkDetail, checkFix, checksSentence, orderChecks, placeholderCount, splitBrackets } from "@/ui/statements-view";
+import { BORROWINGS_ANCHOR, checkDetail, checkFix, checksSentence, draftNoteNumbers, draftNoteSentence, orderChecks, placeholderCount, splitBrackets } from "@/ui/statements-view";
 import { SummaryChevron, summaryRow } from "@/ui/summary-cue";
 import { Table, THead } from "@/ui/table";
 import { count } from "@/ui/text";
@@ -88,6 +88,8 @@ export default async function StatementsPage({ params, searchParams }: { params:
   const hasBorrowings = accounts.some((a) => a.groupCode === "BORROW");
   const open = engagement.status === "open";
   const checks = orderChecks(pack.checks);
+  const draftNumbers = draftNoteNumbers(pack.notes, POLICY_REVIEW_NOTICE);
+  const draftLine = draftNoteSentence(draftNumbers);
   const borrowingsFailed = pack.checks.some((c) => !c.passed && c.label === "Current portion of borrowings is within total borrowings");
 
   const meta = (
@@ -438,7 +440,8 @@ export default async function StatementsPage({ params, searchParams }: { params:
             Notes to the financial statements
           </h2>
           <Callout variant="draft" className="mt-2">
-            Text in [square brackets] is for you to complete in the Word document.
+            <p>Text in [square brackets] is for you to complete in the Word document.</p>
+            {draftLine && <p className="mt-1 font-semibold">{draftLine}</p>}
           </Callout>
           <div className="mt-3 space-y-3">
             {pack.notes.map((note) => {
@@ -451,6 +454,7 @@ export default async function StatementsPage({ params, searchParams }: { params:
                       <h3 className="font-semibold">
                         {note.number}. {note.title}
                       </h3>
+                      {draftNumbers.includes(note.number) && <Badge tone="warning">Draft, needs review</Badge>}
                       {toComplete > 0 && <Badge tone="warning">{toComplete} to complete</Badge>}
                       {note.table && <span className="ml-auto text-sm font-normal text-ink-muted tabular-nums">Total {fmt(note.table.totalCurrent)}</span>}
                     </span>

@@ -1,5 +1,5 @@
 import type { Check } from "../domain/statements";
-import { count, plainCount } from "./text";
+import { count, joinList, plainCount } from "./text";
 
 /** How the financial statements page reads the checks and the notes. Pure: it only rearranges and words what the domain produced. */
 
@@ -62,3 +62,15 @@ export function splitBrackets(text: string): TextPiece[] {
 
 /** How many placeholders a note still has. */
 export const placeholderCount = (texts: string[]): number => texts.reduce((n, t) => n + splitBrackets(t).filter((p) => p.placeholder).length, 0);
+
+/** The numbers of the notes that carry the policy review notice, in note order. Takes the notice text so it stays the domain's own. */
+export function draftNoteNumbers(notes: { number: number; paragraphs: string[] }[], notice: string): number[] {
+  return notes.filter((n) => n.paragraphs.includes(notice)).map((n) => n.number);
+}
+
+/** "The accounting policies in note 3 are draft wording and need review before issue." Null when no note carries the notice. */
+export function draftNoteSentence(numbers: number[]): string | null {
+  if (numbers.length === 0) return null;
+  const list = numbers.length === 1 ? `note ${numbers[0]}` : `notes ${joinList(numbers.map(String))}`;
+  return `The accounting policies in ${list} are draft wording and need review before issue.`;
+}

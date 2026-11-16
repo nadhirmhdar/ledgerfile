@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { checkDetail, checkFix, checksSentence, orderChecks, placeholderCount, splitBrackets } from "../src/ui/statements-view";
+import { checkDetail, checkFix, checksSentence, draftNoteNumbers, draftNoteSentence, orderChecks, placeholderCount, splitBrackets } from "../src/ui/statements-view";
 
 const c = (label: string, passed: boolean) => ({ label, passed });
 
@@ -85,5 +85,25 @@ describe("splitBrackets", () => {
   });
   it("counts placeholders across texts", () => {
     expect(placeholderCount(["[a] and [b]", "none", "[c]"])).toBe(3);
+  });
+});
+
+describe("draft notes", () => {
+  const notice = "NOTICE";
+  const notes = [
+    { number: 1, paragraphs: ["a"] },
+    { number: 3, paragraphs: [notice] },
+    { number: 7, paragraphs: ["x", notice] },
+  ];
+  it("finds the notes that carry the notice, by the number the pack gives", () => {
+    expect(draftNoteNumbers(notes.slice(0, 1), notice)).toEqual([]);
+    expect(draftNoteNumbers(notes.slice(0, 2), notice)).toEqual([3]);
+    expect(draftNoteNumbers([{ number: 5, paragraphs: [notice] }], notice)).toEqual([5]);
+    expect(draftNoteNumbers(notes, notice)).toEqual([3, 7]);
+  });
+  it("words the line, or gives none", () => {
+    expect(draftNoteSentence([])).toBeNull();
+    expect(draftNoteSentence([3])).toBe("The accounting policies in note 3 are draft wording and need review before issue.");
+    expect(draftNoteSentence([3, 7])).toBe("The accounting policies in notes 3 and 7 are draft wording and need review before issue.");
   });
 });
