@@ -67,7 +67,7 @@ export async function EngagementNav({ id, current, status }: { id: string; curre
           <nav aria-label="Engagement sections" className="-mx-4 flex gap-4 overflow-x-auto border-b border-border px-4 lg:mx-0 lg:flex-col lg:gap-5 lg:overflow-visible lg:border-b-0 lg:px-0">
             {GROUPS.map((g) => (
               <div key={g.title} className="flex shrink-0 items-center gap-1 lg:flex-col lg:items-stretch lg:gap-0.5">
-                <p className="hidden px-3 pb-1 text-xs font-semibold tracking-wider text-ink-muted uppercase lg:block">{g.title}</p>
+                <p className="hidden px-3 pb-1 text-sm font-semibold text-ink-muted lg:block">{g.title}</p>
                 {g.items.map((t) => {
                   const active = t.key === current;
                   return (

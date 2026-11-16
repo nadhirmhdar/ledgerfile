@@ -1,5 +1,5 @@
 /**
- * One fixed status vocabulary for the whole app. A status is always shown as a dot plus a word, never by colour alone.
+ * One fixed status vocabulary for the whole app. A status is always shown as a soft pill with an icon and a word, never by colour alone.
  *   Not started: neutral       In progress: blue           Needs review / Waiting: amber
  *   Done / Reviewed: green     Problem / Blocked: red      Not applicable: muted         Locked: slate (with a lock icon)
  */

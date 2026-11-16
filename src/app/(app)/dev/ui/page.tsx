@@ -19,7 +19,7 @@ export default function UiGallery() {
     <div className="space-y-10 py-8 text-ink">
       <PageHeader
         breadcrumb={[{ label: "Engagements", href: "/" }]}
-        eyebrow="Development only"
+        meta={<Badge tone="muted">Development only</Badge>}
         title="UI components"
         subtitle="Every shared component and state. This page is not linked from the app and is not served in production."
         actions={<Button variant="primary">Primary action</Button>}
@@ -43,7 +43,7 @@ export default function UiGallery() {
         </div>
       </Section>
 
-      <Section title="Status" description="A dot and a word, from one fixed vocabulary. Never colour alone.">
+      <Section title="Status" description="A soft pill with an icon and a word, from one fixed vocabulary. Never colour alone.">
         <ul className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           {STATUSES.map((s) => (
             <li key={s} className="rounded-lg border border-border bg-surface px-3 py-2">

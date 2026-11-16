@@ -1,31 +1,31 @@
 import type { ReactNode } from "react";
-import { LockIcon } from "./icons";
+import { BangIcon, CheckIcon, CrossIcon, DashIcon, DotIcon, LockIcon, RingIcon } from "./icons";
 import { STATUS_LABEL, statusTone, type Status, type Tone } from "./status";
 
-const TEXT: Record<Tone, string> = {
-  neutral: "text-neutral-strong",
-  info: "text-info-strong",
-  warning: "text-warning-strong",
-  success: "text-success-strong",
-  danger: "text-danger-strong",
-  muted: "text-ink-muted",
-  slate: "text-neutral-strong",
+const PILL: Record<Tone, string> = {
+  neutral: "bg-neutral-soft text-neutral-strong",
+  info: "bg-info-soft text-info-strong",
+  warning: "bg-warning-soft text-warning-strong",
+  success: "bg-success-soft text-success-strong",
+  danger: "bg-danger-soft text-danger-strong",
+  muted: "bg-surface-muted text-ink-muted",
+  slate: "bg-neutral-soft text-neutral-strong",
 };
-const DOT: Record<Tone, string> = {
-  neutral: "border-2 border-neutral bg-transparent",
-  info: "bg-info",
-  warning: "bg-warning",
-  success: "bg-success",
-  danger: "bg-danger",
-  muted: "bg-ink-subtle opacity-60",
-  slate: "bg-neutral-strong",
+const ICON: Record<Tone, ReactNode> = {
+  neutral: <RingIcon />,
+  info: <DotIcon />,
+  warning: <BangIcon />,
+  success: <CheckIcon />,
+  danger: <CrossIcon />,
+  muted: <DashIcon />,
+  slate: <LockIcon />,
 };
 
-/** A coloured dot and a short word. The word always carries the meaning; the dot only adds to it. */
+/** A soft-filled pill: a small icon and a sentence-case word. The word carries the meaning; the icon and fill only add to it. */
 export function Badge({ tone = "neutral", children, className = "" }: { tone?: Tone; children: ReactNode; className?: string }) {
   return (
-    <span className={`inline-flex items-center gap-1.5 text-sm font-medium ${TEXT[tone]} ${className}`}>
-      {tone === "slate" ? <LockIcon width={14} height={14} /> : <span aria-hidden="true" className={`inline-block size-2.5 shrink-0 rounded-full ${DOT[tone]}`} />}
+    <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-sm font-medium whitespace-nowrap [&>svg]:size-3.5 ${PILL[tone]} ${className}`}>
+      {ICON[tone]}
       {children}
     </span>
   );

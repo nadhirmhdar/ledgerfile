@@ -8,7 +8,7 @@ import { getAuditOverview } from "@/server/audit";
 import { requestCounts } from "@/server/client-requests";
 import { confirmationSummary } from "@/server/confirmations";
 import { buildWorkingPaperIndex } from "@/server/wp-index";
-import { Badge } from "@/ui/badge";
+import { Badge, StatusBadge } from "@/ui/badge";
 import { LinkButton } from "@/ui/button";
 import { buildHomeModel, paths, seeAllLabel, type HomeInput } from "@/ui/engagement-home";
 import { Callout, EmptyState, StepList } from "@/ui/feedback";
@@ -86,10 +86,17 @@ export default async function EngagementHome({ params }: { params: Promise<{ id:
     <div className="py-8 text-ink">
       <PageHeader
         breadcrumb={[{ label: "All engagements", href: "/" }]}
-        eyebrow={`Engagement · ${engagement.periodStart} to ${engagement.periodEnd}`}
+        meta={
+          <>
+            <span>
+              {engagement.periodStart} to {engagement.periodEnd}
+            </span>
+            <StatusBadge status={model.locked ? "locked" : "in_progress"} label={model.locked ? "Locked" : "Open"} />
+            <Badge tone={audit.enabled ? "info" : "muted"}>{audit.enabled ? "Audit on" : "Audit off"}</Badge>
+          </>
+        }
         title={engagement.clientName}
         subtitle={model.summary}
-        actions={<Badge tone={audit.enabled ? "info" : "muted"}>{audit.enabled ? "Audit on" : "Audit off"}</Badge>}
       />
       <EngagementNav id={id} current="home" status={engagement.status} />
 
@@ -113,7 +120,7 @@ export default async function EngagementHome({ params }: { params: Promise<{ id:
           />
         ) : step ? (
           <Card>
-            <p className="text-xs font-semibold tracking-wider text-ink-muted uppercase">Next step</p>
+            <p className="text-sm font-semibold text-accent">Your next step</p>
             <h2 className="mt-1 text-xl font-bold text-ink">{step.title}</h2>
             <p className="mt-1 text-base text-ink-muted">{step.description}</p>
             {step.waitingOn && step.kind === "action" && (
@@ -130,7 +137,7 @@ export default async function EngagementHome({ params }: { params: Promise<{ id:
           </Card>
         ) : null}
 
-        <Section title="Where things stand" description="Each step ticks off by itself as the work is recorded.">
+        <Section title="Where things stand" description="These update from the work you record. Nothing to tick by hand.">
           <ul className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
             {model.tiles.map((t) => (
               <li key={t.key}>

@@ -34,15 +34,15 @@ export function Card({
   );
 }
 
-/** The top of a page: a small uppercase label, the one h1, one status sentence, and the page's actions. */
+/** The top of a page: the one h1, a line of facts and status pills beneath it, one status sentence, and the page's actions. */
 export function PageHeader({
-  eyebrow,
+  meta,
   title,
   subtitle,
   actions,
   breadcrumb,
 }: {
-  eyebrow?: string;
+  meta?: ReactNode;
   title: ReactNode;
   subtitle?: ReactNode;
   actions?: ReactNode;
@@ -65,8 +65,8 @@ export function PageHeader({
             </ol>
           </nav>
         )}
-        {eyebrow && <p className="text-xs font-semibold tracking-wider text-ink-muted uppercase">{eyebrow}</p>}
-        <h1 className="mt-0.5 text-2xl font-bold text-ink">{title}</h1>
+        <h1 className="text-2xl font-bold text-ink">{title}</h1>
+        {meta && <div className="mt-1.5 flex flex-wrap items-center gap-2 text-sm text-ink-muted">{meta}</div>}
         {subtitle && <p className="mt-1 text-base text-ink-muted">{subtitle}</p>}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}

@@ -26,7 +26,6 @@ export default async function Home() {
   return (
     <div className="py-8 text-ink">
       <PageHeader
-        eyebrow="Your firm"
         title="Engagements"
         subtitle={engagements.length === 0 ? "No engagements yet." : `${count(engagements.length, "engagement")}, ${open} open.`}
       />

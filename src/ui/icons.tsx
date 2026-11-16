@@ -74,3 +74,28 @@ export const UserIcon = (p: IconProps) => (
     <path d="M4 16.5c.8-3 3.2-4.5 6-4.5s5.2 1.5 6 4.5" />
   </Svg>
 );
+export const CrossIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="m5.5 5.5 9 9M14.5 5.5l-9 9" />
+  </Svg>
+);
+export const DotIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <circle cx="10" cy="10" r="3.5" fill="currentColor" stroke="none" />
+  </Svg>
+);
+export const RingIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <circle cx="10" cy="10" r="4.5" />
+  </Svg>
+);
+export const BangIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M10 4.5v7M10 15v.01" strokeWidth="2.25" />
+  </Svg>
+);
+export const DashIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M5.5 10h9" />
+  </Svg>
+);
