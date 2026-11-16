@@ -16,7 +16,7 @@ export default async function TeamPage() {
   const admin = session.role === "admin";
 
   return (
-    <main className="mx-auto w-full max-w-6xl px-4 py-8 text-slate-900">
+    <div className="py-8 text-slate-900">
       <h1 className="text-2xl font-semibold">Team</h1>
       <p className="mt-1 text-sm text-slate-600">{session.firmName}</p>
 
@@ -99,6 +99,6 @@ export default async function TeamPage() {
           <p className="mt-2 text-sm text-slate-600">Only an administrator can add or manage users.</p>
         )}
       </section>
-    </main>
+    </div>
   );
 }

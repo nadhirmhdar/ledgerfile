@@ -69,11 +69,11 @@ export default async function ConfirmationsPage({ params, searchParams }: { para
   const summaryAreas = summary ? [...summary.byArea.keys()].sort(compareAreas) : [];
 
   return (
-    <main className="mx-auto w-full max-w-6xl px-4 py-8 text-slate-900">
+    <div className="py-8 text-slate-900">
       <Link href="/" className="text-sm text-blue-700 underline">All engagements</Link>
       <h1 className="mt-2 text-2xl font-semibold">{engagement.clientName}</h1>
       <p className="mt-1 text-sm text-slate-600">{engagement.periodStart} to {engagement.periodEnd}</p>
-      <EngagementNav id={id} current="audit" status={engagement.status} />
+      <EngagementNav id={id} current="confirmations" status={engagement.status} />
 
       <h2 className="mt-6 text-xl font-semibold">External confirmations</h2>
       <p className="mt-1 text-sm text-slate-700">
@@ -343,6 +343,6 @@ export default async function ConfirmationsPage({ params, searchParams }: { para
           {engagement.status !== "open" && <p className="mt-6 text-xs text-slate-600">This engagement is locked, so this page is read-only.</p>}
         </>
       )}
-    </main>
+    </div>
   );
 }

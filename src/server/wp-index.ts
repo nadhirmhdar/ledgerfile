@@ -64,7 +64,7 @@ export async function buildWorkingPaperIndex(tx: Tx, engagementId: string): Prom
     section: GENERAL,
     title: "Trial balance and mapping",
     kind: "trial_balance",
-    href: base,
+    href: `${base}/trial-balance`,
     status: accounts.length === 0 ? "not_started" : unmapped + unapproved > 0 ? "in_progress" : "prepared",
     reviewable: false,
     preparedOn: imported.rows[0]?.on ?? null,

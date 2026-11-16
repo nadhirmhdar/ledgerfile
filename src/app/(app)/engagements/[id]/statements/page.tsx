@@ -54,7 +54,7 @@ export default async function StatementsPage({ params, searchParams }: { params:
     return (
       <tr className={line.kind === "line" ? "" : "font-semibold"}>
         <td className="py-1.5">
-          {line.groupCode ? <Link href={`${base}#ls-${line.groupCode}`} className="text-blue-700 underline">{line.label}</Link> : line.label}
+          {line.groupCode ? <Link href={`${base}/trial-balance#ls-${line.groupCode}`} className="text-blue-700 underline">{line.label}</Link> : line.label}
         </td>
         <td className="py-1.5 pl-4 text-right font-normal">{note ? <a href={`#note-${note}`} className="text-blue-700 underline">{note}</a> : ""}</td>
         <td className={`${num} ${ruleFor(line.kind)}`}>{fmt(line.current)}</td>
@@ -64,7 +64,7 @@ export default async function StatementsPage({ params, searchParams }: { params:
   };
 
   return (
-    <main className="mx-auto w-full max-w-5xl px-4 py-8 text-slate-900">
+    <div className="py-8 text-slate-900">
       <Link href="/" className="text-sm text-blue-700 underline">All engagements</Link>
       <h1 className="mt-2 text-2xl font-semibold">{engagement.clientName}</h1>
       <p className="mt-1 text-sm text-slate-600">{engagement.periodStart} to {engagement.periodEnd}</p>
@@ -289,6 +289,6 @@ export default async function StatementsPage({ params, searchParams }: { params:
           </section>
         </>
       )}
-    </main>
+    </div>
   );
 }

@@ -3,175 +3,173 @@ import { notFound } from "next/navigation";
 import { getDb, withFirm } from "@/server/db";
 import { getSession } from "@/server/session";
 import * as repo from "@/server/repo";
-import { buildLeadSheets } from "@/domain/leadsheet";
-import { GROUPS } from "@/domain/groups";
-import { formatAmount } from "@/domain/money";
-import { approveAllAction } from "@/app/actions";
-import { MappingSelect, UploadForm } from "@/app/forms";
+import * as review from "@/server/review";
+import { getAuditOverview } from "@/server/audit";
+import { requestCounts } from "@/server/client-requests";
+import { confirmationSummary } from "@/server/confirmations";
+import { buildWorkingPaperIndex } from "@/server/wp-index";
+import { Badge } from "@/ui/badge";
+import { LinkButton } from "@/ui/button";
+import { buildHomeModel, paths, seeAllLabel, type HomeInput } from "@/ui/engagement-home";
+import { Callout, EmptyState, StepList } from "@/ui/feedback";
+import { ArrowRightIcon } from "@/ui/icons";
+import { Card, ListRow, ListRows, PageHeader, Section, Stat } from "@/ui/layout";
+import { count } from "@/ui/text";
 import { EngagementNav } from "./nav";
 
 export const dynamic = "force-dynamic";
 
-const SOURCE_LABEL: Record<string, string> = {
-  prior_year: "Prior year",
-  rule: "Suggested",
-  ai: "AI suggested",
-  manual: "Set by preparer",
-};
-
-const num = "py-1.5 pl-4 text-right tabular-nums whitespace-nowrap";
-
-export default async function EngagementPage({ params }: { params: Promise<{ id: string }> }) {
+/** The engagement home: what to do next, how far along each stage is, and what is left before the file can be locked. */
+export default async function EngagementHome({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
 
   const session = await getSession();
-  const { engagement, accounts } = await withFirm(await getDb(), session.firmId, async (tx) => ({
-    engagement: await repo.getEngagement(tx, id),
-    accounts: await repo.listAccounts(tx, id),
-  }));
-  if (!engagement) notFound();
+  const data = await withFirm(await getDb(), session.firmId, async (tx) => {
+    const engagement = await repo.getEngagement(tx, id);
+    if (!engagement) return null;
+    return {
+      engagement,
+      accounts: await repo.listAccounts(tx, id),
+      audit: await getAuditOverview(tx, id),
+      overview: await review.getOverview(tx, id),
+      index: await buildWorkingPaperIndex(tx, id),
+      requests: (await requestCounts(tx, id)).overall,
+      confirmations: (await confirmationSummary(tx, id)).overall,
+    };
+  });
+  if (!data || !data.audit || !data.overview || !data.index) notFound();
+  const { engagement, accounts, audit, overview, index, requests, confirmations } = data;
 
-  // Lead sheets show adjusted balances: trial balance plus journal entries.
-  const hasAdjustments = accounts.some((a) => a.adjustmentMinor !== 0);
-  const set = buildLeadSheets(accounts.map((a) => ({ ...a, closingMinor: a.closingMinor + a.adjustmentMinor })));
-  const groups = [...GROUPS].sort((a, b) => a.sort - b.sort).map((g) => ({ code: g.code, name: g.name }));
-  const toReview = accounts.filter((a) => a.groupCode && !a.approved).length;
-  const total = accounts.reduce((s, a) => s + a.closingMinor, 0);
+  const input: HomeInput = {
+    engagementId: id,
+    role: session.role,
+    status: engagement.status,
+    lockedByName: overview.lockedByName,
+    lockedAt: overview.lockedAt,
+    accounts: {
+      total: accounts.length,
+      unmapped: accounts.filter((a) => !a.groupCode).length,
+      toAccept: accounts.filter((a) => a.groupCode && !a.approved).length,
+    },
+    audit: {
+      enabled: audit.enabled,
+      materialitySet: audit.materiality !== null,
+      materialityStale: audit.materialityStale,
+      areas: audit.areas.map((a) => ({
+        assessed: a.assessed,
+        procedures: a.procedures,
+        completed: a.completed,
+        unreviewed: a.unreviewed,
+        schedules: a.schedules,
+        schedulesToFinish: a.schedulesToFinish,
+      })),
+      approval: audit.approval.state,
+      approvalNotReady: audit.approval.notReady,
+    },
+    review: {
+      leadSheets: overview.leadSheets.map((l) => ({ prepared: l.preparer !== null, reviewed: l.reviewer !== null })),
+      openPoints: overview.points.filter((p) => p.status === "open").length,
+      ready: overview.readiness.ready,
+      blockers: overview.readiness.blockers,
+    },
+    papers: { total: index.overall.total, reviewed: index.overall.reviewed },
+    requests,
+    confirmations: { ...confirmations, total: confirmations.count },
+  };
+  const model = buildHomeModel(input);
+  const p = paths(id);
+  const more = seeAllLabel(model.toDoTotal);
+  const step = model.nextStep;
 
   return (
-    <main className="mx-auto w-full max-w-6xl px-4 py-8 text-slate-900">
-      <Link href="/" className="text-sm text-blue-700 underline">All engagements</Link>
-      <h1 className="mt-2 text-2xl font-semibold">{engagement.clientName}</h1>
-      <p className="mt-1 text-sm text-slate-600">
-        {engagement.periodStart} to {engagement.periodEnd}
-        {engagement.priorEngagementId ? " · mappings carry forward from the prior year" : " · no prior-year engagement linked"}
-      </p>
+    <div className="py-8 text-ink">
+      <PageHeader
+        breadcrumb={[{ label: "All engagements", href: "/" }]}
+        eyebrow={`Engagement · ${engagement.periodStart} to ${engagement.periodEnd}`}
+        title={engagement.clientName}
+        subtitle={model.summary}
+        actions={<Badge tone={audit.enabled ? "info" : "muted"}>{audit.enabled ? "Audit on" : "Audit off"}</Badge>}
+      />
+      <EngagementNav id={id} current="home" status={engagement.status} />
 
-      <EngagementNav id={id} current="tb" status={engagement.status} />
-
-      <section className="mt-6 rounded border border-slate-200 bg-slate-50 p-4">
-        <h2 className="text-base font-semibold">Trial balance</h2>
-        <div className="mt-3">
-          <UploadForm engagementId={id} hasAccounts={accounts.length > 0} />
-        </div>
-      </section>
-
-      {accounts.length > 0 && (
-        <>
-          <section className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-            {[
-              ["Accounts", String(accounts.length)],
-              ["Unmapped", String(set.unmapped.length)],
-              ["Suggestions to review", String(toReview)],
-              ["Trial balance total", total === 0 ? "Balanced" : formatAmount(total)],
-            ].map(([label, value]) => (
-              <div key={label} className="rounded border border-slate-200 p-3">
-                <div className="text-xs text-slate-600">{label}</div>
-                <div className="mt-1 text-xl font-semibold tabular-nums">{value}</div>
-              </div>
-            ))}
-          </section>
-
-          <section className="mt-8">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <h2 className="text-lg font-semibold">Account mapping</h2>
-              {toReview > 0 && (
-                <form action={approveAllAction}>
-                  <input type="hidden" name="engagementId" value={id} />
-                  <button className="rounded border border-slate-900 px-3 py-1.5 text-sm font-medium hover:bg-slate-100">
-                    {toReview === 1 ? "Accept 1 suggestion" : `Accept all ${toReview} suggestions`}
-                  </button>
-                </form>
-              )}
+      <div className="mt-6 space-y-8">
+        {model.locked ? (
+          <Card title="This engagement is locked">
+            <p className="text-base text-ink-muted">{model.summary}</p>
+            <div className="mt-4">
+              <LinkButton href={p.review}>View sign-off</LinkButton>
             </div>
-            <div className="mt-3 overflow-x-auto">
-              <table className="w-full text-left text-sm">
-                <thead className="border-b border-slate-300 text-slate-600">
-                  <tr>
-                    <th className="py-2 font-medium">Code</th>
-                    <th className="py-2 font-medium">Account</th>
-                    <th className={`${num} font-medium`}>Closing</th>
-                    <th className={`${num} font-medium`}>Prior year</th>
-                    <th className="py-2 pl-4 font-medium">Group</th>
-                    <th className="py-2 pl-4 font-medium">Basis</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {accounts.map((a) => (
-                    <tr key={a.id} className="border-b border-slate-200">
-                      <td className="py-1.5 font-mono text-xs">{a.code}</td>
-                      <td className="py-1.5">{a.name}</td>
-                      <td className={num}>{formatAmount(a.closingMinor)}</td>
-                      <td className={num}>{a.priorMinor === null ? "" : formatAmount(a.priorMinor)}</td>
-                      <td className="py-1.5 pl-4">
-                        <MappingSelect key={`${a.id}:${a.groupCode}`} engagementId={id} accountId={a.id} value={a.groupCode} groups={groups} />
-                      </td>
-                      <td className="py-1.5 pl-4 whitespace-nowrap text-slate-700">
-                        {a.source ? SOURCE_LABEL[a.source] : "—"}
-                        {a.source && !a.approved && <span className="ml-2 rounded bg-amber-100 px-1.5 py-0.5 text-xs text-amber-900">Review</span>}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          </Card>
+        ) : model.empty ? (
+          <EmptyState
+            title="No trial balance yet"
+            description="Import the client's trial balance to begin. The lead sheets, audit planning and statements are all built from it."
+            action={
+              <LinkButton href={p.trialBalance} variant="primary">
+                Import the trial balance
+              </LinkButton>
+            }
+          />
+        ) : step ? (
+          <Card>
+            <p className="text-xs font-semibold tracking-wider text-ink-muted uppercase">Next step</p>
+            <h2 className="mt-1 text-xl font-bold text-ink">{step.title}</h2>
+            <p className="mt-1 text-base text-ink-muted">{step.description}</p>
+            {step.waitingOn && step.kind === "action" && (
+              <Callout variant="info" className="mt-3">
+                {step.waitingOn}
+              </Callout>
+            )}
+            <div className="mt-4">
+              <LinkButton href={step.href} variant={step.kind === "action" ? "primary" : "secondary"}>
+                {step.label}
+                <ArrowRightIcon />
+              </LinkButton>
             </div>
-          </section>
+          </Card>
+        ) : null}
 
-          <section className="mt-10">
-            <h2 id="lead-sheets" className="text-lg font-semibold">Lead sheets</h2>
-            <p className={`mt-1 text-sm ${set.tiesToTrialBalance ? "text-emerald-800" : "text-red-800"}`}>
-              {set.tiesToTrialBalance
-                ? "Lead sheet totals agree to the trial balance."
-                : "Lead sheet totals do not agree to the trial balance."}
-              {set.unmapped.length > 0 && ` ${set.unmapped.length} unmapped account(s) are not on any lead sheet yet.`}
-            </p>
-            {set.sheets.map((sheet) => (
-              <div key={sheet.groupCode} id={`ls-${sheet.groupCode}`} className="mt-5 overflow-x-auto rounded border border-slate-200">
-                <table className="w-full text-left text-sm">
-                  <caption className="border-b border-slate-200 bg-slate-50 px-3 py-2 text-left">
-                    <span className="font-semibold">{sheet.groupName}</span>
-                    <span className="ml-2 text-xs text-slate-600">{sheet.section}</span>
-                  </caption>
-                  <thead className="text-slate-600">
-                    <tr>
-                      <th className="px-3 py-1.5 font-medium">Code</th>
-                      <th className="py-1.5 font-medium">Account</th>
-                      {hasAdjustments && <th className={`${num} font-medium`}>Per trial balance</th>}
-                      {hasAdjustments && <th className={`${num} font-medium`}>Adjustments</th>}
-                      <th className={`${num} font-medium`}>{hasAdjustments ? "Adjusted" : "Closing"}</th>
-                      <th className={`${num} font-medium`}>Prior year</th>
-                      <th className={`${num} pr-3 font-medium`}>Movement</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {sheet.accounts.map((a) => (
-                      <tr key={a.code} className="border-t border-slate-100">
-                        <td className="px-3 py-1.5 font-mono text-xs">{a.code}</td>
-                        <td className="py-1.5">{a.name}</td>
-                        {hasAdjustments && <td className={num}>{formatAmount(a.closingMinor - (a.adjustmentMinor ?? 0))}</td>}
-                        {hasAdjustments && <td className={num}>{a.adjustmentMinor ? formatAmount(a.adjustmentMinor) : ""}</td>}
-                        <td className={num}>{formatAmount(a.closingMinor)}</td>
-                        <td className={num}>{a.priorMinor === null ? "" : formatAmount(a.priorMinor)}</td>
-                        <td className={`${num} pr-3`}>{formatAmount(a.closingMinor - (a.priorMinor ?? 0))}</td>
-                      </tr>
-                    ))}
-                    <tr className="border-t border-slate-300 font-semibold">
-                      <td className="px-3 py-1.5" colSpan={hasAdjustments ? 4 : 2}>Total</td>
-                      <td className={num}>{formatAmount(sheet.closingMinor)}</td>
-                      <td className={num}>{formatAmount(sheet.priorMinor)}</td>
-                      <td className={`${num} pr-3`}>
-                        {formatAmount(sheet.varianceMinor)}
-                        {sheet.variancePct !== null && <span className="ml-2 text-xs font-normal text-slate-600">{sheet.variancePct.toFixed(1)}%</span>}
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
+        <Section title="Where things stand" description="Each step ticks off by itself as the work is recorded.">
+          <ul className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+            {model.tiles.map((t) => (
+              <li key={t.key}>
+                <Stat label={t.label} value={t.value} hint={t.hint} href={t.href} />
+              </li>
             ))}
-          </section>
-        </>
-      )}
-    </main>
+          </ul>
+          <StepList steps={model.stages.map((s) => ({ ...s }))} />
+        </Section>
+
+        {!model.locked && model.toDo.length > 0 && (
+          <Section
+            title="To do before this file can be locked"
+            description={count(model.toDoTotal, "thing") + " left."}
+            actions={
+              more && (
+                <Link href={p.review} className="rounded-sm text-sm font-medium text-accent hover:underline">
+                  {more}
+                </Link>
+              )
+            }
+          >
+            <ListRows>
+              {model.toDo.map((t) => (
+                <ListRow key={t.text} title={t.text} subtitle={t.owner ? `For ${t.owner === "partner" ? "a partner" : "a reviewer"}` : undefined} href={t.href} meta={<ArrowRightIcon />} />
+              ))}
+            </ListRows>
+          </Section>
+        )}
+
+        <Section title="Quick links">
+          <div className="flex flex-wrap gap-2">
+            <LinkButton href={p.statements}>Financial statements</LinkButton>
+            <LinkButton href={p.papers}>Working papers</LinkButton>
+            <LinkButton href={p.index}>Working paper index</LinkButton>
+            <LinkButton href={p.requests}>Client requests</LinkButton>
+          </div>
+        </Section>
+      </div>
+    </div>
   );
 }

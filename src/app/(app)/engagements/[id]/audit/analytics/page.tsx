@@ -49,7 +49,7 @@ export default async function AnalyticsPage({ params }: { params: Promise<{ id: 
   const base = `/engagements/${id}/audit`;
 
   return (
-    <main className="mx-auto w-full max-w-6xl px-4 py-8 text-slate-900">
+    <div className="py-8 text-slate-900">
       <Link href="/" className="text-sm text-blue-700 underline">All engagements</Link>
       <h1 className="mt-2 text-2xl font-semibold">{engagement.clientName}</h1>
       <p className="mt-1 text-sm text-slate-600">{engagement.periodStart} to {engagement.periodEnd}</p>
@@ -147,7 +147,7 @@ export default async function AnalyticsPage({ params }: { params: Promise<{ id: 
           </table>
         </div>
       </section>
-    </main>
+    </div>
   );
 }
 
