@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { filterRequests, parseAreaFilter, parseSearch, parseStatus, requestMeta, requestResults, requestsSentence, rowControls, statusCounts, type RequestLike } from "../src/ui/request-view";
+import { filterRequests, requestsHeading, parseAreaFilter, parseSearch, parseStatus, requestMeta, requestResults, requestsSentence, rowControls, statusCounts, type RequestLike } from "../src/ui/request-view";
 
 const r = (reference: string, description: string, status: RequestLike["status"], areaCode: string | null, overdue = false): RequestLike => ({ reference, description, status, overdue, areaCode });
 const rows = [
@@ -104,5 +104,29 @@ describe("a row's controls", () => {
     for (const status of ["open", "received", "not_applicable"] as const) {
       expect(rowControls({ status, files: 1, unlinkedAvailable: 1 }, true)).toEqual({ inlineReceived: false, notApplicable: false, reopen: false, link: false, unlink: false, edit: false, delete: false });
     }
+  });
+});
+
+describe("the heading when a filter is applied", () => {
+  const overall = { total: 47, open: 46, overdue: 3, received: 1, notApplicable: 0 };
+  it("keeps the plain whole-list sentence when nothing is applied", () => {
+    expect(requestsHeading({ overall, area: "", areaTitle: null, q: "" })).toEqual({ subtitle: "46 open, 3 overdue, 1 received.", scope: null });
+  });
+  it("says the sentence is the whole list, and names what the tiles count, for an area", () => {
+    expect(requestsHeading({ overall, area: "C6", areaTitle: "C6 Cash and bank", q: "" })).toEqual({
+      subtitle: "Whole list: 46 open, 3 overdue, 1 received.",
+      scope: "The tiles and filters below count C6 Cash and bank.",
+    });
+    expect(requestsHeading({ overall, area: "general", areaTitle: null, q: "" }).scope).toBe("The tiles and filters below count general requests.");
+  });
+  it("names a search, alone or with an area", () => {
+    expect(requestsHeading({ overall, area: "", areaTitle: null, q: "bank" }).scope).toBe("The tiles and filters below count the search “bank”.");
+    expect(requestsHeading({ overall, area: "C6", areaTitle: "C6 Cash and bank", q: "bank" }).scope).toBe("The tiles and filters below count C6 Cash and bank and the search “bank”.");
+  });
+  it("falls back to the code when the area title is unknown, and drops the prefix and scope for an empty list", () => {
+    expect(requestsHeading({ overall, area: "C99", areaTitle: null, q: "" }).scope).toBe("The tiles and filters below count C99.");
+    // With no requests at all, a filter changes nothing: the plain sentence, no prefix and no scope line.
+    const none = { total: 0, open: 0, overdue: 0, received: 0, notApplicable: 0 };
+    expect(requestsHeading({ overall: none, area: "C6", areaTitle: "C6 Cash and bank", q: "bank" })).toEqual({ subtitle: "No requests yet.", scope: null });
   });
 });

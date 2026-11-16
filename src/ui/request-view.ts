@@ -107,3 +107,21 @@ export function rowControls(r: { status: RequestStatus; files: number; unlinkedA
     delete: isOpen && r.files === 0,
   };
 }
+
+/**
+ * The sentence under the title and the line that says what the tiles and chips count. The sentence is always the whole list;
+ * when an area or a search is applied, it says so and the second line names the scope, so the two counts are never confused.
+ */
+export function requestsHeading(i: {
+  overall: { total: number; open: number; overdue: number; received: number; notApplicable: number };
+  area: string;
+  areaTitle: string | null;
+  q: string;
+}): { subtitle: string; scope: string | null } {
+  const whole = requestsSentence(i.overall);
+  // With no requests at all there is nothing for a filter to be a part of.
+  if (i.overall.total === 0) return { subtitle: whole, scope: null };
+  const parts = [i.area ? (i.area === "general" ? "general requests" : (i.areaTitle ?? i.area)) : null, i.q ? `the search “${i.q}”` : null].filter(Boolean) as string[];
+  if (parts.length === 0) return { subtitle: whole, scope: null };
+  return { subtitle: `Whole list: ${whole}`, scope: `The tiles and filters below count ${parts.join(" and ")}.` };
+}
