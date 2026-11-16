@@ -4,26 +4,38 @@ import { getDb, withFirm } from "@/server/db";
 import { getSession } from "@/server/session";
 import * as repo from "@/server/repo";
 import { buildLeadSheets } from "@/domain/leadsheet";
-import { GROUPS } from "@/domain/groups";
+import { GROUPS, GROUP_BY_CODE } from "@/domain/groups";
 import { formatAmount } from "@/domain/money";
 import { approveAllAction } from "@/app/actions";
 import { MappingSelect, UploadForm } from "@/app/forms";
+import { Badge } from "@/ui/badge";
+import { Button, LinkButton, buttonClass } from "@/ui/button";
+import { Callout, EmptyState } from "@/ui/feedback";
+import { Input } from "@/ui/form";
+import { ArrowRightIcon } from "@/ui/icons";
+import { Card, PageHeader, Section, Stat } from "@/ui/layout";
+import { countMappings, isBalanced, mappingControls, mappingSentence, mappingState, parseQuery, parseShow, resultsText, viewMappings, type MappingShow } from "@/ui/mapping-view";
+import { Table, TCell, THead, TRow } from "@/ui/table";
+import { count } from "@/ui/text";
 import { EngagementNav } from "../nav";
 
 export const dynamic = "force-dynamic";
 
 const SOURCE_LABEL: Record<string, string> = {
-  prior_year: "Prior year",
+  prior_year: "From the prior year",
   rule: "Suggested",
   ai: "AI suggested",
-  manual: "Set by preparer",
+  manual: "Set by a person",
 };
 
-const num = "py-1.5 pl-4 text-right tabular-nums whitespace-nowrap";
+type Params = { show?: string | string[]; q?: string | string[] };
 
-export default async function EngagementPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function TrialBalancePage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<Params> }) {
   const { id } = await params;
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
+  const sp = await searchParams;
+  const show = parseShow(sp.show);
+  const q = parseQuery(sp.q);
 
   const session = await getSession();
   const { engagement, accounts } = await withFirm(await getDb(), session.firmId, async (tx) => ({
@@ -32,146 +44,237 @@ export default async function EngagementPage({ params }: { params: Promise<{ id:
   }));
   if (!engagement) notFound();
 
-  // Lead sheets show adjusted balances: trial balance plus journal entries.
-  const hasAdjustments = accounts.some((a) => a.adjustmentMinor !== 0);
-  const set = buildLeadSheets(accounts.map((a) => ({ ...a, closingMinor: a.closingMinor + a.adjustmentMinor })));
-  const groups = [...GROUPS].sort((a, b) => a.sort - b.sort).map((g) => ({ code: g.code, name: g.name }));
-  const toReview = accounts.filter((a) => a.groupCode && !a.approved).length;
+  const locked = engagement.status !== "open";
+  const counts = countMappings(accounts);
+  const controls = mappingControls({ locked, accounts: accounts.length, toCheck: counts.toCheck });
   const total = accounts.reduce((s, a) => s + a.closingMinor, 0);
+  const view = viewMappings(accounts, { show, q });
+  // The tie-out is the lead sheets' own calculation, on adjusted balances, as the lead sheets page does it.
+  const ties = buildLeadSheets(accounts.map((a) => ({ ...a, closingMinor: a.closingMinor + a.adjustmentMinor }))).tiesToTrialBalance;
+  const groups = [...GROUPS].sort((a, b) => a.sort - b.sort).map((g) => ({ code: g.code, name: g.name }));
+  const base = `/engagements/${id}`;
+  const here = (s: MappingShow, query: string) => {
+    const p = new URLSearchParams();
+    if (s !== "all") p.set("show", s);
+    if (query) p.set("q", query);
+    const str = p.toString();
+    return `${base}/trial-balance${str ? `?${str}` : ""}`;
+  };
+
+  const statusCell = (a: (typeof accounts)[number]) => {
+    const state = mappingState(a);
+    const basis = a.source ? SOURCE_LABEL[a.source] : null;
+    return (
+      <div className="flex flex-col items-start gap-0.5">
+        {state === "to_map" ? <Badge tone="danger">To map</Badge> : state === "to_check" ? <Badge tone="warning">To check</Badge> : <Badge tone="success">Mapped</Badge>}
+        {state !== "to_map" && basis && <span className="text-sm text-ink-muted">{basis}</span>}
+      </div>
+    );
+  };
+  const groupCell = (a: (typeof accounts)[number]) =>
+    controls.selects ? (
+      <MappingSelect key={`${a.id}:${a.groupCode}`} engagementId={id} accountId={a.id} value={a.groupCode} groups={groups} label={`Group for ${a.code} ${a.name}`} />
+    ) : (
+      <span>{a.groupCode ? (GROUP_BY_CODE.get(a.groupCode)?.name ?? a.groupCode) : "Not mapped"}</span>
+    );
+
+  const chips: { key: MappingShow; label: string; n: number }[] = [
+    { key: "all", label: "All", n: counts.all },
+    { key: "unmapped", label: "To map", n: counts.toMap },
+    { key: "review", label: "To check", n: counts.toCheck },
+    { key: "mapped", label: "Mapped", n: counts.mapped },
+  ];
 
   return (
-    <div className="py-8 text-slate-900">
-      <Link href="/" className="text-sm text-blue-700 underline">All engagements</Link>
-      <h1 className="mt-2 text-2xl font-semibold">{engagement.clientName}</h1>
-      <p className="mt-1 text-sm text-slate-600">
-        {engagement.periodStart} to {engagement.periodEnd}
-        {engagement.priorEngagementId ? " · mappings carry forward from the prior year" : " · no prior-year engagement linked"}
-      </p>
-
+    <div className="py-8 text-ink">
+      <PageHeader
+        breadcrumb={[{ label: "All engagements", href: "/" }]}
+        title="Trial balance and mapping"
+        meta={
+          <>
+            <span>{engagement.clientName}</span>
+            <span aria-hidden="true">·</span>
+            <span>
+              {engagement.periodStart} to {engagement.periodEnd}
+            </span>
+            <span aria-hidden="true">·</span>
+            <span>{engagement.priorEngagementId ? "Mappings carry forward from the prior year" : "No prior-year engagement linked"}</span>
+          </>
+        }
+        subtitle={mappingSentence(counts)}
+      />
       <EngagementNav id={id} current="tb" status={engagement.status} />
 
-      <section className="mt-6 rounded border border-slate-200 bg-slate-50 p-4">
-        <h2 className="text-base font-semibold">Trial balance</h2>
-        <div className="mt-3">
-          <UploadForm engagementId={id} hasAccounts={accounts.length > 0} />
-        </div>
-      </section>
+      <div className="mt-6 space-y-8">
+        {accounts.length === 0 ? (
+          controls.importFirst ? (
+            <Card title="Import the trial balance" description="Start here. The mapping, lead sheets and statements are all built from it.">
+              <UploadForm engagementId={id} hasAccounts={false} />
+            </Card>
+          ) : (
+            <EmptyState title="No trial balance was imported" description="This engagement was locked before a trial balance was imported." />
+          )
+        ) : (
+          <>
+            <ul className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+              <li>
+                <Stat label="Accounts" value={counts.all} href={here("all", "")} />
+              </li>
+              <li>
+                <Stat label="To map" value={counts.toMap} href={here("unmapped", "")} />
+              </li>
+              <li>
+                <Stat label="To check" value={counts.toCheck} href={here("review", "")} />
+              </li>
+              <li>
+                <Stat
+                  label="Balance check"
+                  value={isBalanced(total) ? <Badge tone="success">Balances</Badge> : <Badge tone="danger">Out by {formatAmount(Math.abs(total))}</Badge>}
+                />
+              </li>
+            </ul>
 
-      {accounts.length > 0 && (
-        <>
-          <section className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-            {[
-              ["Accounts", String(accounts.length)],
-              ["Unmapped", String(set.unmapped.length)],
-              ["Suggestions to review", String(toReview)],
-              ["Trial balance total", total === 0 ? "Balanced" : formatAmount(total)],
-            ].map(([label, value]) => (
-              <div key={label} className="rounded border border-slate-200 p-3">
-                <div className="text-xs text-slate-600">{label}</div>
-                <div className="mt-1 text-xl font-semibold tabular-nums">{value}</div>
-              </div>
-            ))}
-          </section>
+            {!locked && counts.toMap > 0 ? (
+              <Card title={`Map ${count(counts.toMap, "account")}`} description="Each account needs a lead sheet group before the lead sheets and statements are right.">
+                <LinkButton href={here("unmapped", "")} variant="primary">
+                  Show the accounts to map
+                  <ArrowRightIcon />
+                </LinkButton>
+              </Card>
+            ) : (
+              controls.accept && (
+                <Card
+                  title={`Check ${count(counts.toCheck, "suggested mapping")}`}
+                  description="Accepting confirms the suggested group for each account. You can still change any of them afterwards."
+                >
+                  <form action={approveAllAction}>
+                    <input type="hidden" name="engagementId" value={id} />
+                    <Button variant="primary">{counts.toCheck === 1 ? "Accept 1 suggestion" : `Accept all ${counts.toCheck} suggestions`}</Button>
+                  </form>
+                </Card>
+              )
+            )}
 
-          <section className="mt-8">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <h2 className="text-lg font-semibold">Account mapping</h2>
-              {toReview > 0 && (
-                <form action={approveAllAction}>
-                  <input type="hidden" name="engagementId" value={id} />
-                  <button className="rounded border border-slate-900 px-3 py-1.5 text-sm font-medium hover:bg-slate-100">
-                    {toReview === 1 ? "Accept 1 suggestion" : `Accept all ${toReview} suggestions`}
-                  </button>
+            <Section title="Account mapping" description={locked ? "This engagement is locked, so the mapping is read-only." : "Choose a group for each account. A change is saved as soon as you pick it."}>
+              <div className="flex flex-wrap items-end justify-between gap-3">
+                <nav aria-label="Filter accounts">
+                  <ul className="flex flex-wrap gap-2">
+                    {chips.map((c) => {
+                      const active = show === c.key;
+                      return (
+                        <li key={c.key}>
+                          <Link
+                            href={here(c.key, q)}
+                            aria-current={active ? "true" : undefined}
+                            className={`inline-flex min-h-10 items-center rounded-full border px-4 text-sm font-medium ${active ? "border-accent bg-accent text-surface" : "border-border-strong bg-surface text-ink hover:bg-surface-muted"}`}
+                          >
+                            {c.label} {c.n}
+                          </Link>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </nav>
+                <form method="get" action={`${base}/trial-balance`} role="search" className="flex items-end gap-2">
+                  {show !== "all" && <input type="hidden" name="show" value={show} />}
+                  <div>
+                    <label htmlFor="account-search" className="mb-1 block text-sm font-medium text-ink">
+                      Search accounts
+                    </label>
+                    <Input id="account-search" name="q" type="search" defaultValue={q} placeholder="Code or name" className="w-56" />
+                  </div>
+                  <Button variant="secondary">Search</Button>
                 </form>
-              )}
-            </div>
-            <div className="mt-3 overflow-x-auto">
-              <table className="w-full text-left text-sm">
-                <thead className="border-b border-slate-300 text-slate-600">
-                  <tr>
-                    <th className="py-2 font-medium">Code</th>
-                    <th className="py-2 font-medium">Account</th>
-                    <th className={`${num} font-medium`}>Closing</th>
-                    <th className={`${num} font-medium`}>Prior year</th>
-                    <th className="py-2 pl-4 font-medium">Group</th>
-                    <th className="py-2 pl-4 font-medium">Basis</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {accounts.map((a) => (
-                    <tr key={a.id} className="border-b border-slate-200">
-                      <td className="py-1.5 font-mono text-xs">{a.code}</td>
-                      <td className="py-1.5">{a.name}</td>
-                      <td className={num}>{formatAmount(a.closingMinor)}</td>
-                      <td className={num}>{a.priorMinor === null ? "" : formatAmount(a.priorMinor)}</td>
-                      <td className="py-1.5 pl-4">
-                        <MappingSelect key={`${a.id}:${a.groupCode}`} engagementId={id} accountId={a.id} value={a.groupCode} groups={groups} />
-                      </td>
-                      <td className="py-1.5 pl-4 whitespace-nowrap text-slate-700">
-                        {a.source ? SOURCE_LABEL[a.source] : "—"}
-                        {a.source && !a.approved && <span className="ml-2 rounded bg-amber-100 px-1.5 py-0.5 text-xs text-amber-900">Review</span>}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </section>
-
-          <section className="mt-10">
-            <h2 id="lead-sheets" className="text-lg font-semibold">Lead sheets</h2>
-            <p className={`mt-1 text-sm ${set.tiesToTrialBalance ? "text-emerald-800" : "text-red-800"}`}>
-              {set.tiesToTrialBalance
-                ? "Lead sheet totals agree to the trial balance."
-                : "Lead sheet totals do not agree to the trial balance."}
-              {set.unmapped.length > 0 && ` ${set.unmapped.length} unmapped account(s) are not on any lead sheet yet.`}
-            </p>
-            {set.sheets.map((sheet) => (
-              <div key={sheet.groupCode} id={`ls-${sheet.groupCode}`} className="mt-5 overflow-x-auto rounded border border-slate-200">
-                <table className="w-full text-left text-sm">
-                  <caption className="border-b border-slate-200 bg-slate-50 px-3 py-2 text-left">
-                    <span className="font-semibold">{sheet.groupName}</span>
-                    <span className="ml-2 text-xs text-slate-600">{sheet.section}</span>
-                  </caption>
-                  <thead className="text-slate-600">
-                    <tr>
-                      <th className="px-3 py-1.5 font-medium">Code</th>
-                      <th className="py-1.5 font-medium">Account</th>
-                      {hasAdjustments && <th className={`${num} font-medium`}>Per trial balance</th>}
-                      {hasAdjustments && <th className={`${num} font-medium`}>Adjustments</th>}
-                      <th className={`${num} font-medium`}>{hasAdjustments ? "Adjusted" : "Closing"}</th>
-                      <th className={`${num} font-medium`}>Prior year</th>
-                      <th className={`${num} pr-3 font-medium`}>Movement</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {sheet.accounts.map((a) => (
-                      <tr key={a.code} className="border-t border-slate-100">
-                        <td className="px-3 py-1.5 font-mono text-xs">{a.code}</td>
-                        <td className="py-1.5">{a.name}</td>
-                        {hasAdjustments && <td className={num}>{formatAmount(a.closingMinor - (a.adjustmentMinor ?? 0))}</td>}
-                        {hasAdjustments && <td className={num}>{a.adjustmentMinor ? formatAmount(a.adjustmentMinor) : ""}</td>}
-                        <td className={num}>{formatAmount(a.closingMinor)}</td>
-                        <td className={num}>{a.priorMinor === null ? "" : formatAmount(a.priorMinor)}</td>
-                        <td className={`${num} pr-3`}>{formatAmount(a.closingMinor - (a.priorMinor ?? 0))}</td>
-                      </tr>
-                    ))}
-                    <tr className="border-t border-slate-300 font-semibold">
-                      <td className="px-3 py-1.5" colSpan={hasAdjustments ? 4 : 2}>Total</td>
-                      <td className={num}>{formatAmount(sheet.closingMinor)}</td>
-                      <td className={num}>{formatAmount(sheet.priorMinor)}</td>
-                      <td className={`${num} pr-3`}>
-                        {formatAmount(sheet.varianceMinor)}
-                        {sheet.variancePct !== null && <span className="ml-2 text-xs font-normal text-slate-600">{sheet.variancePct.toFixed(1)}%</span>}
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
               </div>
-            ))}
-          </section>
-        </>
-      )}
+              <p role="status" className="mt-3 text-sm text-ink-muted">
+                {resultsText(view.shown, view.total)}
+              </p>
+
+              {view.rows.length === 0 ? (
+                <div className="mt-3">
+                  <EmptyState
+                    title="No accounts match"
+                    description="Nothing fits this filter and search."
+                    action={
+                      <LinkButton href={`${base}/trial-balance`} variant="secondary">
+                        Clear the filter
+                      </LinkButton>
+                    }
+                  />
+                </div>
+              ) : (
+                <>
+                  <div className="mt-3 hidden sm:block">
+                    <Table caption="Accounts and their lead sheet groups">
+                      <THead>
+                        <TRow>
+                          <TCell header="col">Account</TCell>
+                          <TCell header="col" numeric>
+                            Closing
+                          </TCell>
+                          <TCell header="col" numeric>
+                            Prior year
+                          </TCell>
+                          <TCell header="col">Status</TCell>
+                          <TCell header="col">Group</TCell>
+                        </TRow>
+                      </THead>
+                      <tbody>
+                        {view.rows.map((a) => (
+                          <TRow key={a.id}>
+                            <TCell header="row">
+                              <span className="font-mono text-sm font-normal text-ink-muted">{a.code}</span> <span className="font-semibold">{a.name}</span>
+                            </TCell>
+                            <TCell numeric>{formatAmount(a.closingMinor)}</TCell>
+                            <TCell numeric>{a.priorMinor === null ? "" : formatAmount(a.priorMinor)}</TCell>
+                            <TCell>{statusCell(a)}</TCell>
+                            <TCell>{groupCell(a)}</TCell>
+                          </TRow>
+                        ))}
+                      </tbody>
+                    </Table>
+                  </div>
+                  <ul className="mt-3 space-y-3 sm:hidden">
+                    {view.rows.map((a) => (
+                      <li key={a.id} className="rounded-lg border border-border bg-surface p-4 shadow-card">
+                        <p className="font-semibold">
+                          <span className="font-mono text-sm font-normal text-ink-muted">{a.code}</span> {a.name}
+                        </p>
+                        <p className="mt-1 text-sm text-ink-muted tabular-nums">
+                          Closing {formatAmount(a.closingMinor)}
+                          {a.priorMinor !== null && ` · Prior year ${formatAmount(a.priorMinor)}`}
+                        </p>
+                        <div className="mt-2">{statusCell(a)}</div>
+                        <div className="mt-3">{groupCell(a)}</div>
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )}
+            </Section>
+
+            <Card title="Lead sheets" description="The accounts, grouped by lead sheet, with prior-year movement.">
+              <p className="mb-3 text-sm text-ink-muted">{ties ? "Lead sheet totals agree to the trial balance." : "Lead sheet totals do not agree to the trial balance."}</p>
+              <LinkButton href={`${base}/lead-sheets`}>
+                Open the lead sheets
+                <ArrowRightIcon />
+              </LinkButton>
+            </Card>
+
+            {controls.replace && (
+              <details className="rounded-lg border border-border bg-surface shadow-card">
+                <summary className={`${buttonClass("secondary")} m-3 w-fit cursor-pointer list-none [&::-webkit-details-marker]:hidden`}>Replace the trial balance</summary>
+                <div className="border-t border-border px-4 py-4 sm:px-5">
+                  <Callout variant="warning" className="mb-4">
+                    Replacing re-reads every balance from the new file. Accounts keep their mappings where the account code is unchanged.
+                  </Callout>
+                  <UploadForm engagementId={id} hasAccounts />
+                </div>
+              </details>
+            )}
+          </>
+        )}
+      </div>
     </div>
   );
 }

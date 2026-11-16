@@ -12,7 +12,7 @@ const ITEMS = [
 export function TopNav() {
   const pathname = usePathname();
   return (
-    <nav aria-label="Main" className="flex items-center gap-1">
+    <nav aria-label="Main" className="flex items-center sm:gap-1">
       {ITEMS.map((item) => {
         const current = item.match(pathname);
         return (
@@ -20,7 +20,7 @@ export function TopNav() {
             key={item.href}
             href={item.href}
             aria-current={current ? "page" : undefined}
-            className={`inline-flex min-h-10 items-center border-b-2 px-3 text-sm font-medium ${
+            className={`inline-flex min-h-10 items-center border-b-2 px-2 text-sm sm:px-3 font-medium ${
               current ? "border-accent text-ink" : "border-transparent text-ink-muted hover:text-ink"
             }`}
           >

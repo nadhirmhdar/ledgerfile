@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { buttonClass } from "@/ui/button";
 import { createClientAction, createEngagementAction, setMappingAction, uploadTrialBalanceAction, type FormState } from "./actions";
 
 const initial: FormState = { ok: true, message: "" };
@@ -74,13 +75,13 @@ export function UploadForm({ engagementId, hasAccounts }: { engagementId: string
     <form action={action}>
       <input type="hidden" name="engagementId" value={engagementId} />
       <div className="flex flex-wrap items-end gap-3">
-        <label className="flex flex-col gap-1 text-sm text-slate-700">
+        <label className="flex flex-col gap-1 text-sm font-medium text-ink">
           Trial balance file (.xlsx or .csv)
-          <input type="file" name="file" accept=".xlsx,.csv" required className="text-sm text-slate-900" />
+          <input type="file" name="file" accept=".xlsx,.csv" required className="text-sm font-normal text-ink" />
         </label>
-        <button className={button} disabled={pending}>{pending ? "Importing…" : hasAccounts ? "Replace trial balance" : "Import trial balance"}</button>
+        <button className={buttonClass("primary")} disabled={pending}>{pending ? "Importing…" : hasAccounts ? "Replace trial balance" : "Import trial balance"}</button>
       </div>
-      <p className="mt-2 text-xs text-slate-500">
+      <p className="mt-2 text-sm text-ink-muted">
         Needs a column for account code or name, and either Debit and Credit columns or one Balance column. A Prior Year column is optional.
       </p>
       <Feedback state={state} />
@@ -93,11 +94,14 @@ export function MappingSelect({
   accountId,
   value,
   groups,
+  label = "Group",
 }: {
   engagementId: string;
   accountId: string;
   value: string | null;
   groups: { code: string; name: string }[];
+  /** The accessible name, so each row's control is announced with its account. */
+  label?: string;
 }) {
   return (
     <form action={setMappingAction}>
@@ -105,10 +109,10 @@ export function MappingSelect({
       <input type="hidden" name="accountId" value={accountId} />
       <select
         name="groupCode"
-        aria-label="Group"
+        aria-label={label}
         defaultValue={value ?? ""}
         onChange={(e) => e.currentTarget.form?.requestSubmit()}
-        className={`${input} w-64 py-1 ${value ? "" : "border-amber-500 bg-amber-50"}`}
+        className={`min-h-10 w-full rounded-md border bg-surface px-3 py-1.5 text-sm text-ink sm:w-64 ${value ? "border-border-strong" : "border-warning bg-warning-soft"}`}
       >
         <option value="">Not mapped</option>
         {groups.map((g) => (
