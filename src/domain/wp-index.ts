@@ -1,4 +1,5 @@
 import { AREAS, AREA_BY_CODE, CHECKLIST_BY_CODE, CHECKLISTS } from "./audit";
+import type { ConfirmationState } from "./confirmations";
 
 /**
  * The working paper index: the file's table of contents, derived from what the engagement already holds.
@@ -12,6 +13,7 @@ import { AREAS, AREA_BY_CODE, CHECKLIST_BY_CODE, CHECKLISTS } from "./audit";
  *   C5.L1      a lead sheet of area C5 (one per lead sheet group, numbered in the group order the area lists them)
  *   C5.P       the audit procedures of area C5 (C16.J journal testing)
  *   C5-1       a test schedule of area C5, as the schedules already number themselves
+ *   C6.CF      the external confirmations of area C6, as one paper (the individual CF-n references are on the confirmations page)
  *   C5-F1      an uploaded file, referenced by the preparer. The "-F" shape is one the application never makes itself.
  */
 
@@ -42,6 +44,7 @@ export type Kind =
   | "procedures"
   | "journal_testing"
   | "schedule"
+  | "confirmations"
   | "file";
 
 export const KIND_LABEL: Record<Kind, string> = {
@@ -60,6 +63,7 @@ export const KIND_LABEL: Record<Kind, string> = {
   procedures: "Procedures",
   journal_testing: "Journal testing",
   schedule: "Test schedule",
+  confirmations: "External confirmations",
   file: "Uploaded file",
 };
 
@@ -132,7 +136,7 @@ export function naturalCompare(a: string, b: string): number {
 }
 
 // Within an area the order is lead sheets, procedures, journal testing, schedules, then uploaded files. Elsewhere reference order decides.
-const KIND_RANK: Partial<Record<Kind, number>> = { lead_sheet: 0, procedures: 1, journal_testing: 2, schedule: 3, file: 9 };
+const KIND_RANK: Partial<Record<Kind, number>> = { lead_sheet: 0, procedures: 1, journal_testing: 2, schedule: 3, confirmations: 4, file: 9 };
 
 export function compareEntries(a: IndexEntry, b: IndexEntry): number {
   const sa = SECTION_RANK.get(a.section) ?? SECTIONS.length;
@@ -316,4 +320,36 @@ export const CHECKLIST_CODES = CHECKLISTS.map((c) => c.code);
 export function notApplicableNote(n: number): string | null {
   if (n <= 0) return null;
   return `${n} more ${n === 1 ? "is" : "are"} marked not applicable.`;
+}
+
+// --- External confirmations ---------------------------------------------------
+
+export interface ConfirmationFact {
+  state: ConfirmationState;
+  reply: "agreed" | "differs" | "no_reply" | null;
+}
+
+/**
+ * The status of an area's confirmations as one paper, from the records only. Reviewed when every one is reviewed; prepared when every one
+ * is prepared or reviewed and one is not yet reviewed; in progress when any has been sent but not all are prepared; otherwise not started.
+ */
+export function confirmationsStatus(list: ConfirmationFact[]): Status {
+  if (list.length > 0 && list.every((c) => c.state === "reviewed")) return "reviewed";
+  if (list.length > 0 && list.every((c) => c.state === "prepared" || c.state === "reviewed")) return "prepared";
+  return list.some((c) => c.state !== "not_sent") ? "in_progress" : "not_started";
+}
+
+/** Counts by reply and state, such as "4 confirmations: 2 agreed, 1 differs, 1 awaiting reply." */
+export function confirmationsNote(list: ConfirmationFact[]): string {
+  const n = (f: (c: ConfirmationFact) => boolean) => list.filter(f).length;
+  const parts = [
+    [n((c) => c.reply === "agreed"), "agreed"],
+    [n((c) => c.reply === "differs"), "differs"],
+    [n((c) => c.reply === "no_reply"), "no reply"],
+    [n((c) => c.state === "awaiting_reply"), "awaiting reply"],
+    [n((c) => c.state === "not_sent"), "not sent"],
+  ]
+    .filter(([count]) => (count as number) > 0)
+    .map(([count, label]) => `${count} ${label}`);
+  return `${list.length} confirmation${list.length === 1 ? "" : "s"}: ${parts.join(", ")}.`;
 }

@@ -10,6 +10,7 @@ import * as audit from "../src/server/audit";
 import * as review from "../src/server/review";
 import * as papers from "../src/server/working-papers";
 import * as schedules from "../src/server/test-schedules";
+import * as conf from "../src/server/confirmations";
 import { buildWorkingPaperIndex } from "../src/server/wp-index";
 import { exportIndex } from "../src/server/wp-index-export";
 import { localFileStore } from "../src/server/file-store";
@@ -309,6 +310,67 @@ describe("the working paper index", () => {
     expect(flat(index).filter((e) => e.kind === "schedule").map((e) => e.reference)).toEqual(["C5-1", "C6-1", "C6-2", "C6-3", "C6-4"]);
   });
 
+  it("lists an area's confirmations as one paper after its schedules, with a status from the records, and never another firm's", async () => {
+    const mk = (party: string, kind: string) => as(prep, (tx) => conf.addConfirmation(tx, prep, audited, { kind, partyName: party, bookMinor: 1_000 }));
+    const sentOn = (id: string) => as(prep, (tx) => conf.markSent(tx, prep, id, "2025-06-01", "2025-06-15"));
+    const entry = async (ref: string) => find((await build(audited))!, ref);
+    expect(await entry("C6.CF")).toBeUndefined(); // none yet
+
+    const a = await mk("Index Bank", "bank");
+    const b = await mk("Index Bank Two", "bank");
+    expect(await entry("C6.CF")).toMatchObject({ status: "not_started", reviewable: true, title: "External confirmations", kind: "confirmations", note: "2 confirmations: 2 not sent." });
+    await sentOn(a);
+    expect(await entry("C6.CF")).toMatchObject({ status: "in_progress", note: "2 confirmations: 1 awaiting reply, 1 not sent." });
+    await sentOn(b);
+    await as(prep, (tx) => conf.recordReply(tx, prep, a, { reply: "agreed", repliedOn: "2025-06-02" }, "2025-06-15"));
+    await as(prep, (tx) => conf.recordReply(tx, prep, b, { reply: "differs", repliedOn: "2025-06-02", confirmedMinor: 900 }, "2025-06-15"));
+    await as(prep, (tx) => conf.saveReconciliation(tx, prep, b, "Cheque in transit."));
+    await as(prep, (tx) => conf.prepareConfirmation(tx, prep, a));
+    // One is still to prepare, so the area is in progress.
+    expect(await entry("C6.CF")).toMatchObject({ status: "in_progress", preparedBy: "preparer person", note: "2 confirmations: 1 agreed, 1 differs." });
+    await as(prep, (tx) => conf.prepareConfirmation(tx, prep, b));
+    expect(await entry("C6.CF")).toMatchObject({ status: "prepared", reviewedBy: null });
+    await as(rev, (tx) => conf.reviewConfirmation(tx, rev, a));
+    expect(await entry("C6.CF")).toMatchObject({ status: "prepared" }); // one reviewed, one not yet
+    await as(rev, (tx) => conf.reviewConfirmation(tx, rev, b));
+    expect(await entry("C6.CF")).toMatchObject({ status: "reviewed", reviewedBy: "reviewer person" });
+
+    // One entry per area, placed in that area after its schedules and before its files.
+    await mk("Index Customer", "receivable");
+    const index = (await build(audited))!;
+    expect(flat(index).filter((e) => e.kind === "confirmations").map((e) => e.reference)).toEqual(["C5.CF", "C6.CF"]);
+    const c6 = index.sections.find((s) => s.code === "C6")!.entries.map((e) => e.reference);
+    expect(c6.indexOf("C6.CF")).toBeGreaterThan(c6.indexOf("C6-4"));
+    expect(c6.indexOf("C6.CF")).toBeLessThan(c6.indexOf("C6-F1"));
+    expect(index.sections.find((s) => s.code === "C5")!.entries.filter((e) => e.kind !== "file").map((e) => e.reference).at(-1)).toBe("C5.CF");
+
+    // The export has the row.
+    const out = (await as(prep, (tx) => exportIndex(tx, prep, audited)))!;
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.load(out.buffer as unknown as ArrayBuffer);
+    const sheet = wb.getWorksheet("Index")!;
+    const rows: string[][] = [];
+    for (let i = 1; i <= sheet.rowCount; i++) rows.push(Array.from({ length: 9 }, (_, c) => String(sheet.getRow(i).getCell(c + 1).value ?? "")));
+    const row = rows.find((r) => r[0] === "C6.CF")!;
+    expect([row[1], row[2], row[7], row[8]]).toEqual(["External confirmations", "External confirmations", "Reviewed", "2 confirmations: 1 agreed, 1 differs."]);
+
+    // Another firm's confirmations never appear, and an engagement with the audit off shows none.
+    const theirs = await as(outsider, async (tx) => {
+      const client = await repo.createClient(tx, outsider, "Their Co. (invented)");
+      const id = await repo.createEngagement(tx, outsider, client, "2025-01-01", "2025-12-31");
+      await repo.importTrialBalance(tx, outsider, id, "tb.xlsx", TB);
+      await repo.approveAllMappings(tx, outsider, id);
+      await audit.setAuditEnabled(tx, outsider, id, true);
+      await conf.addConfirmation(tx, outsider, id, { kind: "bank", partyName: "Their Bank" });
+      await conf.addConfirmation(tx, outsider, id, { kind: "legal", partyName: "Their Lawyer" });
+      return id;
+    });
+    expect(flat((await build(audited))!).some((e) => e.reference === "C10.CF")).toBe(false);
+    expect(await build(theirs)).toBeNull(); // not visible to this firm at all
+    expect(flat((await build(theirs, outsider))!).filter((e) => e.kind === "confirmations").map((e) => e.reference)).toEqual(["C6.CF", "C10.CF"]);
+    expect(flat((await build(plain))!).some((e) => e.kind === "confirmations")).toBe(false);
+  });
+
   it("exports the index as text, firm-scoped and logged", async () => {
     // A file name that would be a formula in a spreadsheet must come out as text.
     await upload(audited, "=SUM(A1).pdf");
@@ -335,6 +397,6 @@ describe("the working paper index", () => {
     expect(cell.type).toBe(ExcelJS.ValueType.String);
     expect(cell.numFmt).toBe("@");
     const log = await db.query("select detail from audit_log where entity = 'working_paper_index' and entity_id = $1", [audited]);
-    expect(log.rows).toHaveLength(1);
+    expect(log.rows).toHaveLength(2); // the confirmations test above exported once too
   });
 });

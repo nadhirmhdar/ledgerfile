@@ -3,6 +3,7 @@ import { audit as log, canSelfReviewAudit, getEngagement, listAccounts, type Ses
 import { canLock, canReview } from "../domain/signoff";
 import { buildStatements } from "../domain/statements";
 import { needsFinishing, presentationBalance, scheduleBlockers, type ScheduleState } from "../domain/test-schedule";
+import { confirmationBlockers, confirmationState } from "../domain/confirmations";
 import { compareYears, unexplainedMovements, type ExplanationRecord } from "../domain/analytics";
 import {
   AREA_BY_CODE,
@@ -179,7 +180,8 @@ export async function setAuditEnabled(tx: Tx, s: Session, engagementId: string, 
     const approved = await tx.query("select 1 from risk_approvals where engagement_id = $1 limit 1", [engagementId]);
     const schedules = await tx.query("select 1 from test_schedules where engagement_id = $1 limit 1", [engagementId]);
     const explained = await tx.query("select 1 from analytical_explanations where engagement_id = $1 limit 1", [engagementId]);
-    if (worked.rows.length > 0 || found.rows.length > 0 || evidence.rows.length > 0 || journalTests.rows.length > 0 || approved.rows.length > 0 || schedules.rows.length > 0 || explained.rows.length > 0) throw new Error("Work has been recorded on this audit, so it cannot be turned off.");
+    const confirmed = await tx.query("select 1 from confirmations where engagement_id = $1 limit 1", [engagementId]);
+    if (worked.rows.length > 0 || found.rows.length > 0 || evidence.rows.length > 0 || journalTests.rows.length > 0 || approved.rows.length > 0 || schedules.rows.length > 0 || explained.rows.length > 0 || confirmed.rows.length > 0) throw new Error("Work has been recorded on this audit, so it cannot be turned off.");
   }
   await tx.query("update engagements set audit_enabled = $2 where id = $1", [engagementId, on]);
   if (on) await ensureChecklists(tx, s, engagementId);
@@ -326,6 +328,11 @@ export async function getAuditOverview(tx: Tx, engagementId: string): Promise<Au
     if (unreviewed > 0) blockers.push(`Audit: ${unreviewed} completed procedure(s) and checklist step(s) have not been reviewed.`);
     const untested = await tx.query<{ n: number }>("select count(*)::int as n from journal_tests where engagement_id = $1 and tested_at is null", [engagementId]);
     if (untested.rows[0].n > 0) blockers.push(`Audit: ${untested.rows[0].n} journal entry(ies) selected for testing have no conclusion.`);
+    const confirmations = await tx.query<{ sent: boolean; reply: "agreed" | "differs" | "no_reply" | null; prepared: boolean; reviewed: boolean }>(
+      "select sent_on is not null as sent, reply, prepared_by is not null as prepared, reviewed_by is not null as reviewed from confirmations where engagement_id = $1",
+      [engagementId],
+    );
+    blockers.push(...confirmationBlockers(confirmations.rows.map((c) => confirmationState({ sentOn: c.sent ? "x" : null, reply: c.reply, prepared: c.prepared, reviewed: c.reviewed }))));
     const explained = await tx.query<ExplanationRecord>('select line_key as "lineKey", current_minor::float8 as "currentMinor", prior_minor::float8 as "priorMinor" from analytical_explanations where engagement_id = $1', [engagementId]);
     const unexplained = unexplainedMovements(compareYears(statements, materiality), explained.rows).length;
     if (unexplained > 0) blockers.push(`Audit: ${unexplained} significant movement(s) in the analytical review have no explanation.`);

@@ -81,6 +81,7 @@ export default async function AuditPage({ params }: { params: Promise<{ id: stri
           <p className="mt-4 flex flex-wrap gap-x-6 gap-y-1 text-sm">
             <Link href={`/engagements/${id}/audit/letters`} className="text-blue-700 underline">Engagement letter and representation letter</Link>
             <Link href={`/engagements/${id}/audit/analytics`} className="text-blue-700 underline">Analytical review and ratios</Link>
+            <Link href={`/engagements/${id}/audit/confirmations`} className="text-blue-700 underline">External confirmations</Link>
             <a href={`/engagements/${id}/audit/schedules-export`} className="text-blue-700 underline">Export all test schedules (Excel)</a>
           </p>
           {open && engagement.priorEngagementId && (

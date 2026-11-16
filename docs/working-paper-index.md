@@ -25,6 +25,7 @@ The index is **derived**. Nothing is stored for it, so it cannot fall out of ste
 | C5.P | The audit procedures of area C5 |
 | C16.J | Journal entry testing |
 | C5-1 | A test schedule of area C5, numbered as the schedules already number themselves |
+| C6.CF | The external confirmations of area C6, as one paper: one per area that has any (the individual CF-n references are on the confirmations page). Reviewed when every confirmation is reviewed, Prepared when every one is prepared or reviewed, In progress when any has been sent, otherwise Not started |
 | C5-F1 | An uploaded file that the preparer has given a reference |
 
 Sections run: General, Acceptance (A), Planning (B), then areas C1 to C16 in numeric order (C2 before C10), then Completion (D), Reporting (E), then Unfiled. Within an area: lead sheets, procedures, journal testing, schedules, then uploaded files (referenced ones first).
