@@ -1,4 +1,4 @@
-import { createHash, createHmac, pbkdf2Sync } from "node:crypto";
+import { createHash, createHmac, pbkdf2Sync, randomBytes } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { openDatabase } from "../src/server/db";
 import { ensureAppRole } from "../src/server/hosted-setup";
@@ -26,30 +26,47 @@ describe("scramVerifier", () => {
   });
 });
 
-// On a real server the role already exists cluster-wide (made by setup) and the runtime-role test logs in with its password, so this test
-// changes only the throwaway PGlite database. CI proves the real-server path by running db:setup-hosted twice.
-describe.skipIf(!!process.env.TEST_DATABASE_URL)("ensureAppRole", () => {
+// Roles are cluster-wide, so on a real server these tests use a role of their own and never touch the real ledgerfile_app, whose password the
+// runtime-role test logs in with. The role is dropped at the end.
+describe("ensureAppRole", () => {
   it("creates the runtime role with every restriction, and updates it when run again", async () => {
     const db = await openDatabase();
-    const first = await ensureAppRole(db, scramVerifier("a-long-generated-app-password-0001"));
-    const second = await ensureAppRole(db, scramVerifier("another-long-generated-password-02"));
-    expect([first.created, second.created]).toEqual([true, false]);
-    const { rows } = await db.query<Record<string, boolean>>(
-      "select rolcanlogin, rolsuper, rolcreatedb, rolcreaterole, rolinherit, rolbypassrls from pg_roles where rolname = 'ledgerfile_app'",
-    );
-    expect(rows[0]).toEqual({ rolcanlogin: true, rolsuper: false, rolcreatedb: false, rolcreaterole: false, rolinherit: false, rolbypassrls: false });
-    const members = await db.query<{ rolname: string }>(
-      "select g.rolname from pg_auth_members m join pg_roles g on g.oid = m.roleid join pg_roles u on u.oid = m.member where u.rolname = 'ledgerfile_app' order by 1",
-    );
-    expect(members.rows.map((r) => r.rolname)).toEqual(["app_auth", "app_user"]);
-    const owned = await db.query("select 1 from pg_tables where schemaname = 'public' and tableowner = 'ledgerfile_app'");
-    expect(owned.rows).toHaveLength(0);
-    await db.close();
+    const role = `lf_app_test_${randomBytes(5).toString("hex")}`;
+    try {
+      const first = await ensureAppRole(db, scramVerifier("a-long-generated-app-password-0001"), role);
+      const second = await ensureAppRole(db, scramVerifier("another-long-generated-password-02"), role);
+      expect([first.created, second.created]).toEqual([true, false]);
+      const { rows } = await db.query<Record<string, boolean>>(
+        "select rolcanlogin, rolsuper, rolcreatedb, rolcreaterole, rolinherit, rolbypassrls from pg_roles where rolname = $1",
+        [role],
+      );
+      expect(rows[0]).toEqual({ rolcanlogin: true, rolsuper: false, rolcreatedb: false, rolcreaterole: false, rolinherit: false, rolbypassrls: false });
+      const members = await db.query<{ rolname: string }>(
+        "select g.rolname from pg_auth_members m join pg_roles g on g.oid = m.roleid join pg_roles u on u.oid = m.member where u.rolname = $1 order by 1",
+        [role],
+      );
+      expect(members.rows.map((r) => r.rolname)).toEqual(["app_auth", "app_user"]);
+      const owned = await db.query("select 1 from pg_tables where schemaname = 'public' and tableowner = $1", [role]);
+      expect(owned.rows).toHaveLength(0);
+    } finally {
+      // Privileges in this database first, then the role (which also removes its memberships).
+      await db.exec(`drop owned by ${role}`).catch(() => undefined);
+      await db.exec(`drop role if exists ${role}`).catch(() => undefined);
+      await db.close();
+    }
   });
   it("refuses anything that is not a SCRAM verifier, so a plaintext password never reaches SQL", async () => {
     const db = await openDatabase();
-    await expect(ensureAppRole(db, "plain-text-password-not-a-verifier")).rejects.toThrow(/SCRAM-SHA-256/);
-    await expect(ensureAppRole(db, "SCRAM-SHA-256$4096:x'; drop table firms; --")).rejects.toThrow(/SCRAM-SHA-256/);
+    await expect(ensureAppRole(db, "plain-text-password-not-a-verifier", "lf_app_test_never")).rejects.toThrow(/SCRAM-SHA-256/);
+    await expect(ensureAppRole(db, "SCRAM-SHA-256$4096:x'; drop table firms; --", "lf_app_test_never")).rejects.toThrow(/SCRAM-SHA-256/);
+    await db.close();
+  });
+  it("refuses a role name that is not a plain identifier, because it goes into SQL", async () => {
+    const db = await openDatabase();
+    const v = scramVerifier("a-long-generated-app-password-0001");
+    for (const bad of ["Bad", "a b", "x;drop table firms", "1abc", "", "a".repeat(64), 'q"x']) {
+      await expect(ensureAppRole(db, v, bad)).rejects.toThrow(/plain lower-case identifier/);
+    }
     await db.close();
   });
 });
