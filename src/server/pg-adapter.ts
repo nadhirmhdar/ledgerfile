@@ -1,6 +1,6 @@
 import pg from "pg";
 import type { Db, Queryable, Tx } from "./db";
-import { redact } from "./config";
+import { redact, withVerifiedTls } from "./config";
 
 /**
  * The Postgres side of the Db interface, for hosted deployments. It is built for a serverless host behind a transaction pooler:
@@ -69,7 +69,8 @@ export interface PostgresOptions {
 
 export function createPostgresDb(connectionString: string, options: PostgresOptions = {}): Db {
   const max = options.max ?? (Number(process.env.DATABASE_POOL_MAX) || 3);
-  const pool = new pg.Pool({ connectionString, max, types: typeParsers, idleTimeoutMillis: 10_000, connectionTimeoutMillis: 10_000 });
+  // Verified TLS for every host that is not this machine, whatever the string says: a library upgrade cannot weaken it.
+  const pool = new pg.Pool({ connectionString: withVerifiedTls(connectionString), max, types: typeParsers, idleTimeoutMillis: 10_000, connectionTimeoutMillis: 10_000 });
   // An idle client that errors (the pooler closing it) must not crash the process.
   pool.on("error", (e) => console.error("database pool error:", redact(e.message)));
   const base = wrap(pool);

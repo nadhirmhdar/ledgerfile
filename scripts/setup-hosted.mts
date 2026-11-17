@@ -5,8 +5,8 @@
 import { createPostgresDb } from "../src/server/pg-adapter";
 import { createFirm, DEV_FIRM_ID, DEV_USER_ID } from "../src/server/db";
 import { setPassword } from "../src/server/auth";
-import { appPasswordProblems, assertSecureUrl, migrationUrl, redact } from "../src/server/config";
-import { ensureAppRole } from "../src/server/hosted-setup";
+import { appPasswordProblems, assertSecureUrl, databaseUrl, migrationUrl, redact } from "../src/server/config";
+import { ensureAppRole, ensureSetupRoleCanSwitch, verifyRuntimeConnection } from "../src/server/hosted-setup";
 import { applyMigrations, upsertGroups } from "../src/server/migrations";
 import { SAMPLE_USERS, samplePasswordProblems } from "../src/server/sample-seed";
 import { scramVerifier } from "../src/server/scram";
@@ -34,8 +34,35 @@ try {
   await upsertGroups(db);
   console.log(`1. Migrations: ${done.length === 0 ? "up to date" : `applied ${done.length}`}`);
 
-  const { created } = await ensureAppRole(db, scramVerifier(process.env.LEDGERFILE_APP_PASSWORD!));
-  console.log(`2. Runtime role: ${created ? "created" : "updated"}`);
+  await ensureSetupRoleCanSwitch(db);
+  console.log("1b. Setup role can switch to app_user and app_auth: ok");
+
+  const secret = process.env.LEDGERFILE_APP_PASSWORD!;
+  const { created, usedPlaintext } = await ensureAppRole(db, { verifier: scramVerifier(secret), plaintext: secret });
+  console.log(`2. Runtime role: ${created ? "created" : "updated"}${usedPlaintext ? " (this database takes only a plaintext password, so it was sent as one)" : ""}`);
+
+  // The runtime connection, as the app will make it: the pooled host, as ledgerfile_app. A new role can take a moment to be accepted by a pooler.
+  const runtimeUrl = databaseUrl();
+  if (runtimeUrl) {
+    let last: unknown;
+    for (let attempt = 1; attempt <= 5; attempt++) {
+      const runtime = createPostgresDb(runtimeUrl, { max: 1 });
+      try {
+        await verifyRuntimeConnection(runtime);
+        last = undefined;
+        break;
+      } catch (e) {
+        last = e;
+        await new Promise((r) => setTimeout(r, 2000));
+      } finally {
+        await runtime.close().catch(() => undefined);
+      }
+    }
+    if (last) throw last;
+    console.log("2b. Runtime login through the runtime connection: ok");
+  } else {
+    console.log("2b. Runtime login: skipped (no runtime connection is configured)");
+  }
 
   if (!sampleSet) {
     console.log("3. Sample firm: skipped (the four SAMPLE_*_PASSWORD variables are not all set)");

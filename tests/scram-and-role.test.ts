@@ -33,8 +33,8 @@ describe("ensureAppRole", () => {
     const db = await openDatabase();
     const role = `lf_app_test_${randomBytes(5).toString("hex")}`;
     try {
-      const first = await ensureAppRole(db, scramVerifier("a-long-generated-app-password-0001"), role);
-      const second = await ensureAppRole(db, scramVerifier("another-long-generated-password-02"), role);
+      const first = await ensureAppRole(db, { verifier: scramVerifier("a-long-generated-app-password-0001") }, role);
+      const second = await ensureAppRole(db, { verifier: scramVerifier("another-long-generated-password-02") }, role);
       expect([first.created, second.created]).toEqual([true, false]);
       const { rows } = await db.query<Record<string, boolean>>(
         "select rolcanlogin, rolsuper, rolcreatedb, rolcreaterole, rolinherit, rolbypassrls from pg_roles where rolname = $1",
@@ -57,16 +57,27 @@ describe("ensureAppRole", () => {
   });
   it("refuses anything that is not a SCRAM verifier, so a plaintext password never reaches SQL", async () => {
     const db = await openDatabase();
-    await expect(ensureAppRole(db, "plain-text-password-not-a-verifier", "lf_app_test_never")).rejects.toThrow(/SCRAM-SHA-256/);
-    await expect(ensureAppRole(db, "SCRAM-SHA-256$4096:x'; drop table firms; --", "lf_app_test_never")).rejects.toThrow(/SCRAM-SHA-256/);
+    await expect(ensureAppRole(db, { verifier: "plain-text-password-not-a-verifier" }, "lf_app_test_never")).rejects.toThrow(/SCRAM-SHA-256/);
+    await expect(ensureAppRole(db, { verifier: "SCRAM-SHA-256$4096:x'; drop table firms; --" }, "lf_app_test_never")).rejects.toThrow(/SCRAM-SHA-256/);
     await db.close();
   });
   it("refuses a role name that is not a plain identifier, because it goes into SQL", async () => {
     const db = await openDatabase();
     const v = scramVerifier("a-long-generated-app-password-0001");
     for (const bad of ["Bad", "a b", "x;drop table firms", "1abc", "", "a".repeat(64), 'q"x']) {
-      await expect(ensureAppRole(db, v, bad)).rejects.toThrow(/plain lower-case identifier/);
+      await expect(ensureAppRole(db, { verifier: v }, bad)).rejects.toThrow(/plain lower-case identifier/);
     }
+    await db.close();
+  });
+});
+
+describe("verifyRuntimeConnection", () => {
+  it("passes on a database where the roles switch, and says nothing about hosts or users when it fails", async () => {
+    const { verifyRuntimeConnection } = await import("../src/server/hosted-setup");
+    const db = await openDatabase();
+    await expect(verifyRuntimeConnection(db)).resolves.toBeUndefined();
+    await db.exec("drop table schema_migrations cascade");
+    await expect(verifyRuntimeConnection(db)).rejects.toThrow(/could not log in and switch roles/);
     await db.close();
   });
 });
