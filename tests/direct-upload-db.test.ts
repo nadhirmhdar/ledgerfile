@@ -82,7 +82,7 @@ describe("beginning an upload", () => {
   });
 
   it("stores no blob URL, token or hash: only the key, who, what for and how big", async () => {
-    const { rows } = await db.query<{ column_name: string }>("select column_name from information_schema.columns where table_name = 'pending_uploads' order by column_name");
+    const { rows } = await db.query<{ column_name: string }>("select column_name from information_schema.columns where table_name = 'pending_uploads' and table_schema = current_schema() order by column_name");
     expect(rows.map((r) => r.column_name)).toEqual(["created_at", "description", "engagement_id", "expires_at", "file_name", "firm_id", "key", "size_bytes", "target", "target_kind", "user_id"]);
   });
 

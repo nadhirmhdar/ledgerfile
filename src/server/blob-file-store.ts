@@ -4,8 +4,10 @@ import { FILE_KEY, type FileStore } from "./file-store";
 /**
  * File storage on Vercel Blob, in a PRIVATE store. Server-only. Read from the docs (https://vercel.com/docs/vercel-blob/private-storage):
  * a private blob's URL "is not publicly accessible" and every read needs authentication, so the app reads it on the server with the
- * SDK's `get(pathname, { access: "private" })` and serves it itself, through the logged download route. No blob URL, signed URL
- * or token is ever sent to the browser.
+ * SDK's `get(pathname, { access: "private" })` and serves it itself, through the logged download route. No blob URL or signed URL
+ * is ever rendered in a page or stored. (A direct upload does give the browser a short-lived, single-key client token and, when
+ * the upload finishes, the SDK returns the new blob's URL to the browser's memory; the server issues the token only for a key it
+ * chose, stores neither, and never renders either. See direct-upload.ts.)
  *
  * The stored pathname is exactly the key (`<uuid>/<uuid>`): no random suffix, and `allowOverwrite` stays off, so a second upload to
  * the same key is refused by Blob itself. The SDK takes its credentials from the server's environment (BLOB_READ_WRITE_TOKEN, or

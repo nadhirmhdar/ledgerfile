@@ -28,3 +28,9 @@ export function uploadHint(opts: { direct: boolean; limitLabel: string; importLa
   const types = `Accepted types: ${opts.types.join(", ")}.`;
   return opts.direct ? `Up to ${opts.limitLabel}. ${types} Spreadsheet imports (trial balances, journals and schedules) stay at ${opts.importLabel}.` : `Up to ${opts.limitLabel}. ${types}`;
 }
+
+/**
+ * Every direct upload is stored as this type, whatever the file's name says: the browser asks for it and the token allows only it. The
+ * download route sends every file as an attachment of this type too, so a file is never displayed or run in the page.
+ */
+export const UPLOAD_CONTENT_TYPE = "application/octet-stream";

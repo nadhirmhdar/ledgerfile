@@ -3,6 +3,7 @@ import { withFirm, type Db, type Tx } from "./db";
 import { DIRECT_UPLOAD_BYTES, DIRECT_UPLOAD_LABEL, maxUploadBytes, PENDING_UPLOAD_MINUTES, uploadLimitLabel } from "./config";
 import { fileStoreKind, FILE_KEY } from "./file-store";
 import type { Session } from "./repo";
+import { UPLOAD_CONTENT_TYPE } from "../ui/upload-view";
 import { checkWorkingPaper, registerWorkingPaper, type CheckedPaper } from "./working-papers";
 
 /**
@@ -48,6 +49,7 @@ export interface TokenOptions {
   addRandomSuffix: false;
   allowOverwrite: false;
   validUntil: number;
+  allowedContentTypes: string[];
 }
 
 const REFUSED = "This upload is not allowed.";
@@ -72,6 +74,8 @@ export function decideToken(input: { pathname: string; session: { userId: string
     allowOverwrite: false,
     // The token dies with the row, so a late write cannot land after the sweep.
     validUntil: row.expiresAt.getTime(),
+    // Stored as plain bytes whatever the name says. The browser asks for exactly this type (see DirectUploadForm).
+    allowedContentTypes: [UPLOAD_CONTENT_TYPE],
   };
 }
 

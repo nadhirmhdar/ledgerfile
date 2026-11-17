@@ -31,7 +31,7 @@ const refused = /not allowed/;
 describe("the token check (decideToken)", () => {
   it("issues a token for the key the server issued to this user, limited to the size declared and to the row's lifetime", () => {
     const options = decideToken({ pathname: KEY, session: me, row: row(), now: NOW });
-    expect(options).toEqual({ maximumSizeInBytes: 20 * 1024 * 1024, addRandomSuffix: false, allowOverwrite: false, validUntil: row().expiresAt.getTime() });
+    expect(options).toEqual({ maximumSizeInBytes: 20 * 1024 * 1024, addRandomSuffix: false, allowOverwrite: false, validUntil: row().expiresAt.getTime(), allowedContentTypes: ["application/octet-stream"] });
   });
 
   it("never allows more than the hosted maximum, whatever was declared", () => {

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { beginUploadAction, finishUploadAction } from "./papers-actions";
 import { ProgressBar } from "@/ui/feedback";
-import { clientFileProblem, phaseText, type UploadPhase } from "@/ui/upload-view";
+import { clientFileProblem, phaseText, UPLOAD_CONTENT_TYPE, type UploadPhase } from "@/ui/upload-view";
 
 /**
  * A working paper upload that sends the file straight to the private Blob store (hosted, FILE_STORE=vercel-blob only).
@@ -42,7 +42,7 @@ export function DirectUploadForm({ engagementId, fields, maxBytes, children, cla
       setPhase("uploading");
       try {
         const { upload } = await import("@vercel/blob/client");
-        await upload(begun.key, file, { access: "private", handleUploadUrl: "/api/blob-upload", onUploadProgress: (p) => setPercent(p.percentage) });
+        await upload(begun.key, file, { access: "private", contentType: UPLOAD_CONTENT_TYPE, handleUploadUrl: "/api/blob-upload", onUploadProgress: (p) => setPercent(p.percentage) });
       } catch {
         setResult({ ok: false, message: "The upload did not complete. Try uploading the file again." });
         return;
