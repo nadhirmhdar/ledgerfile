@@ -116,6 +116,12 @@ export function appPasswordProblems(env: Env = process.env): string[] {
   const problems: string[] = [];
   if (v.length < 24) problems.push("LEDGERFILE_APP_PASSWORD is shorter than 24 characters.");
   else if (passwordEntropyBits(v) < 60) problems.push("LEDGERFILE_APP_PASSWORD is too predictable (Neon needs at least 60 bits of entropy): use a long random string.");
+  // Neon's rule for a role password set through SQL (https://neon.com/docs/manage/roles, https://neon.com/docs/manage/database-access): at
+  // least 12 characters with lowercase, uppercase, a number and a symbol, and no character more than twice in a row. It does not publish its
+  // estimator, so the safe shape is stated here and the password is refused up front rather than by Neon in the middle of a build.
+  const missing = [/[a-z]/, /[A-Z]/, /[0-9]/, /[^a-zA-Z0-9]/].filter((r) => !r.test(v)).length;
+  if (missing > 0) problems.push("LEDGERFILE_APP_PASSWORD needs a lowercase letter, an uppercase letter, a number and a symbol (Neon refuses a role password without all four).");
+  if (/(.)\1\1/.test(v)) problems.push("LEDGERFILE_APP_PASSWORD repeats a character three times in a row (Neon refuses that).");
   if (v === PUBLIC_DEMO_PASSWORD) problems.push("LEDGERFILE_APP_PASSWORD is the public demo password.");
   for (const k of ["SAMPLE_ADMIN_PASSWORD", "SAMPLE_PARTNER_PASSWORD", "SAMPLE_REVIEWER_PASSWORD", "SAMPLE_PREPARER_PASSWORD"]) {
     if (env[k] && env[k] === v) problems.push(`LEDGERFILE_APP_PASSWORD is the same as ${k}.`);

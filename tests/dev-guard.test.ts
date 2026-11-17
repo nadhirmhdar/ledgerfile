@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { assertDevSafe, HostedConfigError } from "../src/server/config";
 
 const REMOTE = "postgres://ledgerfile_app:pw@ep-x-pooler.example.test/neondb?sslmode=require";
-const NEON_PARTS = { PGHOST: "ep-x-pooler.example.test", PGDATABASE: "neondb", PGUSER: "neondb_owner", LEDGERFILE_APP_PASSWORD: "a-long-generated-app-password-0001" };
+const NEON_PARTS = { PGHOST: "ep-x-pooler.example.test", PGDATABASE: "neondb", PGUSER: "neondb_owner", LEDGERFILE_APP_PASSWORD: "Ab3-long-generated-App-password-0102" };
 
 describe("assertDevSafe", () => {
   it("refuses a development server whose database is not on this machine", () => {

@@ -1,5 +1,5 @@
 import pg from "pg";
-import { APP_ROLE } from "./config";
+import { APP_ROLE, redact } from "./config";
 import type { Db } from "./db";
 
 /**
@@ -27,21 +27,91 @@ class SecretStatementError extends Error {
   }
 }
 
+/** The secret a statement carries, as it appears in the SQL text: the literal, and the pieces to look for in anything the server says back. */
+export interface StatementSecret {
+  /** The whole statement text. */
+  sql: string;
+  /** Where the secret literal starts and ends within `sql`. */
+  start: number;
+  end: number;
+  /** What was sent: the plaintext (if the plaintext went), and the verifier (if the verifier went). */
+  plaintext?: string;
+  verifier?: string;
+}
+
+const MAX_SHOWN = 300;
+
+/** Every form of a password that can appear in a server's reply: as typed, quote-doubled, as node-postgres writes a literal, and URL-encoded. */
+function passwordForms(p: string): string[] {
+  return [p, p.replace(/'/g, "''"), p.replace(/\\/g, "\\\\").replace(/'/g, "''"), encodeURIComponent(p), pg.escapeLiteral(p)];
+}
+
+/** Does the text contain any run of `n` characters of `of`? Used to catch a partial quote of a secret. */
+function sharesRun(text: string, of: string, n: number): boolean {
+  for (let i = 0; i + n <= of.length; i++) if (text.includes(of.slice(i, i + n))) return true;
+  return false;
+}
+
+/**
+ * A control-plane error that is safe to show, or null. It is shown only when it provably quotes none of the secret: not the
+ * password in any form, not the verifier or its salt and keys, not any 6-character run of either, and not any 12-character run of the
+ * statement that overlaps the secret literal (a run wholly in the fixed text, such as the role name, is harmless and is allowed).
+ * Then it is redacted, stripped of control characters and capped. If it has Neon's `{"request_id","error"}` shape only those two
+ * fields are shown.
+ */
+export function safeControlPlaneText(message: string, secret: StatementSecret): string | null {
+  if (!/control plane/i.test(message)) return null;
+  const secrets: string[] = [];
+  if (secret.plaintext) secrets.push(...passwordForms(secret.plaintext));
+  if (secret.verifier) {
+    secrets.push(secret.verifier);
+    const m = /^SCRAM-SHA-256\$\d+:([^$]+)\$([^:]+):(.+)$/.exec(secret.verifier);
+    if (m) secrets.push(m[1], m[2], m[3]);
+  }
+  for (const s of secrets) if (s && message.includes(s)) return null;
+  for (const s of [secret.plaintext, secret.verifier]) if (s && sharesRun(message, s, 6)) return null;
+  for (let i = 0; i + 12 <= secret.sql.length; i++) {
+    if (i < secret.end && i + 12 > secret.start && message.includes(secret.sql.slice(i, i + 12))) return null;
+  }
+
+  let text = message;
+  const json = /control plane:\s*(\{[\s\S]*\})\s*$/.exec(message);
+  if (json) {
+    try {
+      const body = JSON.parse(json[1]) as { error?: unknown; request_id?: unknown };
+      if (typeof body.error === "string") {
+        text = body.error + (typeof body.request_id === "string" ? ` (request ${body.request_id})` : "");
+      }
+    } catch {
+      // Not JSON after all: fall back to the whole message, which has passed the same checks.
+    }
+  }
+  const clean = redact(text).replace(/[\u0000-\u001f\u007f]+/g, " ").trim();
+  return clean.length > MAX_SHOWN ? `${clean.slice(0, MAX_SHOWN)}...` : clean;
+}
+
 /**
  * Run a statement whose text contains the password (or its verifier). Whatever goes wrong, the error that leaves here carries no
  * pg field: not the message, detail, where, internalQuery or position, any of which can quote the statement. Only the SQLSTATE
- * does, and for permission errors the message too, because those never contain the statement.
+ * does, and: for permission errors the message too (those never contain the statement); for a control-plane error from Neon, its
+ * own reason, but only after safeControlPlaneText has shown it quotes none of the secret.
  */
-async function runSecretStatement(db: Db, sql: string, passRefusal: boolean): Promise<void> {
+async function runSecretStatement(db: Db, secret: StatementSecret, passRefusal: boolean): Promise<void> {
   try {
-    await db.exec(sql);
+    await db.exec(secret.sql);
   } catch (e) {
     // Only the verifier attempt may hand the raw refusal up, so the caller can fall back. The plaintext attempt never does.
     if (passRefusal && isPlaintextOnlyRefusal(e)) throw e;
     const code = e && typeof e === "object" && typeof (e as { code?: unknown }).code === "string" ? (e as { code: string }).code : undefined;
     const message = e && typeof e === "object" && typeof (e as { message?: unknown }).message === "string" ? (e as { message: string }).message : undefined;
-    const refused = isPlaintextOnlyRefusal(e);
-    throw new SecretStatementError(code, refused ? `A role statement failed${code ? ` [${code}]` : ""}: the database refused the plaintext password too.` : code && SAFE_CODES.has(code) && message ? message : undefined);
+    const tag = code ? ` [${code}]` : "";
+    if (isPlaintextOnlyRefusal(e)) throw new SecretStatementError(code, `A role statement failed${tag}: the database refused the plaintext password too.`);
+    if (code && SAFE_CODES.has(code) && message) throw new SecretStatementError(code, message);
+    if (code === "XX000" && message) {
+      const reason = safeControlPlaneText(message, secret);
+      throw new SecretStatementError(code, reason ? `A role statement failed${tag}. The database says: ${reason}` : `A role statement failed${tag}. The database's message was withheld because it could contain the password.`);
+    }
+    throw new SecretStatementError(code);
   }
 }
 
@@ -76,21 +146,27 @@ export async function ensureAppRole(db: Db, password: RolePassword, appRole: str
       throw new Error(`The setup role has no ADMIN option on ${appRole}, so it cannot change its password. As a superuser, run: grant ${appRole} to <the setup role> with admin option`);
     }
   }
-  // The attributes are set when the role is created. A later ALTER ROLE by a non-superuser owner (Neon's, CI's) may not restate them: it
-  // changes only the password, and the attributes are checked after.
-  const statement = (secret: string) =>
-    exists ? `alter role ${appRole} with password ${secret}` : `create role ${appRole} login nosuperuser nocreatedb nocreaterole noinherit nobypassrls password ${secret}`;
+  // Only the password goes through a statement that may reach Neon's control plane, so that statement says as little as it can: a new role
+  // is created with LOGIN and the password alone. NOSUPERUSER, NOCREATEDB, NOCREATEROLE and NOBYPASSRLS are what a new role gets by
+  // default; NOINHERIT is set next in a statement with no secret (the owner holds ADMIN on a role it created), and the read-back check
+  // below proves every attribute or setup fails. A later ALTER ROLE by a non-superuser owner may not restate SUPERUSER or BYPASSRLS, so
+  // an existing role has its password changed and nothing else.
+  const statement = (literal: string, extra: Pick<StatementSecret, "plaintext" | "verifier">): StatementSecret => {
+    const head = exists ? `alter role ${appRole} with password ` : `create role ${appRole} login password `;
+    return { sql: head + literal, start: head.length, end: head.length + literal.length, ...extra };
+  };
   let usedPlaintext = false;
   try {
-    await runSecretStatement(db, statement(`'${password.verifier}'`), true);
+    await runSecretStatement(db, statement(`'${password.verifier}'`, { verifier: password.verifier }), true);
   } catch (e) {
     if (!isPlaintextOnlyRefusal(e) || !password.plaintext) {
       if (isPlaintextOnlyRefusal(e)) throw new Error("This database only accepts a plaintext password for a role, and none was given.");
       throw e;
     }
     usedPlaintext = true;
-    await runSecretStatement(db, statement(quoteLiteral(password.plaintext)), false);
+    await runSecretStatement(db, statement(quoteLiteral(password.plaintext), { plaintext: password.plaintext, verifier: password.verifier }), false);
   }
+  await db.exec(`alter role ${appRole} with noinherit`);
   const attrs = (await db.query<{ rolsuper: boolean; rolbypassrls: boolean; rolcreatedb: boolean; rolcreaterole: boolean; rolinherit: boolean; rolcanlogin: boolean }>(
     "select rolsuper, rolbypassrls, rolcreatedb, rolcreaterole, rolinherit, rolcanlogin from pg_roles where rolname = $1",
     [appRole],
