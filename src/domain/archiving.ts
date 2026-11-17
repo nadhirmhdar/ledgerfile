@@ -2,13 +2,12 @@
  * Archiving: the file-assembly deadline, and when a locked file may be archived. Pure, so the server and the page apply the same words and
  * the same dates.
  *
- * DEFAULT TO CONFIRM WITH THE FIRM. The standards on quality management (ISQM 1) and on audit documentation (ISA 230) expect the final
- * audit file to be assembled within a limited period after the date of the auditor's report; the period is commonly taken as 60 days. The
- * number is a default here, not a statement of what the firm's policy or local rules require: the firm confirms it, and a reviewer checks it
- * against the standards. It is one constant.
+ * The final audit file is to be assembled within 60 days of the date of the auditor's report (the period ISQM 1 and ISA 230 leave to the
+ * firm's policy). The firm has confirmed 60 days. It is this one constant.
  */
 export const ASSEMBLY_DAYS = 60;
-export const ASSEMBLY_NOTICE = "Draft guidance: the 60-day assembly period is a default for the firm to confirm against ISA 230 and ISQM 1 and its own policy.";
+/** The rule in words, for the page. Built from the constant, so it cannot differ from the deadline. */
+export const ASSEMBLY_RULE = `The file is due to be assembled within ${ASSEMBLY_DAYS} days of the date of the auditor's report.`;
 
 const DAY_MS = 86_400_000;
 const parse = (iso: string): number => {

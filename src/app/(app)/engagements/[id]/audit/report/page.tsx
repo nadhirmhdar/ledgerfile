@@ -135,7 +135,14 @@ export default async function AuditorsReportPage({ params }: { params: Promise<{
                       <Input name="city" maxLength={200} />
                     </Field>
                   </div>
-                  <Button variant="primary">Download the report (Word)</Button>
+                  <div className="flex flex-wrap gap-3">
+                    <Button variant="primary" name="format" value="docx">
+                      Download the report (Word)
+                    </Button>
+                    <Button variant="secondary" name="format" value="pdf">
+                      Download the report (PDF)
+                    </Button>
+                  </div>
                   <p className="text-sm text-ink-muted">{DOWNLOAD_NOTE}</p>
                 </form>
               ) : (

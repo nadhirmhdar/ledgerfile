@@ -1,8 +1,8 @@
 import { getDb, withFirm } from "@/server/db";
 import { getSession } from "@/server/session";
 import { buildLetterDocx } from "@/server/letters-docx";
-import { generateReport, type ReportForm } from "@/server/report-download";
-import { docxResponse, sameOriginPost } from "@/server/http";
+import { generateReport, type ReportForm, type ReportFormat } from "@/server/report-download";
+import { docxResponse, pdfResponse, sameOriginPost } from "@/server/http";
 
 export const dynamic = "force-dynamic";
 
@@ -18,10 +18,20 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (!sameOriginPost(request)) return new Response("Forbidden", { status: 403 });
 
   const form: ReportForm = {};
-  for (const [key, value] of await request.formData()) if (typeof value === "string" && (key === "partner" || key === "city")) form[key] = value.slice(0, 1000);
+  let format: ReportFormat = "docx";
+  for (const [key, value] of await request.formData()) {
+    if (typeof value !== "string") continue;
+    if (key === "partner" || key === "city") form[key] = value.slice(0, 1000);
+    if (key === "format" && value === "pdf") format = "pdf";
+  }
 
-  const report = await withFirm(await getDb(), session.firmId, (tx) => generateReport(tx, session, id, form));
+  const report = await withFirm(await getDb(), session.firmId, (tx) => generateReport(tx, session, id, form, format));
   if (report.kind === "not_found") return new Response("Not found", { status: 404 });
   if (report.kind === "refused") return new Response(report.message, { status: 409, headers: { "Content-Type": "text/plain; charset=utf-8" } });
+  if (format === "pdf") {
+    // pdfkit is loaded only when a PDF is asked for. The notice is the first block, as in the Word file.
+    const { renderPdf } = await import("@/server/pdf");
+    return pdfResponse(await renderPdf(report.blocks, { title: report.title, header: report.header }), report.fileName);
+  }
   return docxResponse(await buildLetterDocx(report.title, report.blocks), report.fileName);
 }

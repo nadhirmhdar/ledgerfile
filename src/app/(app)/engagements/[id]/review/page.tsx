@@ -22,7 +22,7 @@ import { ctl, Disclosure, fieldLabel } from "@/ui/controls";
 import { explainBlocker } from "@/ui/engagement-home";
 import { Callout, EmptyState, ProgressBar } from "@/ui/feedback";
 import { ArchiveForm } from "@/app/archive-form";
-import { ASSEMBLY_NOTICE } from "@/domain/archiving";
+import { ASSEMBLY_RULE } from "@/domain/archiving";
 import { todayIso } from "@/domain/client-requests";
 import { ARCHIVE_IRREVERSIBLE, ARCHIVE_PREVENTS, ARCHIVE_STAYS, archiveSection, deadlineView } from "@/ui/archive-view";
 import { Card, PageHeader, Section } from "@/ui/layout";
@@ -152,7 +152,7 @@ export default async function ReviewPage({ params }: { params: Promise<{ id: str
                   <Badge tone={deadline.tone}>{deadline.label}</Badge>
                   <span>{deadline.words}</span>
                 </p>
-                <p className="mt-2 text-sm text-ink-muted">{ASSEMBLY_NOTICE}</p>
+                <p className="mt-2 text-sm text-ink-muted">{ASSEMBLY_RULE}</p>
               </Card>
             )}
 
