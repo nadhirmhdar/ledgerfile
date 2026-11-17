@@ -71,7 +71,7 @@ jobs:
         run: npm run db:migrate
         env:
           DATABASE_URL_MIGRATIONS: postgres://lf_migrator:${{ env.MIGRATOR_PASSWORD }}@localhost:5432/ledgerfile_ci
-      - name: Migrate again (nothing to apply: proves it can be re-run)
+      - name: Migrate again, which proves it can be re-run
         run: npm run db:migrate
         env:
           DATABASE_URL_MIGRATIONS: postgres://lf_migrator:${{ env.MIGRATOR_PASSWORD }}@localhost:5432/ledgerfile_ci
