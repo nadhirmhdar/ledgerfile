@@ -57,30 +57,44 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      - name: Create the owner role and an empty database
+      - name: Create the owner role and database the way the Neon integration has them
         run: |
-          MIGRATOR_PASSWORD=$(openssl rand -hex 16)
+          OWNER_PASSWORD=$(openssl rand -hex 16)
           APP_PASSWORD=$(openssl rand -hex 16)
-          echo "::add-mask::$MIGRATOR_PASSWORD"
+          SAMPLE_PASSWORD=$(openssl rand -hex 16)
+          echo "::add-mask::$OWNER_PASSWORD"
           echo "::add-mask::$APP_PASSWORD"
-          echo "MIGRATOR_PASSWORD=$MIGRATOR_PASSWORD" >> "$GITHUB_ENV"
-          echo "APP_PASSWORD=$APP_PASSWORD" >> "$GITHUB_ENV"
-          psql -h localhost -U postgres -v ON_ERROR_STOP=1 -c "create role lf_migrator login password '$MIGRATOR_PASSWORD' nosuperuser createdb createrole"
-          psql -h localhost -U postgres -v ON_ERROR_STOP=1 -c "create database ledgerfile_ci owner lf_migrator"
-      - name: Migrate (first run applies everything)
-        run: npm run db:migrate
-        env:
-          DATABASE_URL_MIGRATIONS: postgres://lf_migrator:${{ env.MIGRATOR_PASSWORD }}@localhost:5432/ledgerfile_ci
-      - name: Migrate again, which proves it can be re-run
-        run: npm run db:migrate
-        env:
-          DATABASE_URL_MIGRATIONS: postgres://lf_migrator:${{ env.MIGRATOR_PASSWORD }}@localhost:5432/ledgerfile_ci
-      - name: Create the runtime login role (docs/hosted-roles.sql)
-        run: psql "postgres://lf_migrator:${MIGRATOR_PASSWORD}@localhost:5432/ledgerfile_ci" -v ON_ERROR_STOP=1 -v app_password="$APP_PASSWORD" -f docs/hosted-roles.sql
+          echo "::add-mask::$SAMPLE_PASSWORD"
+          # The variable names are the ones the Vercel-Neon integration injects (host, user, database, password, pooled and direct
+          # strings). Here pooled and direct are the same container; the app builds its own runtime URL from the parts.
+          {
+            echo "PGHOST=localhost"
+            echo "PGHOST_UNPOOLED=localhost"
+            echo "PGUSER=neondb_owner"
+            echo "PGPASSWORD=$OWNER_PASSWORD"
+            echo "PGDATABASE=neondb"
+            echo "DATABASE_URL=postgres://neondb_owner:$OWNER_PASSWORD@localhost:5432/neondb"
+            echo "DATABASE_URL_UNPOOLED=postgres://neondb_owner:$OWNER_PASSWORD@localhost:5432/neondb"
+            echo "LEDGERFILE_APP_PASSWORD=${APP_PASSWORD}${APP_PASSWORD}"
+            echo "SAMPLE_ADMIN_PASSWORD=${SAMPLE_PASSWORD}a${SAMPLE_PASSWORD}"
+            echo "SAMPLE_PARTNER_PASSWORD=${SAMPLE_PASSWORD}b${SAMPLE_PASSWORD}"
+            echo "SAMPLE_REVIEWER_PASSWORD=${SAMPLE_PASSWORD}c${SAMPLE_PASSWORD}"
+            echo "SAMPLE_PREPARER_PASSWORD=${SAMPLE_PASSWORD}d${SAMPLE_PASSWORD}"
+          } >> "$GITHUB_ENV"
+          # An owner like Neon's: not a superuser, but able to create databases and roles.
+          PGPASSWORD=postgres psql -h localhost -U postgres -v ON_ERROR_STOP=1 -c "create role neondb_owner login password '$OWNER_PASSWORD' nosuperuser createdb createrole"
+          PGPASSWORD=postgres psql -h localhost -U postgres -v ON_ERROR_STOP=1 -c "create database neondb owner neondb_owner"
+      - name: Set up the hosted database (first run)
+        run: npm run db:setup-hosted
+      - name: Set up the hosted database again, which proves it can be re-run
+        run: npm run db:setup-hosted
       - name: Run every test, against PostgreSQL where there is a database
         run: npx vitest run
         env:
-          # Each test file gets its own freshly migrated database on this server (see src/server/test-database.ts).
-          TEST_DATABASE_URL: postgres://lf_migrator:${{ env.MIGRATOR_PASSWORD }}@localhost:5432/postgres
-          # The runtime-role test connects as the login role to the database prepared above.
-          TEST_RUNTIME_DATABASE_URL: postgres://ledgerfile_app:${{ env.APP_PASSWORD }}@localhost:5432/ledgerfile_ci
+          # The integration's pooled DATABASE_URL is cleared for the tests: its presence would switch on hosted mode (closed sign-up, 4 MB uploads),
+          # which the local-behaviour tests do not expect.
+          DATABASE_URL: ""
+          # Each test file gets its own freshly migrated database on this server (see src/server/test-database.ts), as the owner.
+          TEST_DATABASE_URL: ${{ env.DATABASE_URL_UNPOOLED }}
+          # tests/postgres-runtime.test.ts builds the runtime URL from PGHOST, PGDATABASE and LEDGERFILE_APP_PASSWORD, as the app does,
+          # and connects as ledgerfile_app with the plaintext password.

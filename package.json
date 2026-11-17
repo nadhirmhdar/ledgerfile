@@ -13,11 +13,13 @@
     "seed": "tsx --env-file-if-exists=.env.local scripts/seed-demo.mts",
     "seed:sample-hosted": "tsx scripts/seed-sample-hosted.mts",
     "db:migrate": "tsx --env-file-if-exists=.env.local scripts/migrate.mts",
+    "db:setup-hosted": "tsx --env-file-if-exists=.env.local scripts/setup-hosted.mts",
     "sample:statements": "tsx scripts/sample-statements.mts",
     "methodology": "tsx scripts/build-methodology.mts"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.16",
+    "@vercel/blob": "^2.9.0",
     "docx": "^9.15.3",
     "exceljs": "^4.4.0",
     "next": "16.4.6",

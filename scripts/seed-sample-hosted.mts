@@ -5,13 +5,13 @@
 import { createPostgresDb } from "../src/server/pg-adapter";
 import { createFirm, DEV_FIRM_ID, DEV_USER_ID } from "../src/server/db";
 import { setPassword } from "../src/server/auth";
-import { redact } from "../src/server/config";
+import { migrationUrl, redact } from "../src/server/config";
 import { SAMPLE_USERS, samplePasswordProblems } from "../src/server/sample-seed";
 import { loadSampleClient } from "./seed-common";
 
-const url = process.env.DATABASE_URL_MIGRATIONS?.trim() || process.env.DATABASE_URL?.trim();
+const url = migrationUrl();
 if (!url) {
-  console.error("Set DATABASE_URL_MIGRATIONS (or DATABASE_URL) to the database to seed.");
+  console.error("Set DATABASE_URL_MIGRATIONS (or the integration's DATABASE_URL_UNPOOLED) to the database to seed.");
   process.exit(1);
 }
 const problems = samplePasswordProblems();
