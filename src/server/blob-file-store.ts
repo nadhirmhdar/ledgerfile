@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { FILE_KEY, type FileStore } from "./file-store";
 
 /**
@@ -63,4 +64,42 @@ export function vercelBlobFileStore(options: { sdk?: BlobSdk } = {}): FileStore 
       }
     },
   };
+}
+
+/**
+ * Read a stored object on the server and report its size and sha256, without keeping it in memory. Used to verify a direct upload:
+ * the numbers are the server's own, taken from the bytes Blob holds, never from anything the browser said. Reading stops once the
+ * object is larger than `maxBytes` (the size reported is then over the limit and the hash is empty), so a huge object is not read to the end.
+ * Null when there is no such object. Errors name the operation, never the key, URL or token.
+ */
+export async function inspectBlob(key: string, maxBytes: number, options: { sdk?: BlobSdk } = {}): Promise<{ size: number; sha256: string } | null> {
+  if (typeof window !== "undefined") throw new Error("The storage adapter is server-only.");
+  if (!FILE_KEY.test(key)) throw new Error("Invalid storage key.");
+  const sdk = options.sdk ?? (await realSdk());
+  try {
+    const result = await sdk.get(key, { access: "private" });
+    if (!result || result.statusCode !== 200 || !result.stream) return null;
+    const hash = createHash("sha256");
+    const reader = result.stream.getReader();
+    let size = 0;
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      size += value.byteLength;
+      if (size > maxBytes) {
+        await reader.cancel();
+        return { size, sha256: "" };
+      }
+      hash.update(value);
+    }
+    return { size, sha256: hash.digest("hex") };
+  } catch {
+    throw new Error("File storage inspect failed.");
+  }
+}
+
+/** The operations a direct upload needs from the store, on the real Blob SDK (or one passed in by a test). */
+export function blobOps(options: { sdk?: BlobSdk } = {}) {
+  const store = vercelBlobFileStore(options);
+  return { inspect: (key: string, maxBytes: number) => inspectBlob(key, maxBytes, options), remove: (key: string) => store.remove(key) };
 }

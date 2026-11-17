@@ -73,11 +73,12 @@ describe("redact", () => {
   });
 });
 
-describe("responseTooLarge", () => {
-  it("only refuses a file over the cap, and only when hosted", async () => {
-    const { responseTooLarge, RESPONSE_CAP_BYTES } = await import("../src/server/config");
-    expect(responseTooLarge(RESPONSE_CAP_BYTES + 1, { VERCEL: "1" })).toBe(true);
-    expect(responseTooLarge(RESPONSE_CAP_BYTES, { VERCEL: "1" })).toBe(false);
-    expect(responseTooLarge(RESPONSE_CAP_BYTES + 1, {})).toBe(false);
+describe("the direct upload limit", () => {
+  it("is one constant, larger than the function body limit, and the spreadsheet limit is unchanged", async () => {
+    const { DIRECT_UPLOAD_BYTES, DIRECT_UPLOAD_LABEL, HOSTED_UPLOAD_BYTES } = await import("../src/server/config");
+    expect(DIRECT_UPLOAD_BYTES).toBe(50 * 1024 * 1024);
+    expect(DIRECT_UPLOAD_LABEL).toBe("50 MB");
+    expect(DIRECT_UPLOAD_BYTES).toBeGreaterThan(HOSTED_UPLOAD_BYTES);
+    expect(maxUploadBytes({ VERCEL: "1" })).toBe(HOSTED_UPLOAD_BYTES);
   });
 });

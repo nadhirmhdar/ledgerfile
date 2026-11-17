@@ -7,8 +7,11 @@ import * as papers from "@/server/working-papers";
 import { buildLeadSheets } from "@/domain/leadsheet";
 import { ActionForm } from "@/app/action-form";
 import { FileInput } from "@/app/file-input";
-import { fileWorkingPaperAction, removeWorkingPaperAction, uploadWorkingPaperAction } from "@/app/papers-actions";
+import { fileWorkingPaperAction, removeWorkingPaperAction } from "@/app/papers-actions";
 import { uploadLimitLabel } from "@/server/config";
+import { workingPaperLimit } from "@/server/direct-upload";
+import { UploadForm } from "@/app/upload-form";
+import { uploadHint } from "@/ui/upload-view";
 import { AREAS, CHECKLISTS } from "@/domain/audit";
 import { Button, buttonClass } from "@/ui/button";
 import { ctl, Disclosure, fieldLabel } from "@/ui/controls";
@@ -36,6 +39,7 @@ export default async function PapersPage({ params, searchParams }: { params: Pro
   if (!engagement) notFound();
 
   const open = engagement.status === "open";
+  const limit = workingPaperLimit();
   const sheets = buildLeadSheets(accounts).sheets;
   const base = `/engagements/${id}/papers`;
   const view = filterPapers(list, { show, q });
@@ -76,12 +80,12 @@ export default async function PapersPage({ params, searchParams }: { params: Pro
       <div className="mt-6 space-y-8">
         {open && (
           <Disclosure summary="Upload a file" open={list.length === 0}>
-            <ActionForm action={uploadWorkingPaperAction} fields={{ engagementId: id }}>
+            <UploadForm engagementId={id}>
               <div className="flex flex-wrap items-end gap-3">
                 <label className={fieldLabel}>
                   File
                   <FileInput
-                    maxBytes={papers.MAX_FILE_BYTES}
+                    maxBytes={limit.bytes}
                     accept={papers.ALLOWED_EXTENSIONS.map((e) => `.${e}`).join(",")}
                     className="text-sm font-normal text-ink file:mr-3 file:min-h-10 file:cursor-pointer file:rounded-md file:border file:border-border-strong file:bg-surface file:px-4 file:text-sm file:font-medium file:text-ink hover:file:bg-surface-muted"
                   />
@@ -103,8 +107,8 @@ export default async function PapersPage({ params, searchParams }: { params: Pro
                 </label>
                 <Button variant="primary">Upload</Button>
               </div>
-              <p className="mt-3 text-sm text-ink-muted">Up to {uploadLimitLabel()}. Accepted types: {papers.ALLOWED_EXTENSIONS.join(", ")}. To attach evidence to an audit procedure, upload it from that procedure on the audit page.</p>
-            </ActionForm>
+              <p className="mt-3 text-sm text-ink-muted">{uploadHint({ direct: limit.direct, limitLabel: limit.label, importLabel: uploadLimitLabel(), types: papers.ALLOWED_EXTENSIONS })} To attach evidence to an audit procedure, upload it from that procedure on the audit page.</p>
+            </UploadForm>
           </Disclosure>
         )}
 

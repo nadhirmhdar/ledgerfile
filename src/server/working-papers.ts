@@ -111,17 +111,25 @@ export async function setFileFiling(tx: Tx, s: Session, id: string, input: { ref
   return row.engagementId;
 }
 
+/** What a working paper is about to become: the rules below have been applied to it. */
+export interface CheckedPaper {
+  targetKind: TargetKind;
+  target: string | null;
+  fileName: string;
+  description: string | null;
+}
+
 /**
- * Store a file as a working paper. The bytes are written first; if recording the file
- * then fails, they are removed again so nothing is left unreferenced.
+ * The rules every working paper meets, whichever way its bytes arrive: an open engagement, an accepted file type, a size within the
+ * limit, a real thing for it to support, and (for a procedure) one that has not been reviewed and an audit that is on. Applied when a
+ * file is stored through the server AND again when a direct upload is finished, so a lock or a review that happened in between counts.
  */
-export async function addWorkingPaper(
+export async function checkWorkingPaper(
   tx: Tx,
-  s: Session,
-  store: FileStore,
   engagementId: string,
-  input: { targetKind: string; target: string | null; fileName: string; data: Uint8Array; description: string },
-): Promise<string> {
+  input: { targetKind: string; target: string | null; fileName: string; sizeBytes: number; description: string },
+  limit: { bytes: number; message: string } = { bytes: MAX_FILE_BYTES, message: uploadTooLargeMessage() },
+): Promise<CheckedPaper> {
   await requireOpen(tx, engagementId);
 
   const fileName = cleanFileName(input.fileName);
@@ -129,8 +137,8 @@ export async function addWorkingPaper(
   if (!fileName || !ALLOWED_EXTENSIONS.includes(ext)) {
     throw new Error(`That file type is not accepted. Upload one of: ${ALLOWED_EXTENSIONS.join(", ")}.`);
   }
-  if (input.data.byteLength === 0) throw new Error("The file is empty.");
-  if (input.data.byteLength > MAX_FILE_BYTES) throw new Error(uploadTooLargeMessage());
+  if (input.sizeBytes === 0) throw new Error("The file is empty.");
+  if (input.sizeBytes > limit.bytes) throw new Error(limit.message);
   const description = input.description.trim();
   if (description.length > 500) throw new Error("The description is too long.");
 
@@ -149,17 +157,44 @@ export async function addWorkingPaper(
   } else if (input.targetKind !== "engagement") {
     throw new Error("Choose what the file supports.");
   }
+  return { targetKind: input.targetKind as TargetKind, target, fileName, description: description || null };
+}
+
+/**
+ * Record a stored file as a working paper and write the audit-log entry. The one place a working paper row is created: the upload
+ * through the server and a finished direct upload both end here, so they cannot drift apart.
+ */
+export async function registerWorkingPaper(
+  tx: Tx,
+  s: Session,
+  p: { id: string; storageKey: string; engagementId: string; checked: CheckedPaper; sizeBytes: number; sha256: string },
+): Promise<void> {
+  await tx.query(
+    `insert into working_papers (id, firm_id, engagement_id, target_kind, target, file_name, size_bytes, sha256, storage_key, description, uploaded_by)
+     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+    [p.id, s.firmId, p.engagementId, p.checked.targetKind, p.checked.target, p.checked.fileName, p.sizeBytes, p.sha256, p.storageKey, p.checked.description, s.userId],
+  );
+  await log(tx, s, "upload", "working_paper", p.id, { engagementId: p.engagementId, fileName: p.checked.fileName, targetKind: p.checked.targetKind, target: p.checked.target });
+}
+
+/**
+ * Store a file as a working paper. The bytes are written first; if recording the file
+ * then fails, they are removed again so nothing is left unreferenced.
+ */
+export async function addWorkingPaper(
+  tx: Tx,
+  s: Session,
+  store: FileStore,
+  engagementId: string,
+  input: { targetKind: string; target: string | null; fileName: string; data: Uint8Array; description: string },
+): Promise<string> {
+  const checked = await checkWorkingPaper(tx, engagementId, { ...input, sizeBytes: input.data.byteLength });
 
   const id = randomUUID();
   const storageKey = `${s.firmId}/${id}`;
   await store.put(storageKey, input.data);
   try {
-    await tx.query(
-      `insert into working_papers (id, firm_id, engagement_id, target_kind, target, file_name, size_bytes, sha256, storage_key, description, uploaded_by)
-       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
-      [id, s.firmId, engagementId, input.targetKind, target, fileName, input.data.byteLength, createHash("sha256").update(input.data).digest("hex"), storageKey, description || null, s.userId],
-    );
-    await log(tx, s, "upload", "working_paper", id, { engagementId, fileName, targetKind: input.targetKind, target });
+    await registerWorkingPaper(tx, s, { id, storageKey, engagementId, checked, sizeBytes: input.data.byteLength, sha256: createHash("sha256").update(input.data).digest("hex") });
   } catch (e) {
     await store.remove(storageKey);
     throw e;

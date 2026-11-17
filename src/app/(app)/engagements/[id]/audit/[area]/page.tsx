@@ -7,7 +7,7 @@ import * as audit from "@/server/audit";
 import { AREA_BY_CODE, CHECKLIST_BY_CODE, LIBRARY_STATUS } from "@/domain/audit";
 import { ActionForm } from "@/app/action-form";
 import { reviewAreaAction, reviewProcedureAction, updateProcedureAction } from "@/app/audit-actions";
-import { removeWorkingPaperAction, uploadWorkingPaperAction } from "@/app/papers-actions";
+import { removeWorkingPaperAction } from "@/app/papers-actions";
 import * as papers from "@/server/working-papers";
 import { listSchedules } from "@/server/test-schedules";
 import { confirmationSummary } from "@/server/confirmations";
@@ -18,6 +18,8 @@ import { formatAmount } from "@/domain/money";
 import { canReview } from "@/domain/signoff";
 import { SamplingCalculator } from "./sampling";
 import { FileInput } from "@/app/file-input";
+import { UploadForm } from "@/app/upload-form";
+import { workingPaperLimit } from "@/server/direct-upload";
 import { Badge } from "@/ui/badge";
 import { Button, LinkButton } from "@/ui/button";
 import { ctl, Disclosure, fieldLabel } from "@/ui/controls";
@@ -55,6 +57,7 @@ export default async function ProgrammePage({ params, searchParams }: { params: 
   if (!engagement) notFound();
 
   const open = engagement.status === "open";
+  const limit = workingPaperLimit();
   const auditOn = overview?.enabled ?? false;
   const reviewer = canReview(session.role);
   const base = `/engagements/${id}`;
@@ -328,10 +331,10 @@ export default async function ProgrammePage({ params, searchParams }: { params: 
                               </ul>
                             )}
                             {c.attach && (
-                              <ActionForm action={uploadWorkingPaperAction} fields={{ engagementId: id, supports: `procedure:${p.id}`, description: "" }} className="mt-2">
+                              <UploadForm engagementId={id} fields={{ supports: `procedure:${p.id}`, description: "" }} className="mt-2">
                                 <div className="flex flex-wrap items-center gap-2">
                                   <FileInput
-                                    maxBytes={papers.MAX_FILE_BYTES}
+                                    maxBytes={limit.bytes}
                                     label={`Evidence file for ${p.templateId}`}
                                     accept={papers.ALLOWED_EXTENSIONS.map((e) => `.${e}`).join(",")}
                                     className="text-sm text-ink file:mr-3 file:min-h-8 file:cursor-pointer file:rounded-md file:border file:border-border-strong file:bg-surface file:px-3 file:text-sm file:font-medium file:text-ink hover:file:bg-surface-muted"
@@ -340,7 +343,7 @@ export default async function ProgrammePage({ params, searchParams }: { params: 
                                     Attach evidence
                                   </Button>
                                 </div>
-                              </ActionForm>
+                              </UploadForm>
                             )}
                           </div>
 

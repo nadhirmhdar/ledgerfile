@@ -152,6 +152,16 @@ export const maxUploadBytes = (env: Env = process.env): number => (isHosted(env)
 export const uploadLimitLabel = (env: Env = process.env): string => `${Math.round(maxUploadBytes(env) / 1024 / 1024)} MB`;
 export const uploadTooLargeMessage = (env: Env = process.env): string => `The file is larger than ${uploadLimitLabel(env)}.`;
 
+/**
+ * A working paper sent straight from the browser to the private Blob store never passes through a function, so the function's
+ * request-body limit does not apply to it. One constant for the server's checks, the token it issues and the size the form shows.
+ * Spreadsheet imports are read on the server and keep the smaller limit above.
+ */
+export const DIRECT_UPLOAD_BYTES = 50 * 1024 * 1024;
+export const DIRECT_UPLOAD_LABEL = `${DIRECT_UPLOAD_BYTES / 1024 / 1024} MB`;
+/** How long the browser has to send a file after the server has said it may. */
+export const PENDING_UPLOAD_MINUTES = 15;
+
 /** Replace anything that looks like a connection string, and any configured secret value, so an error can be logged safely. */
 export function redact(text: string, env: Env = process.env): string {
   let out = text.replace(/\bpostgres(?:ql)?:\/\/[^\s'"]*/gi, "postgres://[redacted]");
@@ -190,15 +200,6 @@ export function withVerifiedTls(connectionString: string): string {
   u.searchParams.set("sslmode", "verify-full");
   return u.toString();
 }
-
-/** Vercel Functions cap a response body at about 4.5 MB. */
-export const RESPONSE_CAP_BYTES = 4.5 * 1024 * 1024;
-
-/**
- * Whether a file must not be served as a response body: hosted, and over the cap (a file stored before the upload limit applied).
- * Decided before the download is logged, so the audit trail records only downloads that really happened.
- */
-export const responseTooLarge = (bytes: number, env: Env = process.env): boolean => isHosted(env) && bytes > RESPONSE_CAP_BYTES;
 
 /**
  * Refuses to run a development server (next dev) against a database that is not on this machine. A pulled Vercel environment, or a
