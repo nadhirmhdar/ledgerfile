@@ -14,6 +14,9 @@ export function entriesSentence(entries: { type: string }[]): string {
   return `${count(entries.length, "entry", "entries")} posted: ${parts.join(", ")}.`;
 }
 
+/** "Posted by Ana Preparer on 2025-03-01", or "Posted 2025-03-01" when the poster is not known. */
+export const postedText = (createdAt: string, name: string | null): string => (name ? `Posted by ${name} on ${createdAt}` : `Posted ${createdAt}`);
+
 /** "AJE 1" or "RJE 3". */
 export const entryReference = (type: string, number: number): string => `${type === "adjusting" ? "AJE" : "RJE"} ${number}`;
 

@@ -11,6 +11,8 @@ export interface JournalRow {
   createdAt: string;
   /** Who posted the entry. */
   createdBy: string | null;
+  /** The poster's name; null when the entry has no poster on record or the user is gone. */
+  createdByName: string | null;
   lines: { accountCode: string; accountName: string; amountMinor: number }[];
 }
 
@@ -70,13 +72,15 @@ export async function listJournals(tx: Tx, engagementId: string): Promise<Journa
     description: string;
     createdAt: string;
     createdBy: string | null;
+    createdByName: string | null;
     accountCode: string;
     accountName: string;
     amount: string;
   }>(
-    `select j.id, j.number, j.type, j.description, to_char(j.created_at, 'YYYY-MM-DD') as "createdAt", j.created_by as "createdBy",
+    `select j.id, j.number, j.type, j.description, to_char(j.created_at, 'YYYY-MM-DD') as "createdAt", j.created_by as "createdBy", u.name as "createdByName",
             a.code as "accountCode", a.name as "accountName", l.amount_minor::text as amount
      from journal_entries j
+     left join users u on u.id = j.created_by
      join journal_lines l on l.journal_entry_id = j.id
      join accounts a on a.id = l.account_id
      where j.engagement_id = $1
@@ -87,7 +91,7 @@ export async function listJournals(tx: Tx, engagementId: string): Promise<Journa
   for (const r of rows) {
     let j = byId.get(r.id);
     if (!j) {
-      j = { id: r.id, number: r.number, type: r.type, description: r.description, createdAt: r.createdAt, createdBy: r.createdBy, lines: [] };
+      j = { id: r.id, number: r.number, type: r.type, description: r.description, createdAt: r.createdAt, createdBy: r.createdBy, createdByName: r.createdByName, lines: [] };
       byId.set(r.id, j);
     }
     j.lines.push({ accountCode: r.accountCode, accountName: r.accountName, amountMinor: Number(r.amount) });

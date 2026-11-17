@@ -9,7 +9,7 @@ import { deleteJournalAction } from "@/app/actions";
 import { Badge } from "@/ui/badge";
 import { LinkButton } from "@/ui/button";
 import { EmptyState } from "@/ui/feedback";
-import { entriesSentence, entryReference, entryTotals } from "@/ui/journal-entries-view";
+import { entriesSentence, entryReference, entryTotals, postedText } from "@/ui/journal-entries-view";
 import { Card, PageHeader, Section } from "@/ui/layout";
 import { Table, TCell, THead, TRow } from "@/ui/table";
 import { EngagementNav } from "../nav";
@@ -82,7 +82,7 @@ export default async function JournalsPage({ params }: { params: Promise<{ id: s
                               <span>{j.description}</span>
                             </span>
                           }
-                          description={`Posted ${j.createdAt}`}
+                          description={postedText(j.createdAt, j.createdByName)}
                           actions={
                             open && canDeleteJournal(session.role, j.createdBy === session.userId) ? (
                               <form action={deleteJournalAction}>
