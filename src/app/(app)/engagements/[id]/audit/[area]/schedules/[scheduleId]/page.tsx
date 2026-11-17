@@ -16,6 +16,7 @@ import { Field, Input, Select, Textarea } from "@/ui/form";
 import { Card, PageHeader, Section } from "@/ui/layout";
 import { keyItemsSentence, readOnlyReason, reviewBadge, scheduleSentence, signOffControls } from "@/ui/schedule-view";
 import { SummaryChevron, summaryRow } from "@/ui/summary-cue";
+import { scheduleCrumbs } from "@/ui/engagement-nav";
 import { EngagementNav } from "../../../../nav";
 import { ImportListing } from "./import-listing";
 import { LinesTable } from "./lines-table";
@@ -55,7 +56,7 @@ export default async function SchedulePage({ params }: { params: Promise<{ id: s
   return (
     <div className="py-8 text-ink">
       <PageHeader
-        breadcrumb={[{ label: "All engagements", href: "/" }]}
+        breadcrumb={scheduleCrumbs(id, { code: schedule.areaCode, title: schedule.areaTitle }, schedule)}
         title={`${schedule.reference} ${schedule.title}`}
         meta={
           <>
@@ -64,10 +65,6 @@ export default async function SchedulePage({ params }: { params: Promise<{ id: s
             <span>
               {engagement.periodStart} to {engagement.periodEnd}
             </span>
-            <span aria-hidden="true">·</span>
-            <Link href={`/engagements/${id}/audit/${area}`} className="text-accent hover:underline">
-              Back to {schedule.areaCode} {schedule.areaTitle}
-            </Link>
             {schedule.rolledFrom && (
               <>
                 <span aria-hidden="true">·</span>

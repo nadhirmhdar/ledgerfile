@@ -25,6 +25,7 @@ import { Callout, EmptyState, ProgressBar } from "@/ui/feedback";
 import { Card, ListRow, ListRows, PageHeader, Section } from "@/ui/layout";
 import { count } from "@/ui/text";
 import { filterProcedures, parseProcedureShow, procedureControls, procedureResults, reviewPill, workPill, type ProcedureShow } from "@/ui/procedure-view";
+import { areaCrumbs } from "@/ui/engagement-nav";
 import { EngagementNav } from "../../nav";
 
 export const dynamic = "force-dynamic";
@@ -81,7 +82,7 @@ export default async function ProgrammePage({ params, searchParams }: { params: 
   return (
     <div className="py-8 text-ink">
       <PageHeader
-        breadcrumb={[{ label: "Audit planning", href: `${base}/audit` }]}
+        breadcrumb={areaCrumbs(id, area)}
         title={`${area.code} ${area.title}`}
         meta={
           <>
