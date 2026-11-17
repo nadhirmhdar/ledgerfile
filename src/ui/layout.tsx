@@ -46,7 +46,8 @@ export function PageHeader({
   title: ReactNode;
   subtitle?: ReactNode;
   actions?: ReactNode;
-  breadcrumb?: { label: string; href: string }[];
+  /** Earlier crumbs are links; one with no href is the page the reader is on, shown as text. */
+  breadcrumb?: { label: string; href?: string }[];
 }) {
   return (
     <header className="flex flex-wrap items-start justify-between gap-4">
@@ -55,11 +56,17 @@ export function PageHeader({
           <nav aria-label="Breadcrumb" className="mb-2">
             <ol className="flex flex-wrap items-center gap-1.5 text-sm text-ink-muted">
               {breadcrumb.map((b, i) => (
-                <li key={b.href} className="flex items-center gap-1.5">
+                <li key={`${i}:${b.label}`} className="flex items-center gap-1.5">
                   {i > 0 && <span aria-hidden="true">/</span>}
-                  <Link href={b.href} className="rounded-sm text-accent hover:underline">
-                    {b.label}
-                  </Link>
+                  {b.href ? (
+                    <Link href={b.href} className="rounded-sm text-accent hover:underline">
+                      {b.label}
+                    </Link>
+                  ) : (
+                    <span aria-current="page" className="text-ink">
+                      {b.label}
+                    </span>
+                  )}
                 </li>
               ))}
             </ol>
