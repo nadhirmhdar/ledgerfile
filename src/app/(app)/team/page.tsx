@@ -65,7 +65,7 @@ export default async function TeamPage() {
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                   <span className={`font-semibold ${u.active ? "text-ink" : "text-ink-muted"}`}>{u.name}</span>
                   {self && <Badge tone="info">You</Badge>}
-                  <Badge tone="muted">{roleLabel(u.role)}</Badge>
+                  <span className="inline-flex items-center rounded-full bg-surface-muted px-2.5 py-0.5 text-sm font-medium whitespace-nowrap text-ink-muted">{roleLabel(u.role)}</span>
                   <StatusBadge status={u.active ? "done" : "not_started"} label={u.active ? "Active" : "Deactivated"} />
                 </div>
                 <p className="mt-0.5 min-w-0 text-sm break-words text-ink-muted">{u.email}</p>
