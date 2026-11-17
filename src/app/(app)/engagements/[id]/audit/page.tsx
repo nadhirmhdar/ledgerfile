@@ -319,6 +319,15 @@ export default async function AuditPage({ params }: { params: Promise<{ id: stri
                   const stagePill = checklistPill({ steps, completed: done, unreviewed: toReview });
                   // Open when something here needs attention: work to review, or steps started and not finished.
                   const active = toReview > 0 || (done > 0 && done < steps);
+                  // A stage with no checklist loaded (the audit has not been turned on) is one line, not an empty "0 of 0" row.
+                  if (steps === 0) {
+                    return (
+                      <p key={stage.code} className="rounded-lg border border-dashed border-border-strong px-4 py-3 text-sm">
+                        <span className="font-semibold text-ink">{stage.label}</span>{" "}
+                        <span className="text-ink-muted">No checklist is loaded for this stage. Checklists load when the audit is turned on.</span>
+                      </p>
+                    );
+                  }
                   return (
                     <details key={stage.code} open={active} className="rounded-lg border border-border bg-surface shadow-card">
                       <summary className="flex min-h-12 cursor-pointer flex-wrap items-center gap-x-4 gap-y-1 px-4 py-2 font-semibold">
