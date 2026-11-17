@@ -235,18 +235,27 @@ export default async function TrialBalancePage({ params, searchParams }: { param
                       </tbody>
                     </Table>
                   </div>
-                  <ul className="mt-3 space-y-3 sm:hidden">
+                  {/* Phone: one compact row each. Line 1 is the account and its figures, line 2 the status (and source tag), line 3 the group control at the full row width so the chosen group is readable. */}
+                  <ul className="mt-3 divide-y divide-border rounded-lg border border-border bg-surface shadow-card sm:hidden">
                     {view.rows.map((a) => (
-                      <li key={a.id} className="rounded-lg border border-border bg-surface p-4 shadow-card">
-                        <p className="font-semibold">
-                          <span className="font-mono text-sm font-normal text-ink-muted">{a.code}</span> {a.name}
-                        </p>
-                        <p className="mt-1 text-sm text-ink-muted tabular-nums">
-                          Closing {formatAmount(a.closingMinor)}
-                          {a.priorMinor !== null && ` · Prior year ${formatAmount(a.priorMinor)}`}
-                        </p>
-                        <div className="mt-2">{statusCell(a)}</div>
-                        <div className="mt-3">{groupCell(a)}</div>
+                      <li key={a.id} className="px-4 py-2.5">
+                        <div className="flex items-start justify-between gap-3">
+                          <p className="min-w-0 font-semibold">
+                            <span className="font-mono text-sm font-normal text-ink-muted">{a.code}</span> {a.name}
+                          </p>
+                          <p className="shrink-0 text-right tabular-nums">
+                            <span className="sr-only">Closing </span>
+                            {formatAmount(a.closingMinor)}
+                            {a.priorMinor !== null && (
+                              <span className="block text-sm text-ink-muted">
+                                Prior year {formatAmount(a.priorMinor)}
+                              </span>
+                            )}
+                          </p>
+                        </div>
+                        {/* The badge and its source tag side by side on a phone (the cell stacks them on desktop). */}
+                        <div className="mt-1.5 [&>div]:flex-row [&>div]:flex-wrap [&>div]:items-center [&>div]:gap-x-2">{statusCell(a)}</div>
+                        <div className="mt-1.5">{groupCell(a)}</div>
                       </li>
                     ))}
                   </ul>
