@@ -98,3 +98,14 @@ jobs:
           TEST_DATABASE_URL: ${{ env.DATABASE_URL_UNPOOLED }}
           # tests/postgres-runtime.test.ts builds the runtime URL from PGHOST, PGDATABASE and LEDGERFILE_APP_PASSWORD, as the app does,
           # and connects as ledgerfile_app with the plaintext password.
+      - name: Diagnostic, who may alter the runtime role and what Postgres says when attributes are restated
+        if: always()
+        continue-on-error: true
+        run: |
+          psql "$DATABASE_URL_UNPOOLED" -c "select version()"
+          psql "$DATABASE_URL_UNPOOLED" -c "select g.rolname as role, u.rolname as member, gr.rolname as grantor, m.admin_option, m.inherit_option, m.set_option from pg_auth_members m join pg_roles g on g.oid = m.roleid join pg_roles u on u.oid = m.member join pg_roles gr on gr.oid = m.grantor where g.rolname = 'ledgerfile_app' or u.rolname = 'ledgerfile_app' order by 1, 2"
+          psql "$DATABASE_URL_UNPOOLED" -c "select rolname, rolsuper, rolcreaterole, rolcreatedb, rolbypassrls from pg_roles where rolname in ('neondb_owner', 'ledgerfile_app')"
+          for attr in "nosuperuser" "nobypassrls" "nocreatedb" "nocreaterole" "noinherit" "login"; do
+            echo "--- alter role ledgerfile_app with $attr"
+            psql "$DATABASE_URL_UNPOOLED" -c "alter role ledgerfile_app with $attr" || true
+          done

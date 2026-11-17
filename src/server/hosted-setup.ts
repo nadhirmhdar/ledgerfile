@@ -12,6 +12,19 @@ import type { Db } from "./db";
 export async function ensureAppRole(db: Db, verifier: string): Promise<{ created: boolean }> {
   if (!/^SCRAM-SHA-256\$[0-9A-Za-z+/=:$]+$/.test(verifier)) throw new Error("The password verifier is not in SCRAM-SHA-256 form.");
   const exists = (await db.query("select 1 from pg_roles where rolname = $1", [APP_ROLE])).rows.length > 0;
+  if (exists) {
+    // On Postgres 16 and later a non-superuser may alter a role only with the ADMIN option on it, which the creating role gets on create.
+    // If the owner lacks it (the role was made by someone else), say what to grant instead of failing with a bare permission error.
+    const me = (await db.query<{ super: boolean; admin: boolean; v: string }>(
+      `select r.rolsuper as super, current_setting('server_version_num') as v,
+         exists (select 1 from pg_auth_members m join pg_roles g on g.oid = m.roleid where g.rolname = $1 and m.member = r.oid and m.admin_option) as admin
+       from pg_roles r where r.rolname = current_user`,
+      [APP_ROLE],
+    )).rows[0];
+    if (me && !me.super && Number(me.v) >= 160000 && !me.admin) {
+      throw new Error(`The setup role has no ADMIN option on ${APP_ROLE}, so it cannot change its password. As a superuser, run: grant ${APP_ROLE} to <the setup role> with admin option`);
+    }
+  }
   // The attributes are set when the role is created. A later ALTER ROLE by a non-superuser owner (Neon's, CI's) may not restate them: it
   // changes only the password, and the attributes are checked after.
   await db.exec(

@@ -53,9 +53,12 @@ try {
     console.log("3. Sample firm: seeded");
   }
 } catch (e) {
-  // Postgres adds a DETAIL line to permission errors (for example which option is missing). It names roles, never secrets.
-  const detail = e && typeof e === "object" && "detail" in e && typeof (e as { detail?: unknown }).detail === "string" ? ` (${redact((e as { detail: string }).detail)})` : "";
-  console.error("Setup failed:", e instanceof Error ? redact(e.message) + detail : "unknown error");
+  // Postgres adds a SQLSTATE code and, on permission errors, a DETAIL line (for example which option or attribute is missing). They name
+  // roles and options, never secrets; they go through redact() all the same.
+  const field = (k: string) => (e && typeof e === "object" && k in e && typeof (e as Record<string, unknown>)[k] === "string" ? redact((e as Record<string, string>)[k]) : "");
+  const code = field("code");
+  const detail = field("detail");
+  console.error("Setup failed:", e instanceof Error ? redact(e.message) : "unknown error", code ? `[${code}]` : "", detail ? `(${detail})` : "");
   process.exitCode = 1;
 } finally {
   await db.close();
