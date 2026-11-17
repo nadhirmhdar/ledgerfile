@@ -164,15 +164,6 @@ export default async function EngagementHome({ params }: { params: Promise<{ id:
             <ToDoRows items={model.toDo} />
           </Section>
         )}
-
-        <Section title="Quick links">
-          <div className="flex flex-wrap gap-2">
-            <LinkButton href={p.statements}>Financial statements</LinkButton>
-            <LinkButton href={p.papers}>Working papers</LinkButton>
-            <LinkButton href={p.index}>Working paper index</LinkButton>
-            <LinkButton href={p.requests}>Client requests</LinkButton>
-          </div>
-        </Section>
       </div>
     </div>
   );

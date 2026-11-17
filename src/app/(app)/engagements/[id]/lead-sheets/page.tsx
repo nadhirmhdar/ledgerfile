@@ -3,11 +3,16 @@ import { notFound } from "next/navigation";
 import { getDb, withFirm } from "@/server/db";
 import { getSession } from "@/server/session";
 import * as repo from "@/server/repo";
+import * as review from "@/server/review";
 import { buildLeadSheets } from "@/domain/leadsheet";
 import { formatAmount } from "@/domain/money";
+import { Badge, StatusBadge } from "@/ui/badge";
 import { Callout, EmptyState } from "@/ui/feedback";
 import { LinkButton } from "@/ui/button";
-import { Card, PageHeader, Section } from "@/ui/layout";
+import { openPointsLabel, signBadge, signOffSentence } from "@/ui/leadsheet-view";
+import { PageHeader, Section } from "@/ui/layout";
+import { OpenOnHash } from "@/ui/open-on-hash";
+import { SummaryChevron, summaryRow } from "@/ui/summary-cue";
 import { Table, TCell, THead, TRow } from "@/ui/table";
 import { count } from "@/ui/text";
 import { EngagementNav } from "../nav";
@@ -19,9 +24,11 @@ export default async function LeadSheetsPage({ params }: { params: Promise<{ id:
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
 
   const session = await getSession();
-  const { engagement, accounts } = await withFirm(await getDb(), session.firmId, async (tx) => ({
+  const { engagement, accounts, overview } = await withFirm(await getDb(), session.firmId, async (tx) => ({
     engagement: await repo.getEngagement(tx, id),
     accounts: await repo.listAccounts(tx, id),
+    // The same sign-off data the review page reads: shown here, read-only.
+    overview: await review.getOverview(tx, id),
   }));
   if (!engagement) notFound();
 
@@ -30,6 +37,12 @@ export default async function LeadSheetsPage({ params }: { params: Promise<{ id:
   const set = buildLeadSheets(accounts.map((a) => ({ ...a, closingMinor: a.closingMinor + a.adjustmentMinor })));
   const base = `/engagements/${id}`;
   const unmapped = set.unmapped.length;
+  const signOf = new Map((overview?.leadSheets ?? []).map((l) => [l.groupCode, l]));
+  const stateOf = (code: string) => {
+    const r = signOf.get(code);
+    return { preparer: r?.preparer ?? null, reviewer: r?.reviewer ?? null, openPoints: r?.openPoints ?? 0 };
+  };
+  const signSummary = signOffSentence(set.sheets.map((sh) => stateOf(sh.groupCode)));
 
   const sentence =
     accounts.length === 0
@@ -61,6 +74,7 @@ export default async function LeadSheetsPage({ params }: { params: Promise<{ id:
         subtitle={sentence}
       />
       <EngagementNav id={id} current="leadsheets" status={engagement.status} />
+      <OpenOnHash />
 
       <div className="mt-6 space-y-8">
         {accounts.length === 0 ? (
@@ -89,7 +103,7 @@ export default async function LeadSheetsPage({ params }: { params: Promise<{ id:
               </Callout>
             )}
 
-            <Section title="Summary" description="Select a lead sheet to jump to its accounts.">
+            <Section title="Summary" description="Select a lead sheet to open its accounts.">
               <Table caption="Lead sheet totals">
                 <THead>
                   <TRow>
@@ -107,6 +121,7 @@ export default async function LeadSheetsPage({ params }: { params: Promise<{ id:
                     <TCell header="col" numeric>
                       %
                     </TCell>
+                    <TCell header="col">Sign-off</TCell>
                   </TRow>
                 </THead>
                 <tbody>
@@ -122,17 +137,38 @@ export default async function LeadSheetsPage({ params }: { params: Promise<{ id:
                       <TCell numeric>{formatAmount(s.priorMinor)}</TCell>
                       <TCell numeric>{formatAmount(s.varianceMinor)}</TCell>
                       <TCell numeric>{s.variancePct === null ? "" : `${s.variancePct.toFixed(1)}%`}</TCell>
+                      <TCell>
+                        <SignCell state={stateOf(s.groupCode)} />
+                      </TCell>
                     </TRow>
                   ))}
                 </tbody>
               </Table>
+              {signSummary && (
+                <p className="mt-2 text-sm text-ink-muted">
+                  {signSummary} Signing is on the{" "}
+                  <Link href={`${base}/review`} className="font-medium text-accent hover:underline">
+                    Review and sign-off
+                  </Link>{" "}
+                  page.
+                </p>
+              )}
             </Section>
 
-            <div className="space-y-5">
+            <div className="space-y-3">
               {set.sheets.map((sheet) => (
-                <div key={sheet.groupCode} id={`ls-${sheet.groupCode}`} className="scroll-mt-4">
-                  <Card title={sheet.groupName} description={sheet.section}>
-                    <div className="-mx-4 overflow-x-auto px-4 sm:-mx-5 sm:px-5">
+                <details key={sheet.groupCode} id={`ls-${sheet.groupCode}`} className="group scroll-mt-4 rounded-lg border border-border bg-surface shadow-card">
+                  <summary className={`${summaryRow} font-semibold`}>
+                    <SummaryChevron />
+                    <span className="flex min-w-0 flex-1 flex-wrap items-center gap-x-4 gap-y-1">
+                      <span>{sheet.groupName}</span>
+                      <span className="text-sm font-normal text-ink-muted">{sheet.section}</span>
+                      <SignCell state={stateOf(sheet.groupCode)} />
+                    </span>
+                    <span className="text-right font-semibold tabular-nums">{formatAmount(sheet.closingMinor)}</span>
+                  </summary>
+                  <div className="border-t border-border px-4 py-4 sm:px-5">
+                    <div className="overflow-x-auto">
                       <table className="w-full text-left text-sm">
                         <caption className="sr-only">{sheet.groupName} accounts</caption>
                         <thead className="border-b border-border text-ink-muted">
@@ -190,13 +226,25 @@ export default async function LeadSheetsPage({ params }: { params: Promise<{ id:
                         </tbody>
                       </table>
                     </div>
-                  </Card>
-                </div>
+                  </div>
+                </details>
               ))}
             </div>
           </>
         )}
       </div>
     </div>
+  );
+}
+
+/** A lead sheet's sign-off state, read-only: a status with words, and the open review points when there are any. */
+function SignCell({ state }: { state: { preparer: unknown | null; reviewer: unknown | null; openPoints: number } }) {
+  const badge = signBadge(state);
+  const points = openPointsLabel(state.openPoints);
+  return (
+    <span className="inline-flex flex-wrap items-center gap-1.5">
+      <StatusBadge status={badge.status} label={badge.label} />
+      {points && <Badge tone="warning">{points}</Badge>}
+    </span>
   );
 }
