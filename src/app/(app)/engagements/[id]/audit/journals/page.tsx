@@ -21,6 +21,7 @@ import { completenessSentence, entryPill, journalHref, journalSentence, matching
 import { SummaryChevron } from "@/ui/summary-cue";
 import { Table, TCell, THead, TRow } from "@/ui/table";
 import { count } from "@/ui/text";
+import { maxUploadBytes } from "@/server/config";
 import { EngagementNav } from "../../nav";
 
 export const dynamic = "force-dynamic";
@@ -102,7 +103,7 @@ export default async function JournalTestingPage({ params, searchParams }: { par
                 <ActionForm action={importLedgerAction} fields={{ engagementId: id }}>
                   <div className="flex flex-wrap items-end gap-3">
                     <FileInput
-                      maxBytes={10 * 1024 * 1024}
+                      maxBytes={maxUploadBytes()}
                       accept=".xlsx,.csv"
                       label="Journal listing file"
                       className="block max-w-full text-sm text-ink file:mr-3 file:min-h-10 file:cursor-pointer file:rounded-md file:border file:border-border-strong file:bg-surface file:px-4 file:text-sm file:font-medium file:text-ink hover:file:bg-surface-muted"

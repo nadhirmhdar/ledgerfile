@@ -8,6 +8,7 @@ import { buildLeadSheets } from "@/domain/leadsheet";
 import { ActionForm } from "@/app/action-form";
 import { FileInput } from "@/app/file-input";
 import { fileWorkingPaperAction, removeWorkingPaperAction, uploadWorkingPaperAction } from "@/app/papers-actions";
+import { uploadLimitLabel } from "@/server/config";
 import { AREAS, CHECKLISTS } from "@/domain/audit";
 import { Button, buttonClass } from "@/ui/button";
 import { ctl, Disclosure, fieldLabel } from "@/ui/controls";
@@ -102,7 +103,7 @@ export default async function PapersPage({ params, searchParams }: { params: Pro
                 </label>
                 <Button variant="primary">Upload</Button>
               </div>
-              <p className="mt-3 text-sm text-ink-muted">Up to 10 MB. Accepted types: {papers.ALLOWED_EXTENSIONS.join(", ")}. To attach evidence to an audit procedure, upload it from that procedure on the audit page.</p>
+              <p className="mt-3 text-sm text-ink-muted">Up to {uploadLimitLabel()}. Accepted types: {papers.ALLOWED_EXTENSIONS.join(", ")}. To attach evidence to an audit procedure, upload it from that procedure on the audit page.</p>
             </ActionForm>
           </Disclosure>
         )}

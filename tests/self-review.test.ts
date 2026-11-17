@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, it } from "vitest";
-import type { PGlite } from "@electric-sql/pglite";
+import type { Db } from "../src/server/db";
 import { openDatabase, withFirm } from "../src/server/db";
 import * as repo from "../src/server/repo";
 import * as audit from "../src/server/audit";
@@ -20,7 +20,7 @@ const work = (text: string) => ({ status: "done", workDone: `${text} done.`, con
 type T = Parameters<Parameters<typeof withFirm>[2]>[0];
 
 describe("self-review where the firm has only one reviewer-level user", () => {
-  let db: PGlite;
+  let db: Db;
   const as = <R,>(s: repo.Session, fn: (tx: T) => Promise<R>) => withFirm(db, s.firmId, fn);
   let n = 0;
   const mkFirm = async (roles: repo.Session["role"][]) => {

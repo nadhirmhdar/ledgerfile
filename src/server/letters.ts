@@ -1,4 +1,4 @@
-import type { Transaction } from "@electric-sql/pglite";
+import type { Tx } from "./db";
 import type { Session } from "./repo";
 import * as repo from "./repo";
 import * as audit from "./audit";
@@ -10,7 +10,6 @@ import {
   type Block,
 } from "../domain/letters";
 
-type Tx = Transaction;
 
 export type LetterKind = "engagement" | "representation";
 export const LETTER_KINDS: LetterKind[] = ["engagement", "representation"];

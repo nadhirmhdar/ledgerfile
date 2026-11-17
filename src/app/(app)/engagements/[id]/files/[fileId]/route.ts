@@ -1,6 +1,7 @@
 import { getDb, withFirm } from "@/server/db";
 import { getSession } from "@/server/session";
 import { getFileStore } from "@/server/file-store";
+import { responseTooLarge } from "@/server/config";
 import * as repo from "@/server/repo";
 import { readWorkingPaper } from "@/server/working-papers";
 
@@ -15,10 +16,15 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   if (!UUID.test(id) || !UUID.test(fileId)) return new Response("Not found", { status: 404 });
 
   let paper: Awaited<ReturnType<typeof readWorkingPaper>>;
+  let refused = false;
   try {
     paper = await withFirm(await getDb(), session.firmId, async (tx) => {
       const found = await readWorkingPaper(tx, getFileStore(), id, fileId);
-      if (found) await repo.audit(tx, session, "download", "working_paper", fileId, { engagementId: id });
+      if (found) {
+        // A file too large to serve is not downloaded, so no "download" entry: the refusal is logged instead.
+        refused = responseTooLarge(found.data.byteLength);
+        await repo.audit(tx, session, refused ? "download_refused" : "download", "working_paper", fileId, { engagementId: id });
+      }
       return found;
     });
   } catch (e) {
@@ -30,6 +36,9 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     return new Response("The file could not be downloaded.", { status: 500 });
   }
   if (!paper) return new Response("Not found", { status: 404 });
+
+  // A function response is capped (about 4.5 MB on Vercel); a file kept from before the hosted upload limit may be larger.
+  if (refused) return new Response("This file is too large to download from the hosted site.", { status: 413 });
 
   // Uploaded files are untrusted. They are always sent as a download of unspecified type, never
   // displayed in the page, and the name in the header is reduced to plain characters.

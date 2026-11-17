@@ -1,12 +1,13 @@
 import { createHash, randomUUID } from "node:crypto";
 import type { Tx } from "./db";
 import type { FileStore } from "./file-store";
+import { maxUploadBytes, uploadTooLargeMessage } from "./config";
 import { audit as log, getEngagement, type Session } from "./repo";
 import { canReview } from "../domain/signoff";
 import { GROUP_BY_CODE } from "../domain/groups";
 import { cleanFileReference, cleanSectionCode, homeOfFile } from "../domain/wp-index";
 
-export const MAX_FILE_BYTES = 10 * 1024 * 1024;
+export const MAX_FILE_BYTES = maxUploadBytes();
 /** File types accepted as working papers. Anything else is refused. */
 export const ALLOWED_EXTENSIONS = ["pdf", "xlsx", "xls", "csv", "docx", "doc", "png", "jpg", "jpeg", "txt"];
 
@@ -129,7 +130,7 @@ export async function addWorkingPaper(
     throw new Error(`That file type is not accepted. Upload one of: ${ALLOWED_EXTENSIONS.join(", ")}.`);
   }
   if (input.data.byteLength === 0) throw new Error("The file is empty.");
-  if (input.data.byteLength > MAX_FILE_BYTES) throw new Error("The file is larger than 10 MB.");
+  if (input.data.byteLength > MAX_FILE_BYTES) throw new Error(uploadTooLargeMessage());
   const description = input.description.trim();
   if (description.length > 500) throw new Error("The description is too long.");
 

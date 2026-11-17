@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, it } from "vitest";
-import type { PGlite } from "@electric-sql/pglite";
+import type { Db } from "../src/server/db";
 import { openDatabase, withFirm } from "../src/server/db";
 import * as repo from "../src/server/repo";
 import * as journals from "../src/server/journals";
@@ -22,7 +22,7 @@ const TB = [
   { code: "3000", name: "Share capital", closingMinor: -150000, priorMinor: null },
 ];
 
-let db: PGlite;
+let db: Db;
 let engagement: string;
 const as = <T,>(actor: review.Actor, fn: (tx: Parameters<Parameters<typeof withFirm>[2]>[0]) => Promise<T>) => withFirm(db, actor.firmId, fn);
 const overview = async () => (await as(prep, (tx) => review.getOverview(tx, engagement)))!;

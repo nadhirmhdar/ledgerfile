@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { getDb, withFirm } from "@/server/db";
 import { getSession } from "@/server/session";
 import { getFileStore } from "@/server/file-store";
+import { uploadTooLargeMessage } from "@/server/config";
 import * as papers from "@/server/working-papers";
 import type { FormState } from "./actions";
 
@@ -23,7 +24,7 @@ export async function uploadWorkingPaperAction(_prev: FormState, form: FormData)
   if (!UUID.test(engagementId)) return { ok: false, message: "Engagement not found." };
   const file = form.get("file");
   if (!(file instanceof File) || file.size === 0) return { ok: false, message: "Choose a file to upload." };
-  if (file.size > papers.MAX_FILE_BYTES) return { ok: false, message: "The file is larger than 10 MB." };
+  if (file.size > papers.MAX_FILE_BYTES) return { ok: false, message: uploadTooLargeMessage() };
 
   // The form names what the file supports as "engagement", "lead_sheet:CASH" or "procedure:<id>".
   const [targetKind, target] = field(form, "supports").split(":");

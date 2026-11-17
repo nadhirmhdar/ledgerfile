@@ -2,7 +2,7 @@ import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { beforeAll, describe, expect, it } from "vitest";
-import type { PGlite } from "@electric-sql/pglite";
+import type { Db } from "../src/server/db";
 import { openDatabase, withFirm } from "../src/server/db";
 import * as repo from "../src/server/repo";
 import * as audit from "../src/server/audit";
@@ -39,7 +39,7 @@ describe("rolling schedules forward", () => {
   const rev2 = user(3, "reviewer");
   const partner = user(4, "partner");
   const outsider = user(5, "partner", OTHER);
-  let db: PGlite;
+  let db: Db;
   let e2024: string;
   let e2025: string;
   let client: string;

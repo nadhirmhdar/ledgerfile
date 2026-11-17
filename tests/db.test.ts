@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, it } from "vitest";
-import type { PGlite } from "@electric-sql/pglite";
+import type { Db } from "../src/server/db";
 import { createFirm, openDatabase, withFirm } from "../src/server/db";
 import * as repo from "../src/server/repo";
 import { buildLeadSheets } from "../src/domain/leadsheet";
@@ -21,7 +21,7 @@ const TB_2025 = [
   { code: "3900", name: "Zzz new account", closingMinor: -1300000, priorMinor: null },
 ];
 
-let db: PGlite;
+let db: Db;
 let clientA: string;
 let engagement2024: string;
 let engagement2025: string;

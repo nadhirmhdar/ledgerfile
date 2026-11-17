@@ -2,7 +2,7 @@ import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { beforeAll, describe, expect, it } from "vitest";
-import type { PGlite } from "@electric-sql/pglite";
+import type { Db } from "../src/server/db";
 import { openDatabase, withFirm } from "../src/server/db";
 import * as repo from "../src/server/repo";
 import * as audit from "../src/server/audit";
@@ -24,7 +24,7 @@ const work = (text: string) => ({ status: "done", workDone: `${text} done.`, con
 
 type T = Parameters<Parameters<typeof withFirm>[2]>[0];
 
-async function setup(db: PGlite, firmId: string, setupUser: repo.Session) {
+async function setup(db: Db, firmId: string, setupUser: repo.Session) {
   return withFirm(db, firmId, async (tx: T) => {
     const client = await repo.createClient(tx, setupUser, "Review Co");
     const id = await repo.createEngagement(tx, setupUser, client, "2025-01-01", "2025-12-31");
@@ -45,7 +45,7 @@ describe("reviewing audit procedures", () => {
   const rev2 = user(3, "reviewer");
   const partner = user(4, "partner");
   const outsider = user(5, "partner", OTHER);
-  let db: PGlite;
+  let db: Db;
   let engagement: string;
   let area: string;
   const as = <R,>(s: repo.Session, fn: (tx: T) => Promise<R>) => withFirm(db, s.firmId, fn);
@@ -196,7 +196,7 @@ describe("reviewing audit procedures in a one-person firm", () => {
   const SOLO = "cccccccc-8888-4000-8000-000000000001";
   const me: repo.Session = { firmId: SOLO, userId: "cccccccc-8888-4000-8000-000000000011", role: "partner" };
   const you: repo.Session = { firmId: SOLO, userId: "cccccccc-8888-4000-8000-000000000012", role: "reviewer" };
-  let db: PGlite;
+  let db: Db;
   let engagement: string;
   let area: string;
   const as = <R,>(s: repo.Session, fn: (tx: T) => Promise<R>) => withFirm(db, s.firmId, fn);
@@ -231,7 +231,7 @@ describe("the partner's own sign-off", () => {
   const FIRM = "dddddddd-8888-4000-8000-000000000001";
   const partner: repo.Session = { firmId: FIRM, userId: "dddddddd-8888-4000-8000-000000000011", role: "partner" };
   const prep: repo.Session = { firmId: FIRM, userId: "dddddddd-8888-4000-8000-000000000012", role: "preparer" };
-  let db: PGlite;
+  let db: Db;
   let engagement: string;
   const as = <R,>(s: repo.Session, fn: (tx: T) => Promise<R>) => withFirm(db, s.firmId, fn);
   const overview = async () => (await as(prep, (tx) => audit.getAuditOverview(tx, engagement)))!;

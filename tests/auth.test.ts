@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, it } from "vitest";
-import type { PGlite } from "@electric-sql/pglite";
+import type { Db } from "../src/server/db";
 import { openDatabase, withFirm } from "../src/server/db";
 import * as auth from "../src/server/auth";
 
@@ -7,7 +7,7 @@ import * as auth from "../src/server/auth";
 const PASSWORD = "correct-horse-battery";
 const OTHER = "another-long-passphrase";
 
-let db: PGlite;
+let db: Db;
 let firmA: { firmId: string; userId: string };
 let firmB: { firmId: string; userId: string };
 

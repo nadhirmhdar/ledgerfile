@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getDb } from "@/server/db";
 import * as auth from "@/server/auth";
+import { redact, signupOpen, SIGNUP_CLOSED_MESSAGE } from "@/server/config";
 import { clearSessionCookie, getSession, setSessionCookie } from "@/server/session";
 import type { FormState } from "./actions";
 
@@ -13,7 +14,7 @@ function failure(e: unknown): FormState {
   // Only messages written for users are shown; anything else is reported generically.
   if (e instanceof auth.AuthError) return { ok: false, message: e.message };
   // Log the message only: database errors carry the statement's parameters, which can include a password hash.
-  console.error("auth action failed:", e instanceof Error ? e.message : "unknown error");
+  console.error("auth action failed:", e instanceof Error ? redact(e.message) : "unknown error");
   return { ok: false, message: "Something went wrong. Please try again." };
 }
 
@@ -29,6 +30,8 @@ export async function signInAction(_prev: FormState, form: FormData): Promise<Fo
 }
 
 export async function signUpAction(_prev: FormState, form: FormData): Promise<FormState> {
+  // Checked on the server, whatever the page showed: closed sign-up is a rule, not a hidden link.
+  if (!signupOpen()) return { ok: false, message: SIGNUP_CLOSED_MESSAGE };
   const email = field(form, "email");
   const password = field(form, "password");
   if (password !== field(form, "confirm")) return { ok: false, message: "The two passwords do not match." };
