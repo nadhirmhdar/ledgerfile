@@ -26,65 +26,67 @@ export const OPINION_LABEL: Record<OpinionKind, string> = {
   disclaimer: "Disclaimer of opinion",
 };
 
-const SCOPE = "which consist of the statement of financial position at {period end}, the statements of comprehensive income, changes in equity and cash flows for the year then ended, and the notes, including the accounting policies.";
+const SCOPE = "They consist of the statement of financial position at {period end}, the statements of comprehensive income, changes in equity and cash flows for the year then ended, and the notes with the accounting policies.";
 
 export const REPORT = {
   title: "Independent auditor's report",
   addressee: "To the shareholders of {client name}",
   opinion: {
     headings: { unmodified: "Opinion", qualified: "Qualified opinion", adverse: "Adverse opinion", disclaimer: "Disclaimer of opinion" },
-    audited: "We have audited the financial statements of {client name}, " + SCOPE,
-    engaged: "We were engaged to audit the financial statements of {client name}, " + SCOPE,
-    unmodified: "In our opinion, the financial statements present fairly, in all material respects, the financial position of {client name} at {period end}, and its financial performance and cash flows for the year then ended, in accordance with {framework}.",
+    audited: "We audited the financial statements of {client name}. " + SCOPE,
+    engaged: "We were engaged to audit the financial statements of {client name}. " + SCOPE,
+    unmodified: "In our opinion the financial statements present fairly, in all material respects, the financial position of {client name} at {period end} and its financial performance and cash flows for the year then ended, in accordance with {framework}.",
     qualified:
-      "In our opinion, except for the effects of the matter described in the Basis for qualified opinion section, the financial statements present fairly, in all material respects, the financial position of {client name} at {period end}, and its financial performance and cash flows for the year then ended, in accordance with {framework}.",
+      "In our opinion, except for the effects of the matter described in the Basis for qualified opinion section, the financial statements present fairly, in all material respects, the financial position of {client name} at {period end} and its financial performance and cash flows for the year then ended, in accordance with {framework}.",
     adverse:
-      "In our opinion, because of the significance of the matter described in the Basis for adverse opinion section, the financial statements do not present fairly the financial position of {client name} at {period end}, or its financial performance and cash flows for the year then ended, in accordance with {framework}.",
+      "In our opinion the financial statements do not present fairly the financial position of {client name} at {period end}, or its financial performance and cash flows for the year then ended, in accordance with {framework}. The reason is the matter described in the Basis for adverse opinion section, which is of great significance to the statements.",
     disclaimer:
-      "We do not express an opinion on the financial statements. Because of the significance of the matter described in the Basis for disclaimer of opinion section, we were not able to obtain enough appropriate audit evidence to provide a basis for an opinion on them.",
+      "We do not express an opinion on the financial statements. The matter described in the Basis for disclaimer of opinion section is so significant that we could not gather enough appropriate audit evidence to base an opinion on.",
   },
   basis: {
     headings: { unmodified: "Basis for opinion", qualified: "Basis for qualified opinion", adverse: "Basis for adverse opinion", disclaimer: "Basis for disclaimer of opinion" },
     modification: "{basis for modification}",
-    standards: "We conducted our audit in accordance with International Standards on Auditing. Our responsibilities under those standards are described in the Auditor's responsibilities section of this report.",
-    independence:
-      "We are independent of the Company in accordance with the ethical requirements that apply to our audit of the financial statements, and we have met our other ethical responsibilities in accordance with those requirements.",
+    standards: "We carried out this audit under the International Standards on Auditing (ISA 700 and the related standards). The Auditor's responsibilities section of this report explains what those standards ask of us.",
+    independence: "The firm is independent of the Company under the ethical rules that apply to this audit, and we have kept to the other ethical duties those rules place on us.",
     evidence: {
-      unmodified: "We believe that the audit evidence we have obtained is enough, and appropriate, to provide a basis for our opinion.",
-      qualified: "We believe that the audit evidence we have obtained is enough, and appropriate, to provide a basis for our qualified opinion.",
-      adverse: "We believe that the audit evidence we have obtained is enough, and appropriate, to provide a basis for our adverse opinion.",
+      unmodified: "In our judgement the evidence we gathered is sufficient and appropriate as a basis for our opinion.",
+      qualified: "In our judgement the evidence we gathered is sufficient and appropriate as a basis for our qualified opinion.",
+      adverse: "In our judgement the evidence we gathered is sufficient and appropriate as a basis for our adverse opinion.",
     },
-    notObtained: "We were not able to obtain enough appropriate audit evidence to provide a basis for an opinion, for the reason given above.",
+    notObtained: "For the reason given above we could not gather enough appropriate audit evidence to form an opinion.",
   },
   goingConcern: {
     heading: "Material uncertainty related to going concern",
-    para: "We draw attention to note {note reference} to the financial statements, which says there is a material uncertainty about the Company's ability to continue as a going concern. Our opinion is not modified in respect of this matter.",
+    para: "Note {note reference} to the financial statements describes a material uncertainty about whether the Company can continue as a going concern. This matter does not change our opinion.",
   },
-  emphasis: { heading: "Emphasis of matter", para: "{emphasis of matter text}", after: "Our opinion is not modified in respect of this matter." },
+  emphasis: { heading: "Emphasis of matter", para: "{emphasis of matter text}", after: "This matter does not change our opinion." },
   otherMatter: { heading: "Other matter", para: "{other matter text}" },
   management: {
     heading: "Responsibilities of management and those charged with governance",
-    paras: [
-      "Management is responsible for preparing financial statements that present fairly in accordance with {framework}, and for the internal control that management decides is necessary for statements free from material misstatement, whether caused by fraud or error.",
-      "In preparing the financial statements, management is responsible for assessing the Company's ability to continue as a going concern and for disclosing matters relating to going concern where applicable. Management uses the going-concern basis unless it intends to liquidate the Company or stop operating, or has no realistic alternative but to do so.",
-      "Those charged with governance are responsible for overseeing the Company's financial reporting process.",
+    intro: "Management of the Company is responsible for:",
+    list: [
+      "preparing financial statements that present fairly, in all material respects, in accordance with {framework};",
+      "the internal control it judges necessary so that the statements can be prepared without material misstatement, whether from fraud or error;",
+      "assessing whether the Company can continue as a going concern, and disclosing the going concern matters that call for it.",
     ],
+    goingConcernBasis: "Management prepares the statements on the going concern basis. It departs from that basis only if it plans to wind the Company up or to stop trading, or has no real alternative.",
+    governance: "Overseeing how the Company reports its financial results is the responsibility of those charged with governance.",
   },
   auditor: {
     heading: "Auditor's responsibilities",
-    intro:
-      "Our aim is to obtain reasonable assurance that the financial statements as a whole are free from material misstatement, whether caused by fraud or error, and to issue a report containing our opinion. Reasonable assurance is a high level of assurance, not a guarantee that an audit will always find a material misstatement. Misstatements are material if they could reasonably be expected to influence the decisions users make from these financial statements.",
-    listIntro: "In an audit under International Standards on Auditing we use judgement and question what we are told throughout. We also:",
+    intro: "Our job is to form an opinion on these financial statements and to report it. To do that we seek reasonable assurance that they contain no material misstatement, whether from fraud or error.",
+    assurance: "Reasonable assurance is a high degree of comfort but not a promise: an audit that is properly carried out can still miss a material misstatement. We treat a misstatement as material when it is large enough to change what a reader of the statements would decide.",
+    listIntro: "Throughout the audit we exercised professional judgement and kept a questioning mind. In particular:",
     list: [
-      "identify and assess the risks of material misstatement, whether from fraud or error, and design and carry out procedures that respond to those risks;",
-      "obtain an understanding of the internal control that matters to the audit, in order to design suitable procedures, but not to give an opinion on how effective that control is;",
-      "evaluate the accounting policies used, the reasonableness of management's estimates and the related disclosures;",
-      "conclude on whether management's use of the going-concern basis is appropriate and, from the evidence obtained, whether a material uncertainty exists about the Company's ability to continue as a going concern. If we conclude that one exists, we must draw attention in this report to the related disclosures or, if those are inadequate, modify our opinion;",
-      "evaluate the overall presentation, structure and content of the financial statements, including the disclosures, and whether they show the underlying transactions and events fairly.",
+      "we assessed where the statements might be materially misstated through fraud or error, then chose and carried out procedures aimed at those risks;",
+      "we learned enough about the Company's internal control to choose suitable procedures, and we did not examine that control in order to give an opinion on it;",
+      "we examined the accounting policies, management's estimates and the matching disclosures, and judged whether they are reasonable;",
+      "we considered whether management is right to use the going concern basis, and whether the evidence shows a material uncertainty about going concern. Where we find one, this report must point to the disclosure of it or, if that disclosure falls short, our opinion must be modified;",
+      "we looked at the statements as a whole, including the disclosures, and asked whether they show the underlying transactions and events fairly.",
     ],
-    closing: "We tell those charged with governance about, among other things, the planned scope and timing of the audit and significant findings, including any significant weaknesses in internal control that we identify.",
+    closing: "We also report to those charged with governance on the scope and timing we planned and on our significant findings, including any significant weaknesses in internal control that we found.",
     disclaimer:
-      "Our responsibility is to carry out an audit of the Company's financial statements under International Standards on Auditing and to issue an auditor's report. Because of the matter described in the Basis for disclaimer of opinion section, however, we were not able to obtain enough appropriate audit evidence to provide a basis for an opinion on these financial statements.",
+      "We were engaged to audit under the International Standards on Auditing and to report on the result. For the reason given in the Basis for disclaimer of opinion section we could not gather enough appropriate audit evidence, so we cannot give an opinion on these financial statements.",
   },
   legal: { heading: "Report on other legal and regulatory requirements", para: "[Complete as required by local law]" },
   signature: ["{firm name}", "{engagement partner}", "{city}", "{report date}"],
@@ -176,13 +178,15 @@ export function buildReport(input: ReportInput): Block[] {
   }
 
   blocks.push({ kind: "heading", text: R.management.heading });
-  for (const p of R.management.paras) blocks.push(para(f(p)));
+  blocks.push(para(R.management.intro));
+  for (const item of R.management.list) blocks.push({ kind: "bullet", text: f(item) });
+  blocks.push(para(R.management.goingConcernBasis), para(R.management.governance));
 
   blocks.push({ kind: "heading", text: R.auditor.heading });
   if (kind === "disclaimer") {
     blocks.push(para(R.auditor.disclaimer));
   } else {
-    blocks.push(para(R.auditor.intro), para(R.auditor.listIntro));
+    blocks.push(para(R.auditor.intro), para(R.auditor.assurance), para(R.auditor.listIntro));
     for (const item of R.auditor.list) blocks.push({ kind: "bullet", text: item });
     blocks.push(para(R.auditor.closing));
   }

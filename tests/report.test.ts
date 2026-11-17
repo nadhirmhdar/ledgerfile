@@ -68,13 +68,13 @@ describe("building the report", () => {
     const b = buildReport(base);
     expect(headings(b)).toEqual(["Independent auditor's report", "Opinion", "Basis for opinion", REPORT.management.heading, "Auditor's responsibilities", REPORT.legal.heading]);
     const out = text(b);
-    expect(out).toContain("We have audited the financial statements of Falcon Trading LLC");
+    expect(out).toContain("We audited the financial statements of Falcon Trading LLC");
     expect(out).toContain("statement of financial position at 31 December 2025");
     expect(out).toContain("in accordance with IFRS for SMEs.");
-    expect(out).toContain("In our opinion, the financial statements present fairly");
-    expect(out).toContain("provide a basis for our opinion.");
+    expect(out).toContain("In our opinion the financial statements present fairly");
+    expect(out).toContain("sufficient and appropriate as a basis for our opinion.");
     expect(out).not.toContain("except for");
-    expect(out).toContain("Our aim is to obtain reasonable assurance");
+    expect(out).toContain("Our job is to form an opinion");
     expect(out).not.toContain("{");
     expect(out).not.toContain("["+"basis for modification]");
   });
@@ -85,7 +85,7 @@ describe("building the report", () => {
     const out = text(b);
     expect(out).toContain("except for the effects of the matter described in the Basis for qualified opinion section");
     expect(out).toContain("Stock of AED 1.2 million was not counted");
-    expect(out).toContain("provide a basis for our qualified opinion.");
+    expect(out).toContain("sufficient and appropriate as a basis for our qualified opinion.");
     expect(out).toContain("International Standards on Auditing");
   });
 
@@ -94,26 +94,26 @@ describe("building the report", () => {
     expect(headings(b).slice(1, 3)).toEqual(["Adverse opinion", "Basis for adverse opinion"]);
     const out = text(b);
     expect(out).toContain("the financial statements do not present fairly");
-    expect(out).toContain("provide a basis for our adverse opinion.");
+    expect(out).toContain("sufficient and appropriate as a basis for our adverse opinion.");
   });
 
   it("words a disclaimer: no opinion, no statement that the audit met the standards, a shorter responsibilities section", () => {
     const b = buildReport(modified("disclaimer"));
     expect(headings(b).slice(1, 3)).toEqual(["Disclaimer of opinion", "Basis for disclaimer of opinion"]);
     const out = text(b);
-    expect(out).toContain("We were engaged to audit");
+    expect(out).toContain("We were engaged to audit the financial statements");
     expect(out).toContain("We do not express an opinion on the financial statements.");
     expect(out).not.toContain("In our opinion");
-    expect(out).not.toContain("We conducted our audit in accordance with International Standards on Auditing.");
-    expect(out).toContain("we were not able to obtain enough appropriate audit evidence");
-    expect(out).not.toContain("Our aim is to obtain reasonable assurance");
-    expect(out).toContain("Our responsibility is to carry out an audit");
-    expect(b.filter((x) => x.kind === "bullet")).toHaveLength(0);
+    expect(out).not.toContain("We carried out this audit under the International Standards on Auditing");
+    expect(out).toContain("we could not gather enough appropriate audit evidence");
+    expect(out).not.toContain("Our job is to form an opinion");
+    expect(out).toContain("We were engaged to audit under the International Standards");
+    expect(b.filter((x) => x.kind === "bullet")).toHaveLength(REPORT.management.list.length);
   });
 
   it("lists the auditor's responsibilities as bullets for the other three kinds", () => {
     for (const k of ["unmodified", "qualified", "adverse"] as const) {
-      expect(buildReport(k === "unmodified" ? base : modified(k)).filter((x) => x.kind === "bullet")).toHaveLength(REPORT.auditor.list.length);
+      expect(buildReport(k === "unmodified" ? base : modified(k)).filter((x) => x.kind === "bullet")).toHaveLength(REPORT.management.list.length + REPORT.auditor.list.length);
     }
   });
 
@@ -122,7 +122,7 @@ describe("building the report", () => {
     expect(headings(buildReport({ ...base, goingConcern: null }))).not.toContain(REPORT.goingConcern.heading);
     const b = buildReport({ ...base, goingConcern: { noteReference: "7" } });
     expect(headings(b)).toContain(REPORT.goingConcern.heading);
-    expect(text(b)).toContain("We draw attention to note 7 to the financial statements");
+    expect(text(b)).toContain("Note 7 to the financial statements describes a material uncertainty");
     // The section follows the basis for opinion and comes before the responsibilities.
     const h = headings(b);
     expect(h.indexOf(REPORT.goingConcern.heading)).toBeGreaterThan(h.indexOf("Basis for opinion"));
@@ -137,7 +137,7 @@ describe("building the report", () => {
     expect(h).toContain("Other matter");
     expect(h.indexOf("Emphasis of matter")).toBeLessThan(h.indexOf("Other matter"));
     const out = text(b);
-    expect(out).toContain("Note 9 describes a lawsuit whose outcome is not yet known.\nOur opinion is not modified in respect of this matter.");
+    expect(out).toContain("Note 9 describes a lawsuit whose outcome is not yet known.\nThis matter does not change our opinion.");
     expect(out).toContain("The prior year statements were audited by another firm.");
   });
 
