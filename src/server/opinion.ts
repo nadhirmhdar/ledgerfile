@@ -166,4 +166,4 @@ export async function getOpinionPage(tx: Tx, engagementId: string): Promise<Opin
 }
 
 /** A lock blocker that the opinion page speaks to. */
-export const isOpinionBlocker = (blocker: string): boolean => /audit opinion|uncorrected misstatements/.test(blocker);
+export const isOpinionBlocker = (blocker: string): boolean => /audit opinion|uncorrected misstatements|date of the auditor's report/.test(blocker);

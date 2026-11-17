@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { getDb, withFirm } from "@/server/db";
 import { getSession } from "@/server/session";
 import * as repo from "@/server/repo";
+import { isEnabled } from "@/server/audit";
 import { buildStatementPack } from "@/domain/statement-pack";
 import type { StatementLine } from "@/domain/statements";
 import { POLICY_REVIEW_NOTICE } from "@/domain/policies";
@@ -69,9 +70,10 @@ export default async function StatementsPage({ params, searchParams }: { params:
   const whole = (await searchParams).units === "whole";
 
   const session = await getSession();
-  const { engagement, accounts } = await withFirm(await getDb(), session.firmId, async (tx) => ({
+  const { engagement, accounts, auditOn } = await withFirm(await getDb(), session.firmId, async (tx) => ({
     engagement: await repo.getEngagement(tx, id),
     accounts: await repo.listAccounts(tx, id),
+    auditOn: await isEnabled(tx, id),
   }));
   if (!engagement) notFound();
 
@@ -185,9 +187,16 @@ export default async function StatementsPage({ params, searchParams }: { params:
         meta={meta}
         subtitle={checksSentence(pack.checks)}
         actions={
-          <a href={`${base}/statements/export${query}`} className={buttonClass("primary")}>
-            Download as Word
-          </a>
+          <div className="flex flex-wrap items-center gap-2">
+            {auditOn && (
+              <a href={`${base}/audit/report`} className={buttonClass("secondary")}>
+                Auditor&apos;s report
+              </a>
+            )}
+            <a href={`${base}/statements/export${query}`} className={buttonClass("primary")}>
+              Download as Word
+            </a>
+          </div>
         }
       />
       <EngagementNav id={id} current="statements" status={engagement.status} />

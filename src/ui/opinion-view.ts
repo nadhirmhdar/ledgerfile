@@ -79,3 +79,12 @@ export function formProblems(v: FormValues): string[] {
   if (v.reportDate.trim() === "") problems.push("Enter the date of the report.");
   return problems;
 }
+
+/** The page's draft callout shows its title once: the notice's own first sentence is the title, so the body is what follows it. */
+export const NOTICE_TITLE = "Draft wording, not yet reviewed.";
+export function noticeBody(notice: string): string {
+  return notice.replace(/^\[/, "").replace(/\]$/, "").replace(/^Draft report wording, not yet reviewed\.\s*/, "").trim();
+}
+
+export const DOWNLOAD_BEFORE = "The report can be downloaded once the partner records the opinion.";
+export const DOWNLOAD_NOTE = "The report is generated from the decision above. It is an unreviewed draft to check and complete in Word.";

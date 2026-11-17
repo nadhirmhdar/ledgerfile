@@ -156,7 +156,7 @@ async function requireOpen(tx: Tx, engagementId: string) {
   if (engagement.status !== "open") throw new Error("This engagement is locked.");
 }
 
-async function isEnabled(tx: Tx, engagementId: string): Promise<boolean> {
+export async function isEnabled(tx: Tx, engagementId: string): Promise<boolean> {
   const { rows } = await tx.query<{ on: boolean }>('select audit_enabled as "on" from engagements where id = $1', [engagementId]);
   return rows[0]?.on ?? false;
 }
@@ -339,9 +339,10 @@ export async function getAuditOverview(tx: Tx, engagementId: string): Promise<Au
     const unexplained = unexplainedMovements(compareYears(statements, materiality), explained.rows).length;
     if (unexplained > 0) blockers.push(`Audit: ${unexplained} significant movement(s) in the analytical review have no explanation.`);
     blockers.push(...scheduleBlockers(scheduleStates.map((x) => x.state)));
-    const decided = await tx.query<{ opinion: string }>("select opinion from audit_opinions where engagement_id = $1", [engagementId]);
+    const decided = await tx.query<{ opinion: string; dated: boolean }>("select opinion, report_date is not null as dated from audit_opinions where engagement_id = $1", [engagementId]);
     const opinion = decided.rows[0]?.opinion ?? null;
     if (!opinion) blockers.push("Audit: the partner has not recorded the audit opinion.");
+    else if (!decided.rows[0].dated) blockers.push("Record the date of the auditor's report on the Auditor's report page.");
     // Uncorrected misstatements that reach materiality stop an unmodified opinion; a modified one (with its basis) answers them.
     if (misstatements.exceedsMateriality && (opinion === null || opinion === "unmodified")) {
       blockers.push("Audit: uncorrected misstatements reach overall materiality. Correct them, or have the partner record a modified opinion with its basis.");

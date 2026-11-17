@@ -11,7 +11,8 @@ import { Badge } from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { Callout } from "@/ui/feedback";
 import { Card, PageHeader } from "@/ui/layout";
-import { decisionSentence, misstatementPill, opinionBadge, opinionReadOnlyReason } from "@/ui/opinion-view";
+import { decisionSentence, DOWNLOAD_BEFORE, DOWNLOAD_NOTE, misstatementPill, noticeBody, NOTICE_TITLE, opinionBadge, opinionReadOnlyReason } from "@/ui/opinion-view";
+import { Field, Input } from "@/ui/form";
 import { EngagementNav } from "../../nav";
 import { OpinionForm } from "./opinion-form";
 
@@ -66,8 +67,8 @@ export default async function AuditorsReportPage({ params }: { params: Promise<{
           </Callout>
         ) : (
           <>
-            <Callout variant="draft" title="Draft wording, not yet reviewed.">
-              {REPORT_NOTICE.replace(/^\[|\]$/g, "")}
+            <Callout variant="draft" title={NOTICE_TITLE}>
+              {noticeBody(REPORT_NOTICE)}
             </Callout>
 
             <Card title="The file" description="What the opinion has to answer to.">
@@ -120,6 +121,25 @@ export default async function AuditorsReportPage({ params }: { params: Promise<{
                 </div>
               ) : (
                 <p className="text-sm text-ink-muted">No opinion recorded yet.</p>
+              )}
+            </Card>
+
+            <Card title="Download the report (Word)">
+              {decision ? (
+                <form method="post" action={`${base}/report/download`} className="space-y-4">
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <Field label="Engagement partner" hint="Printed in the signature block. Used for this download only.">
+                      <Input name="partner" defaultValue={decision.decidedByName} maxLength={200} />
+                    </Field>
+                    <Field label="City" hint="Printed in the signature block. Used for this download only.">
+                      <Input name="city" maxLength={200} />
+                    </Field>
+                  </div>
+                  <Button variant="primary">Download the report (Word)</Button>
+                  <p className="text-sm text-ink-muted">{DOWNLOAD_NOTE}</p>
+                </form>
+              ) : (
+                <p className="text-sm text-ink-muted">{DOWNLOAD_BEFORE}</p>
               )}
             </Card>
 
