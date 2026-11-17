@@ -21,6 +21,10 @@ import { Button } from "@/ui/button";
 import { ctl, Disclosure, fieldLabel } from "@/ui/controls";
 import { explainBlocker } from "@/ui/engagement-home";
 import { Callout, EmptyState, ProgressBar } from "@/ui/feedback";
+import { ArchiveForm } from "@/app/archive-form";
+import { ASSEMBLY_NOTICE } from "@/domain/archiving";
+import { todayIso } from "@/domain/client-requests";
+import { ARCHIVE_IRREVERSIBLE, ARCHIVE_PREVENTS, ARCHIVE_STAYS, archiveSection, deadlineView } from "@/ui/archive-view";
 import { Card, PageHeader, Section } from "@/ui/layout";
 import { ToDoRows } from "@/ui/todo-rows";
 import { openPointsPill, pointControls, readinessView, signCell, signOffProgress, type Level } from "@/ui/review-view";
@@ -43,7 +47,11 @@ export default async function ReviewPage({ params }: { params: Promise<{ id: str
 
   const open = overview.status === "open";
   const base = `/engagements/${id}`;
-  const view = readinessView({ open, ready: overview.readiness.ready, blockers: overview.readiness.blockers.length, role: session.role, lockedByName: overview.lockedByName, lockedAt: overview.lockedAt });
+  const view = readinessView({ open, ready: overview.readiness.ready, blockers: overview.readiness.blockers.length, role: session.role, lockedByName: overview.lockedByName, lockedAt: overview.lockedAt, archivedAt: overview.archivedAt, archivedByName: overview.archivedByName });
+  const today = todayIso();
+  const archived = overview.archivedAt !== null;
+  const deadline = deadlineView(overview.reportDate, today, overview.archivedAt);
+  const archive = archiveSection({ role: session.role, locked: !open, archived, audited: overview.audited, hasOpinion: overview.hasOpinion, reportDate: overview.reportDate, today });
   const points = pointControls({ open, role: session.role });
   const openPoints = overview.points.filter((p) => p.status === "open");
   const clearedPoints = overview.points.filter((p) => p.status === "cleared");
@@ -104,31 +112,66 @@ export default async function ReviewPage({ params }: { params: Promise<{ id: str
         }
         subtitle={view.sentence}
       />
-      <EngagementNav id={id} current="review" status={engagement.status} />
+      <EngagementNav id={id} current="review" status={engagement.status} archived={archived} />
 
       <div className="mt-6 space-y-8">
         {view.state === "locked" ? (
-          <Card title="Locked">
-            <p className="flex flex-wrap items-center gap-2">
-              <Badge tone="slate">Locked</Badge>
-              <span className="text-sm">
-                Locked by {overview.lockedByName} on {overview.lockedAt}. Nothing on this engagement can be changed while it is locked.
-              </span>
-            </p>
-            {view.canUnlock && (
-              <Disclosure summary="Unlock this engagement" className="mt-4">
-                <ActionForm action={unlockAction} fields={{ engagementId: id }}>
-                  <div className="flex flex-wrap items-end gap-3">
-                    <label className={`${fieldLabel} min-w-72 flex-1`}>
-                      Reason for unlocking (recorded in the audit log)
-                      <input name="reason" required minLength={5} maxLength={500} className={ctl} />
-                    </label>
-                    <Button variant="secondary">Unlock</Button>
-                  </div>
-                </ActionForm>
-              </Disclosure>
+          <>
+            <Card title={archived ? "Archived" : "Locked"}>
+              <p className="flex flex-wrap items-center gap-2">
+                <Badge tone="slate">{archived ? "Archived" : "Locked"}</Badge>
+                <span className="text-sm">
+                  Locked by {overview.lockedByName} on {overview.lockedAt}.{" "}
+                  {archived ? "This file is archived: it can never be unlocked or changed. You can still open it, download and export from it." : "Nothing on this engagement can be changed while it is locked."}
+                </span>
+              </p>
+              {archived && (
+                <p className="mt-2 text-sm text-ink-muted">
+                  Archived on {overview.archivedAt}
+                  {overview.archivedByName ? ` by ${overview.archivedByName}` : ""}.
+                </p>
+              )}
+              {view.canUnlock && !archived && (
+                <Disclosure summary="Unlock this engagement" className="mt-4">
+                  <ActionForm action={unlockAction} fields={{ engagementId: id }}>
+                    <div className="flex flex-wrap items-end gap-3">
+                      <label className={`${fieldLabel} min-w-72 flex-1`}>
+                        Reason for unlocking (recorded in the audit log)
+                        <input name="reason" required minLength={5} maxLength={500} className={ctl} />
+                      </label>
+                      <Button variant="secondary">Unlock</Button>
+                    </div>
+                  </ActionForm>
+                </Disclosure>
+              )}
+            </Card>
+
+            {overview.audited && (
+              <Card title="File assembly deadline">
+                <p className="flex flex-wrap items-center gap-2 text-sm">
+                  <Badge tone={deadline.tone}>{deadline.label}</Badge>
+                  <span>{deadline.words}</span>
+                </p>
+                <p className="mt-2 text-sm text-ink-muted">{ASSEMBLY_NOTICE}</p>
+              </Card>
             )}
-          </Card>
+
+            {archive.show && (
+              <Section title="Archive the file" description="The permanent lock, for when the file has been assembled.">
+                <Callout variant="danger" title={ARCHIVE_IRREVERSIBLE}>
+                  <ul className="list-disc pl-5">
+                    {ARCHIVE_PREVENTS.map((p) => (
+                      <li key={p}>{p}</li>
+                    ))}
+                  </ul>
+                  <p className="mt-2">{ARCHIVE_STAYS}</p>
+                </Callout>
+                <div className="mt-4">
+                  <ArchiveForm engagementId={id} clientName={engagement.clientName} blocker={archive.blocker} />
+                </div>
+              </Section>
+            )}
+          </>
         ) : view.state === "ready" ? (
           <Card title="Ready to lock">
             <p className="flex flex-wrap items-center gap-2">

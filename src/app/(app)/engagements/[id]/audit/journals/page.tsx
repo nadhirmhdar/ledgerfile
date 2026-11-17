@@ -78,7 +78,7 @@ export default async function JournalTestingPage({ params, searchParams }: { par
         }
         subtitle={journalSentence({ enabled, entryCount: overview.listing?.entryCount ?? null, selected: overview.selected, tested: overview.tested })}
       />
-      <EngagementNav id={id} current="journaltesting" status={engagement.status} />
+      <EngagementNav id={id} current="journaltesting" status={engagement.status} archived={engagement.archivedAt !== null} />
 
       <div className="mt-6 min-w-0 space-y-6">
         <p className="max-w-3xl text-sm text-ink-muted">

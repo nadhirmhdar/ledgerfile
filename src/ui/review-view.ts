@@ -17,6 +17,8 @@ export interface ReadinessInput {
   role: Role;
   lockedByName?: string | null;
   lockedAt?: string | null;
+  archivedAt?: string | null;
+  archivedByName?: string | null;
 }
 
 export interface ReadinessView {
@@ -29,6 +31,9 @@ export interface ReadinessView {
 }
 
 export function readinessView(i: ReadinessInput): ReadinessView {
+  if (!i.open && i.archivedAt) {
+    return { state: "locked", sentence: `Archived on ${i.archivedAt}${i.archivedByName ? ` by ${i.archivedByName}` : ""}.`, lock: "none", canUnlock: false };
+  }
   if (!i.open) {
     return {
       state: "locked",

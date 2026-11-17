@@ -100,7 +100,7 @@ export default async function ProgrammePage({ params, searchParams }: { params: 
         }
         subtitle={sentence}
       />
-      <EngagementNav id={id} current="audit" status={engagement.status} />
+      <EngagementNav id={id} current="audit" status={engagement.status} archived={engagement.archivedAt !== null} />
 
       <div className="mt-6 space-y-6">
         {procedures.length > 0 && (

@@ -104,7 +104,7 @@ export default async function TrialBalancePage({ params, searchParams }: { param
         }
         subtitle={mappingSentence(counts)}
       />
-      <EngagementNav id={id} current="tb" status={engagement.status} />
+      <EngagementNav id={id} current="tb" status={engagement.status} archived={engagement.archivedAt !== null} />
 
       <div className="mt-6 space-y-8">
         {accounts.length === 0 ? (

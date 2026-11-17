@@ -123,7 +123,7 @@ export default async function IndexPage({ params, searchParams }: { params: Prom
           </a>
         }
       />
-      <EngagementNav id={id} current="index" status={engagement.status} />
+      <EngagementNav id={id} current="index" status={engagement.status} archived={engagement.archivedAt !== null} />
 
       <div className="mt-6 space-y-6">
         {!index.auditOn && (

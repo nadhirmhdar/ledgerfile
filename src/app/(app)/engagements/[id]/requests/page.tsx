@@ -98,7 +98,7 @@ export default async function RequestsPage({ params, searchParams }: { params: P
           </a>
         }
       />
-      <EngagementNav id={id} current="requests" status={engagement.status} />
+      <EngagementNav id={id} current="requests" status={engagement.status} archived={engagement.archivedAt !== null} />
 
       <div className="mt-6 space-y-6">
         {heading.scope && <p className="text-sm text-ink-muted">{heading.scope}</p>}

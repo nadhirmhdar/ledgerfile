@@ -30,6 +30,9 @@ export interface EngagementRow {
   /** Borrowings due within twelve months, as entered by the preparer, for each year. */
   borrowingsCurrentMinor: number;
   borrowingsCurrentPriorMinor: number;
+  /** The day the file was archived (the permanent lock), or null. An archived file is also locked. */
+  archivedAt: string | null;
+  archivedByName: string | null;
 }
 
 export interface AccountRow extends MappedAccount {
@@ -82,8 +85,9 @@ const ENGAGEMENT_SELECT = `
   select e.id, e.client_id as "clientId", c.name as "clientName",
          to_char(e.period_start, 'YYYY-MM-DD') as "periodStart", to_char(e.period_end, 'YYYY-MM-DD') as "periodEnd",
          e.status, e.prior_engagement_id as "priorEngagementId",
-         e.borrowings_current_minor::float8 as "borrowingsCurrentMinor", e.borrowings_current_prior_minor::float8 as "borrowingsCurrentPriorMinor"
-  from engagements e join clients c on c.id = e.client_id`;
+         e.borrowings_current_minor::float8 as "borrowingsCurrentMinor", e.borrowings_current_prior_minor::float8 as "borrowingsCurrentPriorMinor",
+         to_char(e.archived_at at time zone 'UTC', 'YYYY-MM-DD') as "archivedAt", au.name as "archivedByName"
+  from engagements e join clients c on c.id = e.client_id left join users au on au.id = e.archived_by`;
 
 export async function listEngagements(tx: Tx): Promise<EngagementRow[]> {
   return (await tx.query<EngagementRow>(`${ENGAGEMENT_SELECT} order by c.name, e.period_end desc`)).rows;

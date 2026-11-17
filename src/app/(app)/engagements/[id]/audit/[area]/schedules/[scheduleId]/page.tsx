@@ -93,7 +93,7 @@ export default async function SchedulePage({ params }: { params: Promise<{ id: s
           </a>
         }
       />
-      <EngagementNav id={id} current="audit" status={engagement.status} />
+      <EngagementNav id={id} current="audit" status={engagement.status} archived={engagement.archivedAt !== null} />
 
       <div className="mt-6 min-w-0 space-y-6">
         {!schedule.areaInScope && (
