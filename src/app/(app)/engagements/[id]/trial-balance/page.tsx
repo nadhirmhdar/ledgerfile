@@ -253,7 +253,8 @@ export default async function TrialBalancePage({ params, searchParams }: { param
                             )}
                           </p>
                         </div>
-                        <div className="mt-1.5">{statusCell(a)}</div>
+                        {/* The badge and its source tag side by side on a phone (the cell stacks them on desktop). */}
+                        <div className="mt-1.5 [&>div]:flex-row [&>div]:flex-wrap [&>div]:items-center [&>div]:gap-x-2">{statusCell(a)}</div>
                         <div className="mt-1.5">{groupCell(a)}</div>
                       </li>
                     ))}
