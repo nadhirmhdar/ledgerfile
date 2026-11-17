@@ -235,7 +235,7 @@ export default async function TrialBalancePage({ params, searchParams }: { param
                       </tbody>
                     </Table>
                   </div>
-                  {/* Phone: one compact row each. Line 1 is the account and its figures, line 2 the status and the group control. */}
+                  {/* Phone: one compact row each. Line 1 is the account and its figures, line 2 the status (and source tag), line 3 the group control at the full row width so the chosen group is readable. */}
                   <ul className="mt-3 divide-y divide-border rounded-lg border border-border bg-surface shadow-card sm:hidden">
                     {view.rows.map((a) => (
                       <li key={a.id} className="px-4 py-2.5">
@@ -253,10 +253,8 @@ export default async function TrialBalancePage({ params, searchParams }: { param
                             )}
                           </p>
                         </div>
-                        <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1.5">
-                          <div className="shrink-0">{statusCell(a)}</div>
-                          <div className="min-w-0 flex-1 basis-40">{groupCell(a)}</div>
-                        </div>
+                        <div className="mt-1.5">{statusCell(a)}</div>
+                        <div className="mt-1.5">{groupCell(a)}</div>
                       </li>
                     ))}
                   </ul>
