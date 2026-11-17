@@ -66,6 +66,9 @@ jobs:
             printf %s "$APP_PASSWORD" | grep -Eq '(.)\1\1' || break
           done
           SAMPLE_PASSWORD=$(openssl rand -hex 16)
+          # A generated key for two-step sign-in, masked in the log. It exists only for this run.
+          MFA_KEY=$(openssl rand -base64 32)
+          echo "::add-mask::$MFA_KEY"
           echo "::add-mask::$OWNER_PASSWORD"
           echo "::add-mask::$APP_PASSWORD"
           echo "::add-mask::$SAMPLE_PASSWORD"
@@ -80,6 +83,7 @@ jobs:
             echo "DATABASE_URL=postgres://neondb_owner:$OWNER_PASSWORD@localhost:5432/neondb"
             echo "DATABASE_URL_UNPOOLED=postgres://neondb_owner:$OWNER_PASSWORD@localhost:5432/neondb"
             echo "LEDGERFILE_APP_PASSWORD=$APP_PASSWORD"
+            echo "MFA_ENCRYPTION_KEY=$MFA_KEY"
             echo "SAMPLE_ADMIN_PASSWORD=${SAMPLE_PASSWORD}a${SAMPLE_PASSWORD}"
             echo "SAMPLE_PARTNER_PASSWORD=${SAMPLE_PASSWORD}b${SAMPLE_PASSWORD}"
             echo "SAMPLE_REVIEWER_PASSWORD=${SAMPLE_PASSWORD}c${SAMPLE_PASSWORD}"

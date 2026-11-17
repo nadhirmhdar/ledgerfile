@@ -7,6 +7,7 @@ import { createFirm, DEV_FIRM_ID, DEV_USER_ID } from "../src/server/db";
 import { setPassword } from "../src/server/auth";
 import { appPasswordProblems, assertSecureUrl, databaseUrl, migrationUrl, redact } from "../src/server/config";
 import { ensureAppRole, ensureSetupRoleCanSwitch, verifyRuntimeConnection } from "../src/server/hosted-setup";
+import { mfaKeyProblem } from "../src/server/mfa-crypto";
 import { applyMigrations, upsertGroups } from "../src/server/migrations";
 import { SAMPLE_USERS, samplePasswordProblems } from "../src/server/sample-seed";
 import { scramVerifier } from "../src/server/scram";
@@ -15,6 +16,17 @@ import { loadSampleClient } from "./seed-common";
 function stop(lines: string[]): never {
   console.error(lines.join("\n"));
   process.exit(1);
+}
+
+// Two-step sign-in encrypts its secrets with MFA_ENCRYPTION_KEY. This runs inside the Vercel build, so a missing or invalid key fails the build
+// here, before anything else, and the deployment that is already live keeps serving: nobody is locked out by a deploy that lacks the key.
+const mfaProblem = mfaKeyProblem();
+if (mfaProblem) {
+  stop([
+    "Refusing to set up the database:",
+    `  - ${mfaProblem}`,
+    "  Add it in Vercel (Project, Settings, Environment Variables) before deploying. The build stops here, so the live site keeps running as it is.",
+  ]);
 }
 
 const url = migrationUrl();

@@ -30,6 +30,7 @@ The Neon integration injects `DATABASE_URL` holding the **owner's** credentials.
 | `POSTGRES_*` | Neon integration | not used | yes | Legacy names; ignored |
 | `LEDGERFILE_APP_PASSWORD` | **you** | runtime and setup | **yes** | Password of `ledgerfile_app`, 24+ characters |
 | `SAMPLE_ADMIN_PASSWORD`, `SAMPLE_PARTNER_PASSWORD`, `SAMPLE_REVIEWER_PASSWORD`, `SAMPLE_PREPARER_PASSWORD` | **you** | setup | **yes** | Passwords of the invented sample firm's four users (optional) |
+| `MFA_ENCRYPTION_KEY` | **you** | setup (build) and runtime | **yes** | 32 random bytes, base64. Encrypts two-step sign-in secrets at rest. Generate one with `openssl rand -base64 32`. `db:setup-hosted` fails without a valid one |
 | `FILE_STORE` | you (not secret) | runtime | no | `vercel-blob` |
 | `BLOB_READ_WRITE_TOKEN` or `BLOB_STORE_ID` and OIDC | Blob connection | runtime | yes | Server-only credentials the Blob SDK reads. Never `NEXT_PUBLIC_`. Uploads over 4 MB need the token |
 | `VERCEL` | Vercel | runtime | no | Marks the deployment as hosted |
@@ -60,6 +61,10 @@ Vercel Functions limit a request body to 4.5 MB ([limitations](https://vercel.co
 **Working papers up to 50 MB** go straight from the browser to the private Blob store when `FILE_STORE=vercel-blob` **and `BLOB_READ_WRITE_TOKEN` is set** (the SDK signs client tokens with the read-write token; the store id with OIDC alone cannot, so that setup keeps the 4 MB form). The flow is begin (the server checks the user and the file's declared name and size and records a key in `pending_uploads`), token (`/api/blob-upload` issues a token for that key only, limited to the declared size, no overwrite, no random suffix, valid for 15 minutes), then finish (the server reads the object, checks its size against the declaration, hashes it itself and only then creates the working paper). A file that does not match is deleted and refused. An upload that is never finished expires after 15 minutes and is swept, with its blob, by the next upload in that firm. The limit is one constant, `DIRECT_UPLOAD_BYTES` in `src/server/config.ts`.
 
 Downloads still go through the logged route and are streamed, so a 50 MB file is not subject to the 4.5 MB response cap (the docs say the cap "doesn't apply to" streamed responses; that is not confirmed for a Next.js route handler until it is tried on a deployment). The route reads the whole file and checks its sha256 before it sends the first byte, so a file that has changed is still refused (409).
+
+## Two-step sign-in key
+
+Two-step sign-in (authenticator codes and recovery codes; the sign-in step itself arrives in later slices) keeps each user's authenticator secret encrypted with AES-256-GCM under `MFA_ENCRYPTION_KEY`. Generate a key once with `openssl rand -base64 32` and enter it in Vercel (Project, Settings, Environment Variables, Production and Preview) **before deploying this version**: `npm run db:setup-hosted` runs first in the Vercel build and **stops the build** when the key is missing or is not base64 of exactly 32 bytes. A failed build leaves the deployment that is already live serving, so nobody is locked out by forgetting the key. Sign-in without two-step sign-in does not use the key and is unaffected. Keep a copy of the key somewhere safe: a secret encrypted with a lost key cannot be read, so every user who had enrolled would need an administrator's reset and to enrol again. Never commit the key or paste it into a ticket; the application never prints it (`redact()` strips it from error text).
 
 ## Regions
 

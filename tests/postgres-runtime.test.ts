@@ -1,4 +1,6 @@
 import { createHash, randomBytes } from "node:crypto";
+import { base32Decode, stepOf, totp } from "../src/domain/totp";
+import { confirmEnrolment, startEnrolment, verifySecondStep } from "../src/server/mfa";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import * as auth from "../src/server/auth";
 import { withAuth, withFirm, type Db } from "../src/server/db";
@@ -133,6 +135,21 @@ describe.skipIf(!URL)("the Postgres adapter as the runtime role", () => {
     await expect(withAuth(db, (tx) => tx.query("select 1 from audit_opinions"))).rejects.toThrow(/permission denied/);
     const reviewer = { ...sa, role: "reviewer" } as repo.Session;
     await expect(withFirm(db, a.firmId, (tx) => recordOpinion(tx, reviewer, engagementId, { opinion: "unmodified", basisForModification: "", goingConcern: false, goingConcernNote: "", emphasisOfMatter: "", otherMatter: "", reportDate: "2026-03-15" }))).rejects.toThrow(/Only a partner/);
+  });
+
+  it("runs two-step sign-in as the runtime role: enrol, confirm, verify, replay refused, and tenant work cannot read the secret", async () => {
+    const key = randomBytes(32);
+    const now = new Date();
+    const me = { firmId: a.firmId, userId: a.userId, email: `ada-${suffix}@alpha.test` };
+    const enrolment = await startEnrolment(db, me, { key, now });
+    const code = totp(base32Decode(enrolment.secret)!, stepOf(now.getTime()));
+    expect(await confirmEnrolment(db, me, code, { key, now })).toHaveLength(10);
+    const next = totp(base32Decode(enrolment.secret)!, stepOf(now.getTime()) + 1);
+    expect(await verifySecondStep(db, a.userId, next, { key, now })).toEqual({ ok: true, method: "totp" });
+    expect(await verifySecondStep(db, a.userId, next, { key, now })).toEqual({ ok: false, reason: "invalid" });
+    await expect(withFirm(db, a.firmId, (tx) => tx.query("select secret_ciphertext from user_mfa"))).rejects.toThrow(/permission denied/);
+    expect(await withFirm(db, b.firmId, async (tx) => (await tx.query("select user_id from user_mfa")).rows.length)).toBe(0);
+    expect((await withFirm(db, a.firmId, async (tx) => (await tx.query("select user_id, enabled_at from user_mfa")).rows)).length).toBe(1);
   });
 
   it("leaves nothing on the connection after a transaction, which is what makes a transaction pooler safe", async () => {

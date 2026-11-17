@@ -165,7 +165,7 @@ export const PENDING_UPLOAD_MINUTES = 15;
 /** Replace anything that looks like a connection string, and any configured secret value, so an error can be logged safely. */
 export function redact(text: string, env: Env = process.env): string {
   let out = text.replace(/\bpostgres(?:ql)?:\/\/[^\s'"]*/gi, "postgres://[redacted]");
-  for (const key of ["DATABASE_URL", "DATABASE_URL_UNPOOLED", "DATABASE_URL_MIGRATIONS", "LEDGERFILE_DATABASE_URL", "PGPASSWORD", "SUPABASE_SERVICE_ROLE_KEY", "BLOB_READ_WRITE_TOKEN", "TEST_DATABASE_URL"]) {
+  for (const key of ["DATABASE_URL", "DATABASE_URL_UNPOOLED", "DATABASE_URL_MIGRATIONS", "LEDGERFILE_DATABASE_URL", "PGPASSWORD", "SUPABASE_SERVICE_ROLE_KEY", "BLOB_READ_WRITE_TOKEN", "MFA_ENCRYPTION_KEY", "TEST_DATABASE_URL"]) {
     const v = env[key]?.trim();
     if (v && v.length >= 6) out = out.split(v).join("[redacted]");
   }

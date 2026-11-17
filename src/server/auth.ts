@@ -195,13 +195,13 @@ export async function listTeam(db: Db, firmId: string): Promise<TeamMember[]> {
 // --- Managing existing users -------------------------------------------------
 
 /** Confirm from the database that the acting user is an active administrator of their firm. */
-async function requireAdmin(db: Queryable, admin: AuthSession): Promise<void> {
+export async function requireAdmin(db: Queryable, admin: AuthSession): Promise<void> {
   const current = await db.query<{ role: string; active: boolean }>("select role, active from users where id = $1 and firm_id = $2", [admin.userId, admin.firmId]);
   if (current.rows[0]?.role !== "admin" || !current.rows[0].active) throw new AuthError("Only an administrator can manage users.");
 }
 
 /** Load a user of the administrator's own firm; a user of any other firm is reported as not found. */
-async function targetUser(db: Queryable, admin: AuthSession, userId: string) {
+export async function targetUser(db: Queryable, admin: AuthSession, userId: string) {
   const { rows } = await db.query<{ id: string; role: Role; active: boolean; email: string }>(
     "select id, role, active, email from users where id = $1 and firm_id = $2",
     [userId, admin.firmId],
@@ -216,7 +216,7 @@ async function otherActiveAdmins(db: Queryable, firmId: string, exceptUserId: st
   return rows[0].n;
 }
 
-async function logUserChange(db: Queryable, admin: AuthSession, action: string, userId: string, detail?: unknown) {
+export async function logUserChange(db: Queryable, admin: AuthSession, action: string, userId: string, detail?: unknown) {
   await db.query("insert into audit_log (firm_id, user_id, action, entity, entity_id, detail) values ($1, $2, $3, 'user', $4, $5)", [
     admin.firmId,
     admin.userId,
