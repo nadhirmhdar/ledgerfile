@@ -136,7 +136,7 @@ export default async function ConfirmationsPage({ params, searchParams }: { para
           ) : undefined
         }
       />
-      <EngagementNav id={id} current="confirmations" status={engagement.status} />
+      <EngagementNav id={id} current="confirmations" status={engagement.status} archived={engagement.archivedAt !== null} />
 
       <div className="mt-6 space-y-6">
         {!auditOn ? (

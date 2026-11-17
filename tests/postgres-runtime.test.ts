@@ -135,6 +135,19 @@ describe.skipIf(!URL)("the Postgres adapter as the runtime role", () => {
     await expect(withFirm(db, a.firmId, (tx) => recordOpinion(tx, reviewer, engagementId, { opinion: "unmodified", basisForModification: "", goingConcern: false, goingConcernNote: "", emphasisOfMatter: "", otherMatter: "", reportDate: "2026-03-15" }))).rejects.toThrow(/Only a partner/);
   });
 
+  it("keeps an archived file locked for good, as the runtime role: the database guard refuses to unlock, re-date or delete it", async () => {
+    const sa = { firmId: a.firmId, userId: a.userId, role: "partner" } as repo.Session;
+    const id = await withFirm(db, a.firmId, async (tx) => repo.createEngagement(tx, sa, await repo.createClient(tx, sa, "Archive guard client"), "2025-01-01", "2025-12-31"));
+    // An open file cannot be archived.
+    await expect(withFirm(db, a.firmId, (tx) => tx.query("update engagements set archived_at = now(), archived_by = $2 where id = $1", [id, a.userId]))).rejects.toThrow(/only after it has been locked/);
+    await withFirm(db, a.firmId, (tx) => tx.query("update engagements set status = 'locked', locked_by = $2, locked_at = now() where id = $1", [id, a.userId]));
+    await withFirm(db, a.firmId, (tx) => tx.query("update engagements set archived_at = now(), archived_by = $2 where id = $1", [id, a.userId]));
+    await expect(withFirm(db, a.firmId, (tx) => tx.query("update engagements set status = 'open', locked_by = null, locked_at = null where id = $1", [id]))).rejects.toThrow(/This file is archived/);
+    await expect(withFirm(db, a.firmId, (tx) => tx.query("update engagements set archived_at = null where id = $1", [id]))).rejects.toThrow(/This file is archived/);
+    await expect(withFirm(db, a.firmId, (tx) => tx.query("delete from engagements where id = $1", [id]))).rejects.toThrow(/cannot be deleted/);
+    expect((await withFirm(db, a.firmId, async (tx) => (await tx.query("select status from engagements where id = $1", [id])).rows[0]))).toEqual({ status: "locked" });
+  });
+
   it("leaves nothing on the connection after a transaction, which is what makes a transaction pooler safe", async () => {
     // One connection, reused: after withFirm and after withAuth the next statement is a plain one again.
     await withFirm(single, a.firmId, async (tx) => (await tx.query("select 1")).rows.length);

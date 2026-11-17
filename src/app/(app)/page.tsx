@@ -59,7 +59,7 @@ export default async function Home() {
                     <span className="block whitespace-nowrap">to {e.periodEnd}</span>
                   </TCell>
                   <TCell>
-                    <StatusBadge status={e.status === "open" ? "in_progress" : "locked"} label={e.status === "open" ? "Open" : "Locked"} />
+                    <StatusBadge status={e.status === "open" ? "in_progress" : "locked"} label={e.archivedAt ? "Archived" : e.status === "open" ? "Open" : "Locked"} />
                   </TCell>
                   <TCell>{e.priorEngagementId ? "Yes" : "No"}</TCell>
                 </TRow>

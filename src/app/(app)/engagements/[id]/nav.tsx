@@ -10,13 +10,13 @@ export type { EngagementTab };
  * labelled by its heading. The client and period are in each page's own header, so they are not repeated here; a locked
  * engagement also gets a banner.
  */
-export function EngagementNav({ id, current, status }: { id: string; current: EngagementTab; status: string }) {
+export function EngagementNav({ id, current, status, archived = false }: { id: string; current: EngagementTab; status: string; archived?: boolean }) {
   const locked = status !== "open";
   return (
     <>
       {locked && (
-        <Callout variant="locked" title="This engagement is locked" className="mt-4">
-          Changes are refused until a partner unlocks it on the Review and sign-off page.
+        <Callout variant="locked" title={archived ? "This engagement is archived" : "This engagement is locked"} className="mt-4">
+          {archived ? "Nothing on it can be changed or unlocked, ever. You can still open it, download and export from it." : "Changes are refused until a partner unlocks it on the Review and sign-off page."}
         </Callout>
       )}
       <div className="mt-4 lg:absolute lg:inset-y-0 lg:left-0 lg:mt-0 lg:w-52 lg:pt-8">

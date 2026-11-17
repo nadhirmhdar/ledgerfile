@@ -99,7 +99,7 @@ export default async function EngagementHome({ params }: { params: Promise<{ id:
         title={engagement.clientName}
         subtitle={model.summary}
       />
-      <EngagementNav id={id} current="home" status={engagement.status} />
+      <EngagementNav id={id} current="home" status={engagement.status} archived={engagement.archivedAt !== null} />
 
       <div className="mt-6 space-y-8">
         {model.locked ? (

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { getDb, withFirm, type Tx } from "@/server/db";
 import { getSession } from "@/server/session";
 import * as review from "@/server/review";
+import { archiveEngagement } from "@/server/archiving";
 import type { FormState } from "./actions";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -58,4 +59,8 @@ export async function lockAction(_prev: FormState, form: FormData): Promise<Form
 
 export async function unlockAction(_prev: FormState, form: FormData): Promise<FormState> {
   return run(form, "Engagement unlocked.", (tx, actor, id) => review.unlockEngagement(tx, actor, id, field(form, "reason")));
+}
+
+export async function archiveAction(_prev: FormState, form: FormData): Promise<FormState> {
+  return run(form, "The file is archived.", (tx, actor, id) => archiveEngagement(tx, actor, id, field(form, "confirmation")));
 }

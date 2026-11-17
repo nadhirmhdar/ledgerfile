@@ -71,7 +71,7 @@ export default async function AuditPage({ params }: { params: Promise<{ id: stri
         }
         subtitle={planningSentence({ enabled: overview.enabled, materialitySet: m !== null, materialityStale: overview.materialityStale, areasAssessed, areasTotal: overview.areas.length, approval: approval.state })}
       />
-      <EngagementNav id={id} current="audit" status={engagement.status} />
+      <EngagementNav id={id} current="audit" status={engagement.status} archived={engagement.archivedAt !== null} />
 
       <div className="mt-6 space-y-8">
         <Callout variant="draft" title={`Methodology content: ${LIBRARY_STATUS}`}>

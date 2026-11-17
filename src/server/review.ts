@@ -46,6 +46,13 @@ export interface ReviewOverview {
   solePractitioner: boolean;
   lockedByName: string | null;
   lockedAt: string | null;
+  /** The day the file was archived and by whom (the permanent lock), or null. */
+  archivedAt: string | null;
+  archivedByName: string | null;
+  /** The audit is on, an opinion is recorded, and its report date: what the archiving rules and the file assembly deadline need. */
+  audited: boolean;
+  hasOpinion: boolean;
+  reportDate: string | null;
   leadSheets: LeadSheetReview[];
   points: ReviewPoint[];
   readiness: LockReadiness;
@@ -60,9 +67,10 @@ async function requireOpen(tx: Tx, engagementId: string) {
 const targetName = (target: string) => (target === GENERAL ? "General" : (GROUP_BY_CODE.get(target)?.name ?? target));
 
 export async function getOverview(tx: Tx, engagementId: string): Promise<ReviewOverview | null> {
-  const lock = await tx.query<{ status: string; lockedByName: string | null; lockedAt: string | null; splitCurrent: number; splitPrior: number }>(
-    `select e.status, e.borrowings_current_minor::float8 as "splitCurrent", e.borrowings_current_prior_minor::float8 as "splitPrior", u.name as "lockedByName", to_char(e.locked_at at time zone 'UTC', 'YYYY-MM-DD HH24:MI') || ' UTC' as "lockedAt"
-     from engagements e left join users u on u.id = e.locked_by where e.id = $1`,
+  const lock = await tx.query<{ status: string; lockedByName: string | null; lockedAt: string | null; archivedAt: string | null; archivedByName: string | null; splitCurrent: number; splitPrior: number }>(
+    `select e.status, e.borrowings_current_minor::float8 as "splitCurrent", e.borrowings_current_prior_minor::float8 as "splitPrior", u.name as "lockedByName", to_char(e.locked_at at time zone 'UTC', 'YYYY-MM-DD HH24:MI') || ' UTC' as "lockedAt",
+            to_char(e.archived_at at time zone 'UTC', 'YYYY-MM-DD') as "archivedAt", au.name as "archivedByName"
+     from engagements e left join users u on u.id = e.locked_by left join users au on au.id = e.archived_by where e.id = $1`,
     [engagementId],
   );
   if (lock.rows.length === 0) return null;
@@ -108,10 +116,16 @@ export async function getOverview(tx: Tx, engagementId: string): Promise<ReviewO
   // Once an engagement is being audited, unfinished audit work also blocks the lock.
   const auditOverview = await getAuditOverview(tx, engagementId);
   const auditBlockers = auditOverview?.blockers ?? [];
+  const opinion = await tx.query<{ reportDate: string | null }>("select to_char(report_date, 'YYYY-MM-DD') as \"reportDate\" from audit_opinions where engagement_id = $1", [engagementId]);
   const overview: ReviewOverview = {
     status: lock.rows[0].status,
     lockedByName: lock.rows[0].lockedByName,
     lockedAt: lock.rows[0].lockedAt,
+    archivedAt: lock.rows[0].archivedAt,
+    archivedByName: lock.rows[0].archivedByName,
+    audited: auditOverview?.enabled ?? false,
+    hasOpinion: opinion.rows.length > 0,
+    reportDate: opinion.rows[0]?.reportDate ?? null,
     solePractitioner,
     leadSheets,
     points: points.rows.map((p) => ({ ...p, targetName: targetName(p.target) })),
@@ -223,6 +237,7 @@ export async function lockEngagement(tx: Tx, actor: Actor, engagementId: string)
 export async function unlockEngagement(tx: Tx, actor: Actor, engagementId: string, reason: string): Promise<void> {
   const engagement = await getEngagement(tx, engagementId);
   if (!engagement) throw new Error("Engagement not found.");
+  if (engagement.archivedAt) throw new Error("This file is archived. Archived files cannot be unlocked.");
   if (engagement.status !== "locked") throw new Error("This engagement is not locked.");
   if (!canLock(actor.role)) throw new Error("Only a partner can unlock an engagement.");
   if (reason.trim().length < 5) throw new Error("Give the reason for unlocking; it is recorded in the audit log.");

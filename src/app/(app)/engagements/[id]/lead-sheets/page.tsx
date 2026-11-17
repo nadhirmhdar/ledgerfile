@@ -73,7 +73,7 @@ export default async function LeadSheetsPage({ params }: { params: Promise<{ id:
         }
         subtitle={sentence}
       />
-      <EngagementNav id={id} current="leadsheets" status={engagement.status} />
+      <EngagementNav id={id} current="leadsheets" status={engagement.status} archived={engagement.archivedAt !== null} />
       <OpenOnHash />
 
       <div className="mt-6 space-y-8">

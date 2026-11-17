@@ -54,7 +54,7 @@ export default async function AuditorsReportPage({ params }: { params: Promise<{
         }
         subtitle="The partner's decision on the audit opinion. The report is worded from it."
       />
-      <EngagementNav id={id} current="report" status={engagement.status} />
+      <EngagementNav id={id} current="report" status={engagement.status} archived={engagement.archivedAt !== null} />
 
       <div className="mt-6 min-w-0 space-y-6">
         {!page.enabled ? (

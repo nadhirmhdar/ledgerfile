@@ -75,7 +75,7 @@ export default async function PapersPage({ params, searchParams }: { params: Pro
         }
         subtitle={papersSentence(list)}
       />
-      <EngagementNav id={id} current="papers" status={engagement.status} />
+      <EngagementNav id={id} current="papers" status={engagement.status} archived={engagement.archivedAt !== null} />
 
       <div className="mt-6 space-y-8">
         {open && (

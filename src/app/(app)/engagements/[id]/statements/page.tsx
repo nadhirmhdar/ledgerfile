@@ -108,7 +108,7 @@ export default async function StatementsPage({ params, searchParams }: { params:
     return (
       <div className="py-8 text-ink">
         <PageHeader breadcrumb={[{ label: "All engagements", href: "/" }]} title="Financial statements" meta={meta} />
-        <EngagementNav id={id} current="statements" status={engagement.status} />
+        <EngagementNav id={id} current="statements" status={engagement.status} archived={engagement.archivedAt !== null} />
         <div className="mt-6">
           <EmptyState
             title="No trial balance yet"
@@ -199,7 +199,7 @@ export default async function StatementsPage({ params, searchParams }: { params:
           </div>
         }
       />
-      <EngagementNav id={id} current="statements" status={engagement.status} />
+      <EngagementNav id={id} current="statements" status={engagement.status} archived={engagement.archivedAt !== null} />
 
       <div className="mt-6 space-y-5">
         {pack.clean ? (
