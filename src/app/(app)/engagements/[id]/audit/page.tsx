@@ -374,7 +374,7 @@ export default async function AuditPage({ params }: { params: Promise<{ id: stri
                 {m ? (
                   overview.misstatements.exceedsMateriality ? (
                     <Callout variant="danger" title="Uncorrected misstatements reach materiality">
-                      The net uncorrected misstatements reach overall materiality of {formatAmount(m.overallMinor)}. The engagement cannot be locked until they are corrected; modified opinions are not yet supported.
+                      The net uncorrected misstatements reach overall materiality of {formatAmount(m.overallMinor)}. The engagement cannot be locked until they are corrected or the partner records a modified opinion with its basis, on the Auditor&apos;s report page.
                     </Callout>
                   ) : (
                     <Callout variant="info" title="Below materiality">
@@ -493,7 +493,7 @@ export default async function AuditPage({ params }: { params: Promise<{ id: stri
           </>
         )}
 
-        <p className="text-sm text-ink-muted">Not yet in the product: modified audit opinions and the auditor&apos;s report.</p>
+        <p className="text-sm text-ink-muted">Not yet in the product: the auditor&apos;s report as a Word document.</p>
       </div>
     </div>
   );

@@ -339,7 +339,13 @@ export async function getAuditOverview(tx: Tx, engagementId: string): Promise<Au
     const unexplained = unexplainedMovements(compareYears(statements, materiality), explained.rows).length;
     if (unexplained > 0) blockers.push(`Audit: ${unexplained} significant movement(s) in the analytical review have no explanation.`);
     blockers.push(...scheduleBlockers(scheduleStates.map((x) => x.state)));
-    if (misstatements.exceedsMateriality) blockers.push("Audit: uncorrected misstatements reach overall materiality. Have them corrected; modified opinions are not yet supported.");
+    const decided = await tx.query<{ opinion: string }>("select opinion from audit_opinions where engagement_id = $1", [engagementId]);
+    const opinion = decided.rows[0]?.opinion ?? null;
+    if (!opinion) blockers.push("Audit: the partner has not recorded the audit opinion.");
+    // Uncorrected misstatements that reach materiality stop an unmodified opinion; a modified one (with its basis) answers them.
+    if (misstatements.exceedsMateriality && (opinion === null || opinion === "unmodified")) {
+      blockers.push("Audit: uncorrected misstatements reach overall materiality. Correct them, or have the partner record a modified opinion with its basis.");
+    }
   }
 
   return {

@@ -6,7 +6,7 @@ const labels = (id: string) => NAV_GROUPS.find((g) => g.id === id)!.items.map((i
 describe("the groups", () => {
   it("lists the audit work in work order, with the new entries", () => {
     expect(labels("audit")).toEqual(["Planning", "Confirmations", "Journal testing", "Analytical review", "Client requests"]);
-    expect(labels("finish")).toEqual(["Letters", "Review and sign-off"]);
+    expect(labels("finish")).toEqual(["Letters", "Auditor's report", "Review and sign-off"]);
   });
   it("keeps the other groups as they were", () => {
     expect(labels("overview")).toEqual(["Home"]);
@@ -33,6 +33,7 @@ describe("tabForPath", () => {
     expect(tabForPath("/audit/analytics")).toBe("analytics");
     expect(tabForPath("/audit/letters")).toBe("letters");
     expect(tabForPath("/audit/letters/engagement")).toBe("letters");
+    expect(tabForPath("/audit/report")).toBe("report");
   });
   it("keeps Planning for the planning page, area pages and schedules", () => {
     expect(tabForPath("/audit")).toBe("audit");
