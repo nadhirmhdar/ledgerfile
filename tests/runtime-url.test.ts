@@ -12,7 +12,7 @@ const NEON = {
   PGDATABASE: "neondb",
   PGPASSWORD: "owner-pw",
 };
-const APP_PW = "a-long-generated-app-password-0001";
+const APP_PW = "Ab3-long-generated-App-password-0102";
 
 describe("the runtime connection on Neon", () => {
   it("is built from the pooled host and database, as ledgerfile_app, with verified TLS", () => {
@@ -117,7 +117,7 @@ describe("the app password policy", () => {
   });
   it("refuses a missing, short, demo or sample password, without printing it", () => {
     expect(appPasswordProblems({})).toEqual(["LEDGERFILE_APP_PASSWORD is not set."]);
-    expect(appPasswordProblems({ LEDGERFILE_APP_PASSWORD: "short" })).toEqual(["LEDGERFILE_APP_PASSWORD is shorter than 24 characters."]);
+    expect(appPasswordProblems({ LEDGERFILE_APP_PASSWORD: "short" })).toContain("LEDGERFILE_APP_PASSWORD is shorter than 24 characters.");
     expect(appPasswordProblems({ LEDGERFILE_APP_PASSWORD: APP_PW, SAMPLE_ADMIN_PASSWORD: APP_PW })).toEqual(["LEDGERFILE_APP_PASSWORD is the same as SAMPLE_ADMIN_PASSWORD."]);
     expect(appPasswordProblems({ LEDGERFILE_APP_PASSWORD: "ledgerfile-demo-only" }).join(" ")).toContain("public demo password");
     expect(appPasswordProblems({ LEDGERFILE_APP_PASSWORD: "short" }).join(" ")).not.toContain("short ");

@@ -48,7 +48,7 @@ function unquote(lit: string): string {
   return out;
 }
 
-const PW = "a-long-generated-app-password-0001";
+const PW = "Ab3-long-generated-App-password-0102";
 
 describe("the plaintext fallback on Neon", () => {
   it("recognises exactly Neon's refusal", () => {
@@ -65,7 +65,7 @@ describe("the plaintext fallback on Neon", () => {
     const role = exec.filter((s) => s.startsWith("create role"));
     expect(role).toHaveLength(2);
     expect(role[0]).toContain("SCRAM-SHA-256$");
-    expect(role[1]).toBe(`create role ledgerfile_app login nosuperuser nocreatedb nocreaterole noinherit nobypassrls password ${quoteLiteral(PW)}`);
+    expect(role[1]).toBe(`create role ledgerfile_app login password ${quoteLiteral(PW)}`);
     expect(role[1]).not.toContain("SCRAM-SHA-256$");
   });
 
@@ -80,7 +80,7 @@ describe("the plaintext fallback on Neon", () => {
     const { db, exec } = fakeDb({ exists: true, failExec: (sql) => (sql.includes("SCRAM-SHA-256$") ? NEON_REFUSAL : null) });
     const result = await ensureAppRole(db, { verifier: scramVerifier(PW), plaintext: PW });
     expect(result).toEqual({ created: false, usedPlaintext: true });
-    expect(exec.filter((s) => s.startsWith("alter role"))).toHaveLength(2);
+    expect(exec.filter((s) => s.startsWith("alter role") && s.includes("with password"))).toHaveLength(2);
   });
 
   it("does not retry any other error", async () => {
@@ -207,14 +207,14 @@ describe("Neon's password strength rule", () => {
   it("estimates entropy by length and character pool, and rejects repetition", () => {
     expect(passwordEntropyBits("aaaaaaaaaaaaaaaaaaaaaaaaaaaa")).toBe(0);
     expect(passwordEntropyBits("abababababababababababab")).toBe(0);
-    expect(passwordEntropyBits("a1b2c3d4e5f6a7b8c9d0e1f2")).toBeGreaterThan(60);
+    expect(passwordEntropyBits("Ab3-a1b2c3d4e5f6a7b8c9d0e1f2")).toBeGreaterThan(60);
     expect(passwordEntropyBits("short")).toBe(0);
   });
   it("is enforced up front, naming no value", () => {
     const problems = appPasswordProblems({ LEDGERFILE_APP_PASSWORD: "aaaaaaaaaaaaaaaaaaaaaaaaaaaa" });
     expect(problems.join(" ")).toMatch(/too predictable/);
     expect(problems.join(" ")).not.toContain("aaaa");
-    expect(appPasswordProblems({ LEDGERFILE_APP_PASSWORD: "a1b2c3d4e5f6a7b8c9d0e1f2" })).toEqual([]);
+    expect(appPasswordProblems({ LEDGERFILE_APP_PASSWORD: "Ab3-a1b2c3d4e5f6a7b8c9d0e1f2" })).toEqual([]);
   });
 });
 

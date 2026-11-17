@@ -85,7 +85,9 @@ try {
   const field = (k: string) => (e && typeof e === "object" && k in e && typeof (e as Record<string, unknown>)[k] === "string" ? redact((e as Record<string, string>)[k]) : "");
   const code = field("code");
   const detail = field("detail");
-  console.error("Setup failed:", e instanceof Error ? redact(e.message) : "unknown error", code ? `[${code}]` : "", detail ? `(${detail})` : "");
+  const message = e instanceof Error ? redact(e.message) : "unknown error";
+  // The code is not repeated when the message already carries it.
+  console.error("Setup failed:", message, code && !message.includes(`[${code}]`) ? `[${code}]` : "", detail ? `(${detail})` : "");
   process.exitCode = 1;
 } finally {
   await db.close();
