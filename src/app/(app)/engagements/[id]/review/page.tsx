@@ -206,31 +206,34 @@ export default async function ReviewPage({ params }: { params: Promise<{ id: str
                   </tbody>
                 </Table>
               </div>
-              <ul className="space-y-3 sm:hidden">
-                {sheets.map((sheet) => (
-                  <li key={sheet.groupCode} className="rounded-lg border border-border bg-surface p-4 shadow-card">
-                    <p className="font-semibold">
-                      <Link href={`${base}/lead-sheets#ls-${sheet.groupCode}`} className="text-accent hover:underline">
-                        {sheet.groupName}
-                      </Link>
-                    </p>
-                    <p className="text-sm text-ink-muted tabular-nums">{formatAmount(sheet.closingMinor)}</p>
-                    <dl className="mt-3 space-y-3 text-sm">
-                      <div>
-                        <dt className="text-ink-muted">Prepared by</dt>
-                        <dd>{cell(sheet, "preparer")}</dd>
+              {/* Phone: line 1 is the lead sheet and its balance, line 2 the two sign-off states with short labels, and a pill only when there are open points. */}
+              <ul className="divide-y divide-border rounded-lg border border-border bg-surface shadow-card sm:hidden">
+                {sheets.map((sheet) => {
+                  const pill = openPointsPill(sheet.openPoints);
+                  return (
+                    <li key={sheet.groupCode} className="px-4 py-2.5">
+                      <div className="flex items-baseline justify-between gap-3">
+                        <p className="min-w-0 font-semibold">
+                          <Link href={`${base}/lead-sheets#ls-${sheet.groupCode}`} className="text-accent hover:underline">
+                            {sheet.groupName}
+                          </Link>
+                        </p>
+                        <p className="shrink-0 text-sm text-ink tabular-nums">{formatAmount(sheet.closingMinor)}</p>
                       </div>
-                      <div>
-                        <dt className="text-ink-muted">Reviewed by</dt>
-                        <dd>{cell(sheet, "reviewer")}</dd>
+                      <div className="mt-1.5 flex flex-wrap items-start gap-x-4 gap-y-1.5 text-sm">
+                        <div className="flex flex-wrap items-center gap-x-1.5">
+                          <span className="text-ink-muted">Prepared</span>
+                          {cell(sheet, "preparer")}
+                        </div>
+                        <div className="flex flex-wrap items-center gap-x-1.5">
+                          <span className="text-ink-muted">Reviewed</span>
+                          {cell(sheet, "reviewer")}
+                        </div>
+                        {pill && <Badge tone={pill.tone}>{pill.label}</Badge>}
                       </div>
-                      <div>
-                        <dt className="text-ink-muted">Open points</dt>
-                        <dd>{pointsCell(sheet.openPoints)}</dd>
-                      </div>
-                    </dl>
-                  </li>
-                ))}
+                    </li>
+                  );
+                })}
               </ul>
             </>
           )}
