@@ -53,7 +53,9 @@ try {
     console.log("3. Sample firm: seeded");
   }
 } catch (e) {
-  console.error("Setup failed:", e instanceof Error ? redact(e.message) : "unknown error");
+  // Postgres adds a DETAIL line to permission errors (for example which option is missing). It names roles, never secrets.
+  const detail = e && typeof e === "object" && "detail" in e && typeof (e as { detail?: unknown }).detail === "string" ? ` (${redact((e as { detail: string }).detail)})` : "";
+  console.error("Setup failed:", e instanceof Error ? redact(e.message) + detail : "unknown error");
   process.exitCode = 1;
 } finally {
   await db.close();

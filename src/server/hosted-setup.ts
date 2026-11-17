@@ -12,11 +12,11 @@ import type { Db } from "./db";
 export async function ensureAppRole(db: Db, verifier: string): Promise<{ created: boolean }> {
   if (!/^SCRAM-SHA-256\$[0-9A-Za-z+/=:$]+$/.test(verifier)) throw new Error("The password verifier is not in SCRAM-SHA-256 form.");
   const exists = (await db.query("select 1 from pg_roles where rolname = $1", [APP_ROLE])).rows.length > 0;
-  // BYPASSRLS defaults to off when the role is created. ALTER ROLE may not name it (even as NOBYPASSRLS) unless the caller itself has
-  // BYPASSRLS, which a non-superuser owner like Neon's may lack, so it is only named on create and checked after.
+  // The attributes are set when the role is created. A later ALTER ROLE by a non-superuser owner (Neon's, CI's) may not restate them: it
+  // changes only the password, and the attributes are checked after.
   await db.exec(
     exists
-      ? `alter role ${APP_ROLE} with login nosuperuser nocreatedb nocreaterole noinherit password '${verifier}'`
+      ? `alter role ${APP_ROLE} with password '${verifier}'`
       : `create role ${APP_ROLE} login nosuperuser nocreatedb nocreaterole noinherit nobypassrls password '${verifier}'`,
   );
   const attrs = (await db.query<{ rolsuper: boolean; rolbypassrls: boolean; rolcreatedb: boolean; rolcreaterole: boolean; rolinherit: boolean; rolcanlogin: boolean }>(
