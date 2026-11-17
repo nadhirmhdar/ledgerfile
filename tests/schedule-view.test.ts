@@ -86,3 +86,24 @@ describe("small wording", () => {
     expect(keyItemsSentence(1, 500000)).toContain("look at it.");
   });
 });
+
+describe("signOffControls when the viewer worked on the schedule", () => {
+  const base = { open: true, auditOn: true, reviewed: false, hasConclusion: true };
+  it("offers a reviewer who did not work on it the review, as before", () => {
+    expect(signOffControls({ ...base, role: "reviewer", viewerWorkedOnIt: false, selfReviewAllowed: false })).toEqual({ review: "review", delete: true });
+    expect(signOffControls({ ...base, role: "partner" })).toEqual({ review: "review", delete: true });
+  });
+  it("withholds the review from one who worked on it where the firm has another reviewer, and marks it as waiting", () => {
+    for (const role of ["reviewer", "partner", "admin"] as const) {
+      expect(signOffControls({ ...base, role, viewerWorkedOnIt: true, selfReviewAllowed: false })).toEqual({ review: null, workedOnIt: "waiting", delete: true });
+    }
+  });
+  it("keeps the button, marked as a self-review, where the firm may self-review", () => {
+    expect(signOffControls({ ...base, role: "reviewer", viewerWorkedOnIt: true, selfReviewAllowed: true })).toEqual({ review: "review", workedOnIt: "self", delete: true });
+  });
+  it("leaves withdrawing a review, a preparer, and a locked or reviewed schedule alone", () => {
+    expect(signOffControls({ ...base, reviewed: true, role: "reviewer", viewerWorkedOnIt: true, selfReviewAllowed: false })).toEqual({ review: "withdraw", delete: false });
+    expect(signOffControls({ ...base, role: "preparer", viewerWorkedOnIt: true, selfReviewAllowed: false })).toEqual({ review: null, delete: false });
+    expect(signOffControls({ ...base, open: false, role: "reviewer", viewerWorkedOnIt: true, selfReviewAllowed: false })).toEqual({ review: null, delete: false });
+  });
+});
