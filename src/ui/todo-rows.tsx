@@ -6,7 +6,7 @@ export function ToDoRows({ items }: { items: { text: string; href: string; owner
   return (
     <ListRows>
       {items.map((t) => (
-        <ListRow key={t.text} title={t.text} subtitle={t.owner ? `For ${t.owner === "partner" ? "a partner" : "a reviewer"}` : undefined} href={t.href} meta={<ArrowRightIcon />} />
+        <ListRow key={t.text} title={t.text} subtitle={t.owner ? `For ${t.owner === "partner" ? "a partner" : "a reviewer"}` : undefined} href={t.href} meta={<ArrowRightIcon />} inlineMeta />
       ))}
     </ListRows>
   );

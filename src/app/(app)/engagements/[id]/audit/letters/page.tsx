@@ -50,7 +50,7 @@ export default async function LettersPage({ params }: { params: Promise<{ id: st
         }
         subtitle={context ? lettersSentence(uncorrected) : undefined}
       />
-      <EngagementNav id={id} current="audit" status={engagement.status} />
+      <EngagementNav id={id} current="letters" status={engagement.status} />
 
       <div className="mt-6 min-w-0 space-y-6">
         {!context ? (

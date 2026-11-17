@@ -80,7 +80,7 @@ export default async function AnalyticsPage({ params, searchParams }: { params: 
         }
         subtitle={analyticsSentence({ hasComparatives: data.hasComparatives, hasThresholds: !!data.thresholds, ...counts })}
       />
-      <EngagementNav id={id} current="audit" status={engagement.status} />
+      <EngagementNav id={id} current="analytics" status={engagement.status} />
 
       <div className="mt-6 min-w-0 space-y-6">
         <p className="max-w-3xl text-sm text-ink-muted">
