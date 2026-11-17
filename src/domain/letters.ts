@@ -79,18 +79,13 @@ export const ENGAGEMENT = {
   },
   you: {
     heading: "What you are responsible for",
-    intro: "We carry out the audit on the understanding that management and, where applicable, those charged with governance accept that they are responsible for:",
+    intro: "Signing this letter confirms that management and, where applicable, those charged with governance accept the following.",
     items: [
-      "(a) the preparation and fair presentation of the financial statements in accordance with {framework};",
-      "(b) keeping the internal control that management judges necessary so that the statements contain no material misstatement from fraud or error;",
-      "(c) judging whether the Company can continue as a going concern, and disclosing what that requires;",
-      "(d) providing us with:",
+      "Management prepares the financial statements, and they must present fairly, in all material respects, under {framework}.",
+      "Management keeps the internal control it judges necessary so that the statements contain no material misstatement from fraud or error.",
+      "Management judges whether the Company can continue as a going concern, and makes the disclosures that requires.",
     ],
-    access: [
-      "all the information, such as records and documents, that bears on the statements;",
-      "anything more that we ask for;",
-      "free access to the people in the Company from whom we need evidence.",
-    ],
+    access: "Management also gives us what the audit needs: free access to the people in the Company, the records and documents that bear on the statements, and anything else we ask for.",
     after: "At the end of the audit we will ask you to confirm in writing the statements you have made to us during it.",
   },
   otherServices: {
@@ -151,8 +146,8 @@ export function buildEngagementLetter(input: EngagementLetterInput): Block[] {
 
   section(ENGAGEMENT.you.heading);
   blocks.push({ kind: "para", text: ENGAGEMENT.you.intro });
-  for (const item of ENGAGEMENT.you.items) blocks.push({ kind: "para", text: f(item) });
-  for (const item of ENGAGEMENT.you.access) blocks.push({ kind: "bullet", text: item, level: 2 });
+  for (const item of ENGAGEMENT.you.items) blocks.push({ kind: "bullet", text: f(item) });
+  blocks.push({ kind: "para", text: ENGAGEMENT.you.access });
   blocks.push({ kind: "para", text: ENGAGEMENT.you.after });
 
   if (input.otherServices) {
