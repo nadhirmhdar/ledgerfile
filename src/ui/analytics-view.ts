@@ -104,3 +104,19 @@ export function chips(rows: Pick<ReviewRow, "flag" | "explanation">[]): Chip[] {
 }
 
 export const showHref = (base: string, show: Show): string => (show === "all" ? base : `${base}?show=${show}`);
+
+export type FormMode = "write-open" | "write-closed" | "rewrite" | null;
+
+/**
+ * How a flagged line's explanation form shows. A line with no explanation has its form open only under To explain, where the work
+ * is done, and folded away under All lines and Flagged to keep the page short. A line that has an explanation (explained, or to
+ * re-confirm) offers a closed rewrite. An unflagged line has none.
+ */
+export function formMode(show: Show, state: RowState): FormMode {
+  if (state === "none") return null;
+  if (state === "to_explain") return show === "unexplained" ? "write-open" : "write-closed";
+  return "rewrite";
+}
+
+/** "Explain the 15 movements" for the link to the To explain view. */
+export const explainLinkLabel = (n: number): string => (n === 1 ? "Explain the movement" : `Explain the ${n} movements`);

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { analyticsSentence, chips, filterRows, groupBySection, parseShow, reviewCounts, rowState, showHref, statePill } from "../src/ui/analytics-view";
+import { analyticsSentence, chips, explainLinkLabel, formMode, filterRows, groupBySection, parseShow, reviewCounts, rowState, showHref, statePill } from "../src/ui/analytics-view";
 
 const IS = "Statement of comprehensive income";
 const FP = "Statement of financial position";
@@ -82,5 +82,24 @@ describe("filtering", () => {
     expect(parseShow(undefined)).toBe("all");
     expect(showHref("/a", "all")).toBe("/a");
     expect(showHref("/a", "unexplained")).toBe("/a?show=unexplained");
+  });
+});
+
+describe("formMode", () => {
+  it("opens the write form only under To explain", () => {
+    expect(formMode("unexplained", "to_explain")).toBe("write-open");
+    expect(formMode("all", "to_explain")).toBe("write-closed");
+    expect(formMode("flagged", "to_explain")).toBe("write-closed");
+  });
+  it("offers a closed rewrite for a line that has an explanation, in every view", () => {
+    for (const show of ["all", "flagged", "unexplained"] as const) {
+      expect(formMode(show, "explained")).toBe("rewrite");
+      expect(formMode(show, "reconfirm")).toBe("rewrite");
+      expect(formMode(show, "none")).toBeNull();
+    }
+  });
+  it("words the link to the To explain view", () => {
+    expect(explainLinkLabel(15)).toBe("Explain the 15 movements");
+    expect(explainLinkLabel(1)).toBe("Explain the movement");
   });
 });

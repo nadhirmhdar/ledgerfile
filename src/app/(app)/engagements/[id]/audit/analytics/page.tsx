@@ -8,7 +8,8 @@ import { DAYS_IN_YEAR, FLAG_RULE_TEXT, type RatioRow } from "@/domain/analytics"
 import { formatAmount } from "@/domain/money";
 import { ActionForm } from "@/app/action-form";
 import { reconfirmExplanationAction, saveExplanationAction } from "@/app/analytics-actions";
-import { analyticsSentence, chips, filterRows, groupBySection, parseShow, reviewCounts, rowState, showHref, statePill } from "@/ui/analytics-view";
+import type { Show } from "@/ui/analytics-view";
+import { analyticsSentence, chips, explainLinkLabel, filterRows, formMode, groupBySection, parseShow, reviewCounts, rowState, showHref, statePill } from "@/ui/analytics-view";
 import { Badge } from "@/ui/badge";
 import { Button, LinkButton } from "@/ui/button";
 import { Disclosure } from "@/ui/controls";
@@ -105,7 +106,16 @@ export default async function AnalyticsPage({ params, searchParams }: { params: 
               {FLAG_RULE_TEXT} Performance materiality is {formatAmount(data.thresholds.performanceMinor)}; clearly trivial is {formatAmount(data.thresholds.trivialMinor)}.
             </p>
             {data.unexplained > 0 ? (
-              <Callout variant="warning">{count(data.unexplained, "flagged movement")} {data.unexplained === 1 ? "has" : "have"} no explanation that still stands, which holds up the lock.</Callout>
+              <Callout variant="warning">
+                {count(data.unexplained, "flagged movement")} {data.unexplained === 1 ? "has" : "have"} no explanation that still stands, which holds up the lock.
+                {data.editable && show !== "unexplained" && (
+                  <div className="mt-2">
+                    <LinkButton href={showHref(page, "unexplained")} variant="secondary" size="sm">
+                      {explainLinkLabel(data.unexplained)}
+                    </LinkButton>
+                  </div>
+                )}
+              </Callout>
             ) : (
               <Callout variant="success">Every flagged movement is explained.</Callout>
             )}
@@ -167,7 +177,7 @@ export default async function AnalyticsPage({ params, searchParams }: { params: 
                       </TCell>
                     </TRow>
                     {g.rows.map((r) => (
-                      <RowView key={`${g.section}:${r.key}`} r={r} id={id} editable={data.editable} />
+                      <RowView key={`${g.section}:${r.key}`} r={r} id={id} editable={data.editable} show={show} />
                     ))}
                   </tbody>
                 ))}
@@ -215,11 +225,12 @@ export default async function AnalyticsPage({ params, searchParams }: { params: 
   );
 }
 
-function RowView({ r, id, editable }: { r: AnalyticsRow; id: string; editable: boolean }) {
+function RowView({ r, id, editable, show }: { r: AnalyticsRow; id: string; editable: boolean; show: Show }) {
   const strong = r.kind !== "line";
   const e = r.explanation;
   const state = rowState(r);
   const pill = statePill(state);
+  const mode = formMode(show, state);
   const bg = r.flag ? "bg-warning-soft" : "bg-surface";
   return (
     <>
@@ -260,13 +271,17 @@ function RowView({ r, id, editable }: { r: AnalyticsRow; id: string; editable: b
                     </Button>
                   </ActionForm>
                 )}
-                {e ? (
+                {mode === "rewrite" && (
                   <Disclosure summary="Rewrite the explanation">
                     <ExplanationForm id={id} r={r} label="Rewrite the explanation" />
                   </Disclosure>
-                ) : (
-                  <ExplanationForm id={id} r={r} label="Explanation: the cause, and what you did to confirm it" />
                 )}
+                {mode === "write-closed" && (
+                  <Disclosure summary={`Write an explanation, ${r.label}`}>
+                    <ExplanationForm id={id} r={r} label="Explanation: the cause, and what you did to confirm it" />
+                  </Disclosure>
+                )}
+                {mode === "write-open" && <ExplanationForm id={id} r={r} label="Explanation: the cause, and what you did to confirm it" />}
               </div>
             )}
             {!editable && !e && <p className="mt-1.5 text-ink-muted">No explanation recorded.</p>}
@@ -280,11 +295,11 @@ function RowView({ r, id, editable }: { r: AnalyticsRow; id: string; editable: b
 function ExplanationForm({ id, r, label }: { id: string; r: AnalyticsRow; label: string }) {
   return (
     <ActionForm action={saveExplanationAction} fields={{ engagementId: id, lineKey: r.key }}>
-      <Field label={label}>
-        <Textarea name="explanation" rows={2} maxLength={3000} required defaultValue={r.explanation?.text ?? ""} aria-label={`${label}, ${r.label}`} />
-      </Field>
-      <div className="mt-2">
-        <Button variant="primary" size="sm">
+      <div className="flex flex-col gap-2 md:flex-row md:items-end">
+        <Field label={label} className="min-w-0 flex-1">
+          <Textarea name="explanation" rows={2} maxLength={3000} required defaultValue={r.explanation?.text ?? ""} aria-label={`${label}, ${r.label}`} />
+        </Field>
+        <Button variant="primary" size="sm" className="self-start md:self-auto">
           Save explanation
         </Button>
       </div>
