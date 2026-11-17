@@ -269,11 +269,11 @@ function RowView({ r, id, editable, show }: { r: AnalyticsRow; id: string; edita
               </ActionForm>
             )}
             {editable && mode === "rewrite" ? (
-              <InlineFold reason={r.flag.reason} text="Rewrite" name={`Rewrite the explanation, ${r.label}`} className={e ? "mt-1.5" : ""}>
+              <InlineFold reason={r.flag.reason} text="Rewrite" suffix={`, the explanation for ${r.label}`} className={e ? "mt-1.5" : ""}>
                 <ExplanationForm id={id} r={r} label="Rewrite the explanation" />
               </InlineFold>
             ) : editable && mode === "write-closed" ? (
-              <InlineFold reason={r.flag.reason} text="Write an explanation" name={`Write an explanation, ${r.label}`}>
+              <InlineFold reason={r.flag.reason} text="Write an explanation" suffix={`, ${r.label}`}>
                 <ExplanationForm id={id} r={r} label="Explanation: the cause, and what you did to confirm it" />
               </InlineFold>
             ) : (
@@ -294,16 +294,21 @@ function RowView({ r, id, editable, show }: { r: AnalyticsRow; id: string; edita
 
 /**
  * The flag reason with a light, link-style control after it that opens a form below. Closed it is one line, with no card or border;
- * the panel appears only when open. The summary keeps the line in its accessible name.
+ * the panel appears only when open. Its accessible name is the reason plus the control's text and a hidden suffix naming the line, so nothing visible is dropped.
  */
-function InlineFold({ reason, text, name, className = "", children }: { reason: string; text: string; name: string; className?: string; children: React.ReactNode }) {
+function InlineFold({ reason, text, suffix, className = "", children }: { reason: string; text: string; suffix: string; className?: string; children: React.ReactNode }) {
   return (
     <details className={`group ${className}`}>
-      <summary aria-label={name} className="flex cursor-pointer list-none flex-wrap items-baseline gap-x-3 gap-y-0.5 rounded-sm [&::-webkit-details-marker]:hidden">
+      <summary className="flex cursor-pointer list-none flex-wrap items-baseline gap-x-3 gap-y-0.5 rounded-sm [&::-webkit-details-marker]:hidden">
         <span className="text-ink-muted">{reason}</span>
         <span className="inline-flex items-center gap-1 font-medium text-accent hover:underline">
-          <SummaryChevron />
-          {text}
+          <span aria-hidden="true" className="inline-flex">
+            <SummaryChevron />
+          </span>
+          <span>
+            {text}
+            <span className="sr-only">{suffix}</span>
+          </span>
         </span>
       </summary>
       <div className="mt-2 rounded-lg border border-border bg-surface p-3">{children}</div>
