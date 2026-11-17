@@ -96,10 +96,10 @@ describe("letters for an engagement", () => {
       generateLetter(tx, partner, engagement, "representation", { receivables: "on", supporter: "Noor Holdings", specific: "The warehouse lease will be renewed.\r\n\r\n  Second   matter. " }),
     ))!;
     const out = text(letter.blocks);
-    expect(out).toContain("5. The uncorrected misstatements listed in the attachment");
+    expect(out).toContain("5. In our view the uncorrected misstatements listed in the attachment");
     expect(out).toContain("Noor Holdings has confirmed");
     expect(out).toContain("20. The allowance for doubtful debts is adequate.");
-    expect(out).not.toContain("Inventories are stated");
+    expect(out).not.toContain("Inventories are carried");
     expect(out).toContain("21. The warehouse lease will be renewed.");
     expect(out).toContain("22. Second matter.");
     const table = letter.blocks.find((b) => b.kind === "table") as Extract<Block, { kind: "table" }>;
@@ -136,7 +136,7 @@ describe("letters for an engagement", () => {
     const buffer = await buildLetterDocx(letter.title, letter.blocks);
     const xml = await (await JSZip.loadAsync(buffer)).file("word/document.xml")!.async("string");
     expect(xml).toContain("Draft template wording");
-    expect(xml).toContain("We consider the going-concern basis appropriate");
+    expect(xml).toContain("the going concern basis is appropriate");
     expect(xml).toContain("Accrual not booked");
     expect(xml).toContain("<w:tbl>");
   });

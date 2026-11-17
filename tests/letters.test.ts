@@ -93,7 +93,7 @@ describe("representation letter", () => {
       buildRepresentationLetter({ ...base, ownerSupport: true, inventory: true, receivables: true, tax: true, specific: ["The lease of the warehouse will be renewed."], values: { ...base.values, "Supporter name": "Falcon Holdings" } }),
     );
     expect(full).toHaveLength(23);
-    expect(full[18]).toBe("19. Falcon Holdings has confirmed that it will provide the financial support the Company needs for at least twelve months from the date of approval of the financial statements, and we are satisfied that it is able to do so.");
+    expect(full[18]).toBe("19. Falcon Holdings has confirmed that it will provide the financial support the Company needs for at least twelve months from the date the financial statements are approved, and we are satisfied that it can do so.");
     expect(full[22]).toBe("23. The lease of the warehouse will be renewed.");
   });
 
@@ -102,7 +102,7 @@ describe("representation letter", () => {
     expect(text(buildRepresentationLetter(base))).not.toContain("Attachment");
 
     const blocks = buildRepresentationLetter({ ...base, uncorrected: [{ description: "Accrual not booked", amount: "(4,000.00)" }] });
-    expect(text(blocks)).toContain("5. The uncorrected misstatements listed in the attachment are, in our view, immaterial");
+    expect(text(blocks)).toContain("5. In our view the uncorrected misstatements listed in the attachment are immaterial");
     const table = blocks.find((b) => b.kind === "table") as Extract<Block, { kind: "table" }>;
     expect(table.rows).toEqual([["Accrual not booked", "(4,000.00)"]]);
   });
