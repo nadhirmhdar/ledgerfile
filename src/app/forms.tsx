@@ -2,21 +2,20 @@
 
 import { useActionState } from "react";
 import { buttonClass } from "@/ui/button";
+import { Field, Input, Select } from "@/ui/form";
+import { plainCount } from "@/ui/text";
 import { createClientAction, createEngagementAction, setMappingAction, uploadTrialBalanceAction, type FormState } from "./actions";
 
 const initial: FormState = { ok: true, message: "" };
-const input = "rounded border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900";
-const button = "rounded bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 disabled:opacity-50";
-
 function Feedback({ state }: { state: FormState }) {
   if (!state.message) return null;
   return (
-    <div role="status" className={`mt-3 rounded border px-3 py-2 text-sm ${state.ok ? "border-emerald-300 bg-emerald-50 text-emerald-900" : "border-red-300 bg-red-50 text-red-900"}`}>
-      <p>{state.message}</p>
+    <div role="status" className={`mt-3 rounded-md border px-3 py-2 text-sm ${state.ok ? "border-success bg-success-soft text-success-strong" : "border-danger bg-danger-soft text-danger-strong"}`}>
+      <p className="font-medium">{plainCount(state.message)}</p>
       {state.details && state.details.length > 0 && (
         <ul className="mt-2 list-disc pl-5">
           {state.details.map((d) => (
-            <li key={d}>{d}</li>
+            <li key={d}>{plainCount(d)}</li>
           ))}
         </ul>
       )}
@@ -29,11 +28,10 @@ export function NewClientForm() {
   return (
     <form action={action}>
       <div className="flex flex-wrap items-end gap-3">
-        <label className="flex flex-col gap-1 text-sm text-slate-700">
-          Client name
-          <input name="name" required maxLength={200} className={`${input} w-72`} />
-        </label>
-        <button className={button} disabled={pending}>Add client</button>
+        <Field label="Client name" className="w-full sm:w-72">
+          <Input name="name" required maxLength={200} />
+        </Field>
+        <button className={buttonClass("primary")} disabled={pending}>Add client</button>
       </div>
       <Feedback state={state} />
     </form>
@@ -45,24 +43,21 @@ export function NewEngagementForm({ clients }: { clients: { id: string; name: st
   return (
     <form action={action}>
       <div className="flex flex-wrap items-end gap-3">
-        <label className="flex flex-col gap-1 text-sm text-slate-700">
-          Client
-          <select name="clientId" required className={`${input} w-72`} defaultValue="">
+        <Field label="Client" className="w-full sm:w-72">
+          <Select name="clientId" required defaultValue="">
             <option value="" disabled>Choose a client</option>
             {clients.map((c) => (
               <option key={c.id} value={c.id}>{c.name}</option>
             ))}
-          </select>
-        </label>
-        <label className="flex flex-col gap-1 text-sm text-slate-700">
-          Period start
-          <input type="date" name="periodStart" required className={input} />
-        </label>
-        <label className="flex flex-col gap-1 text-sm text-slate-700">
-          Period end
-          <input type="date" name="periodEnd" required className={input} />
-        </label>
-        <button className={button} disabled={pending}>Create engagement</button>
+          </Select>
+        </Field>
+        <Field label="Period start" className="w-full sm:w-44">
+          <Input type="date" name="periodStart" required />
+        </Field>
+        <Field label="Period end" className="w-full sm:w-44">
+          <Input type="date" name="periodEnd" required />
+        </Field>
+        <button className={buttonClass("primary")} disabled={pending}>Create engagement</button>
       </div>
       <Feedback state={state} />
     </form>

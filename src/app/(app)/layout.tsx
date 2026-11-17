@@ -3,6 +3,7 @@ import { getSession } from "@/server/session";
 import { signOutAction } from "@/app/auth-actions";
 import { Button } from "@/ui/button";
 import { ChevronDownIcon, UserIcon } from "@/ui/icons";
+import { roleLabel } from "@/ui/team-view";
 import { TopNav } from "@/ui/top-nav";
 
 export const dynamic = "force-dynamic";
@@ -35,7 +36,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             <div className="absolute right-0 z-40 mt-1 w-64 rounded-lg border border-border bg-surface p-3 shadow-pop">
               <p className="font-semibold text-ink">{session.name}</p>
               <p className="text-sm text-ink-muted">
-                <span className="capitalize">{session.role}</span> · {session.firmName}
+                {roleLabel(session.role)} · {session.firmName}
               </p>
               <div className="mt-3 flex flex-col gap-2 border-t border-border pt-3">
                 <Link href="/account" className="inline-flex min-h-10 items-center rounded-md px-2 text-sm font-medium text-ink hover:bg-surface-muted">
