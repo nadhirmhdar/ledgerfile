@@ -12,6 +12,7 @@ import { Callout, EmptyState } from "@/ui/feedback";
 import { chipCounts, indexResults, indexSentence, parseIndexSearch, sectionOpen, sectionSummary, viewIndex } from "@/ui/index-view";
 import { PageHeader, Stat } from "@/ui/layout";
 import type { Status as UiStatus } from "@/ui/status";
+import { SummaryChevron, summaryRow } from "@/ui/summary-cue";
 import { Table, TCell, THead, TRow } from "@/ui/table";
 import { plainCount } from "@/ui/text";
 import { EngagementNav } from "../nav";
@@ -206,11 +207,14 @@ export default async function IndexPage({ params, searchParams }: { params: Prom
             ) : (
               <div className="mt-3 space-y-3">
                 {view.sections.map((s) => (
-                  <details key={s.code} id={`sec-${s.code}`} open={sectionOpen(s.counts, { filter, q })} className="scroll-mt-4 rounded-lg border border-border bg-surface shadow-card">
-                    <summary className="flex min-h-12 cursor-pointer flex-wrap items-center gap-x-4 gap-y-1 px-4 py-2 font-semibold">
-                      <span>{s.title}</span>
-                      <span className="text-sm font-normal text-ink-muted">{sectionSummary(s.counts, narrowed)}</span>
-                      {s.counts.toReview > 0 && <Badge tone="warning">{s.counts.toReview} to review</Badge>}
+                  <details key={s.code} id={`sec-${s.code}`} open={sectionOpen(s.counts, { filter, q })} className="group scroll-mt-4 rounded-lg border border-border bg-surface shadow-card">
+                    <summary className={`${summaryRow} font-semibold`}>
+                      <SummaryChevron />
+                      <span className="flex min-w-0 flex-1 flex-wrap items-center gap-x-4 gap-y-1">
+                        <span>{s.title}</span>
+                        <span className="text-sm font-normal text-ink-muted">{sectionSummary(s.counts, narrowed)}</span>
+                        {s.counts.toReview > 0 && <Badge tone="warning">{s.counts.toReview} to review</Badge>}
+                      </span>
                     </summary>
                     <div className="border-t border-border">
                       <div className="hidden sm:block">
