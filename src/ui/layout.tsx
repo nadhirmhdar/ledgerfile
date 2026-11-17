@@ -119,9 +119,9 @@ export function ListRows({ children, className = "" }: { children: ReactNode; cl
   return <ul className={`divide-y divide-border rounded-lg border border-border bg-surface ${className}`}>{children}</ul>;
 }
 
-export function ListRow({ title, subtitle, meta, href, leading }: { title: ReactNode; subtitle?: ReactNode; meta?: ReactNode; href?: string; leading?: ReactNode }) {
+export function ListRow({ title, subtitle, meta, href, leading, inlineMeta = false }: { title: ReactNode; subtitle?: ReactNode; meta?: ReactNode; href?: string; leading?: ReactNode; /** Keep a small meta (an arrow, a count) beside the title on a phone instead of under it. */ inlineMeta?: boolean }) {
   return (
-    <li className="relative flex items-center gap-3 px-4 py-3 hover:bg-surface-muted/60">
+    <li className="relative flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3 hover:bg-surface-muted/60 sm:flex-nowrap">
       {leading && <div className="shrink-0">{leading}</div>}
       <div className="min-w-0 flex-1">
         <div className="font-semibold text-ink">
@@ -135,7 +135,8 @@ export function ListRow({ title, subtitle, meta, href, leading }: { title: React
         </div>
         {subtitle && <div className="text-sm text-ink-muted">{subtitle}</div>}
       </div>
-      {meta && <div className="shrink-0 text-sm text-ink tabular-nums">{meta}</div>}
+      {/* Below sm the meta drops under the title and may wrap, so a row of badges can never be wider than the screen; from sm up it sits at the right and does not shrink. */}
+      {meta && <div className={`min-w-0 max-w-full text-sm text-ink tabular-nums sm:shrink-0 sm:basis-auto ${inlineMeta ? "shrink-0" : "basis-full max-sm:[&>*]:justify-start"}`}>{meta}</div>}
     </li>
   );
 }
