@@ -228,6 +228,12 @@ describe("role restrictions", () => {
       );
     const first = await post();
     expect((await as(prep, (tx) => journals.listJournals(tx, engagement))).find((j) => j.id === first)?.createdBy).toBe(prep.userId);
+    // The poster's name comes with the entry, read through row-level security as the application role.
+    expect((await as(prep, (tx) => journals.listJournals(tx, engagement))).find((j) => j.id === first)?.createdByName).toBe(`${prep.role} ${prep.userId.slice(-1)}`);
+    // An entry whose poster is not on record has no name.
+    await db.query("update journal_entries set created_by = null where id = $1", [first]);
+    expect((await as(prep, (tx) => journals.listJournals(tx, engagement))).find((j) => j.id === first)).toMatchObject({ createdBy: null, createdByName: null });
+    await db.query("update journal_entries set created_by = $2 where id = $1", [first, prep.userId]);
     await expect(as(prep2, (tx) => journals.deleteJournal(tx, prep2, first))).rejects.toThrow(/Only the person who posted/);
     await as(prep, (tx) => journals.deleteJournal(tx, prep, first));
     const second = await post();

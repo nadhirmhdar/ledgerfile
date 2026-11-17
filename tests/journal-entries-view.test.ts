@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { balancePill, entriesSentence, entryReference, entryTotals } from "../src/ui/journal-entries-view";
+import { balancePill, entriesSentence, entryReference, entryTotals, postedText } from "../src/ui/journal-entries-view";
 
 describe("entriesSentence", () => {
   it("says none are posted", () => {
@@ -42,5 +42,15 @@ describe("balancePill", () => {
   });
   it("never leaves the state to colour: every state has words", () => {
     for (const [d, c] of [[0, 0], [5, 5], [5, 4]] as const) expect(balancePill(d, c).label.length).toBeGreaterThan(5);
+  });
+});
+
+describe("postedText", () => {
+  it("names the poster when known", () => {
+    expect(postedText("2025-03-01", "Ana Preparer")).toBe("Posted by Ana Preparer on 2025-03-01");
+  });
+  it("says only the date when the poster is not known", () => {
+    expect(postedText("2025-03-01", null)).toBe("Posted 2025-03-01");
+    expect(postedText("2025-03-01", "")).toBe("Posted 2025-03-01");
   });
 });
