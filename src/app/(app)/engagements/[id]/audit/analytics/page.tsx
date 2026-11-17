@@ -12,7 +12,7 @@ import type { Show } from "@/ui/analytics-view";
 import { analyticsSentence, chips, explainLinkLabel, filterRows, formMode, groupBySection, parseShow, reviewCounts, rowState, showHref, statePill } from "@/ui/analytics-view";
 import { Badge } from "@/ui/badge";
 import { Button, LinkButton } from "@/ui/button";
-import { Disclosure } from "@/ui/controls";
+import { SummaryChevron } from "@/ui/summary-cue";
 import { Callout, EmptyState } from "@/ui/feedback";
 import { Field, Textarea } from "@/ui/form";
 import { PageHeader, Section } from "@/ui/layout";
@@ -251,9 +251,8 @@ function RowView({ r, id, editable, show }: { r: AnalyticsRow; id: string; edita
       {r.flag && (
         <TRow className={bg}>
           <TCell colSpan={5} className="pt-0 text-sm">
-            <p className="text-ink-muted">{r.flag.reason}</p>
             {e && (
-              <p className="mt-1.5">
+              <p>
                 <span className="font-semibold">Explanation:</span> {e.text}{" "}
                 <span className="text-ink-muted">
                   Written by {e.writtenByName} on {e.writtenAt}
@@ -262,26 +261,27 @@ function RowView({ r, id, editable, show }: { r: AnalyticsRow; id: string; edita
               </p>
             )}
             {e?.stale && <p className="mt-1.5 font-semibold text-warning-strong">The figures have changed since this was written. Re-confirm it still holds, or rewrite it. Until then it does not count towards the lock.</p>}
-            {editable && (
-              <div className="mt-2 space-y-2">
-                {e?.stale && (
-                  <ActionForm action={reconfirmExplanationAction} fields={{ engagementId: id, lineKey: r.key }}>
-                    <Button variant="secondary" size="sm">
-                      Re-confirm as written
-                    </Button>
-                  </ActionForm>
-                )}
-                {mode === "rewrite" && (
-                  <Disclosure summary="Rewrite the explanation">
-                    <ExplanationForm id={id} r={r} label="Rewrite the explanation" />
-                  </Disclosure>
-                )}
-                {mode === "write-closed" && (
-                  <Disclosure summary={`Write an explanation, ${r.label}`}>
-                    <ExplanationForm id={id} r={r} label="Explanation: the cause, and what you did to confirm it" />
-                  </Disclosure>
-                )}
-                {mode === "write-open" && <ExplanationForm id={id} r={r} label="Explanation: the cause, and what you did to confirm it" />}
+            {editable && e?.stale && (
+              <ActionForm action={reconfirmExplanationAction} fields={{ engagementId: id, lineKey: r.key }} className="mt-2">
+                <Button variant="secondary" size="sm">
+                  Re-confirm as written
+                </Button>
+              </ActionForm>
+            )}
+            {editable && mode === "rewrite" ? (
+              <InlineFold reason={r.flag.reason} text="Rewrite" name={`Rewrite the explanation, ${r.label}`} className={e ? "mt-1.5" : ""}>
+                <ExplanationForm id={id} r={r} label="Rewrite the explanation" />
+              </InlineFold>
+            ) : editable && mode === "write-closed" ? (
+              <InlineFold reason={r.flag.reason} text="Write an explanation" name={`Write an explanation, ${r.label}`}>
+                <ExplanationForm id={id} r={r} label="Explanation: the cause, and what you did to confirm it" />
+              </InlineFold>
+            ) : (
+              <p className={`text-ink-muted ${e ? "mt-1.5" : ""}`}>{r.flag.reason}</p>
+            )}
+            {editable && mode === "write-open" && (
+              <div className="mt-2">
+                <ExplanationForm id={id} r={r} label="Explanation: the cause, and what you did to confirm it" />
               </div>
             )}
             {!editable && !e && <p className="mt-1.5 text-ink-muted">No explanation recorded.</p>}
@@ -289,6 +289,25 @@ function RowView({ r, id, editable, show }: { r: AnalyticsRow; id: string; edita
         </TRow>
       )}
     </>
+  );
+}
+
+/**
+ * The flag reason with a light, link-style control after it that opens a form below. Closed it is one line, with no card or border;
+ * the panel appears only when open. The summary keeps the line in its accessible name.
+ */
+function InlineFold({ reason, text, name, className = "", children }: { reason: string; text: string; name: string; className?: string; children: React.ReactNode }) {
+  return (
+    <details className={`group ${className}`}>
+      <summary aria-label={name} className="flex cursor-pointer list-none flex-wrap items-baseline gap-x-3 gap-y-0.5 rounded-sm [&::-webkit-details-marker]:hidden">
+        <span className="text-ink-muted">{reason}</span>
+        <span className="inline-flex items-center gap-1 font-medium text-accent hover:underline">
+          <SummaryChevron />
+          {text}
+        </span>
+      </summary>
+      <div className="mt-2 rounded-lg border border-border bg-surface p-3">{children}</div>
+    </details>
   );
 }
 
