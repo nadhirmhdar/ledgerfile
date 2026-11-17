@@ -55,7 +55,8 @@ export default async function Home() {
                     </Link>
                   </TCell>
                   <TCell>
-                    {e.periodStart} to {e.periodEnd}
+                    <span className="block whitespace-nowrap">{e.periodStart}</span>
+                    <span className="block whitespace-nowrap">to {e.periodEnd}</span>
                   </TCell>
                   <TCell>
                     <StatusBadge status={e.status === "open" ? "in_progress" : "locked"} label={e.status === "open" ? "Open" : "Locked"} />

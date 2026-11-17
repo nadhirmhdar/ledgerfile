@@ -91,7 +91,7 @@ export function AddUserForm({ roles, minPassword }: { roles: readonly string[]; 
       <Feedback state={state} />
       <div>
         <Button variant="primary" disabled={pending}>
-          Add user
+          Add person
         </Button>
       </div>
     </form>
