@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getDb, withFirm } from "@/server/db";
 import { getSession } from "@/server/session";
@@ -7,12 +6,17 @@ import * as journals from "@/server/journals";
 import { formatAmount } from "@/domain/money";
 import { canDeleteJournal } from "@/domain/permissions";
 import { deleteJournalAction } from "@/app/actions";
+import { Badge } from "@/ui/badge";
+import { LinkButton } from "@/ui/button";
+import { Disclosure } from "@/ui/controls";
+import { EmptyState } from "@/ui/feedback";
+import { entriesSentence, entryReference, entryTotals } from "@/ui/journal-entries-view";
+import { Card, PageHeader, Section } from "@/ui/layout";
+import { Table, TCell, THead, TRow } from "@/ui/table";
 import { EngagementNav } from "../nav";
 import { DeleteJournalButton, JournalForm } from "./journal-form";
 
 export const dynamic = "force-dynamic";
-
-const num = "py-1.5 pl-4 text-right tabular-nums whitespace-nowrap";
 
 export default async function JournalsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -25,76 +29,120 @@ export default async function JournalsPage({ params }: { params: Promise<{ id: s
     list: await journals.listJournals(tx, id),
   }));
   if (!engagement) notFound();
+  const open = engagement.status === "open";
+
+  const form = <JournalForm engagementId={id} accounts={accounts.map((a) => ({ id: a.id, code: a.code, name: a.name }))} />;
 
   return (
-    <div className="py-8 text-slate-900">
-      <Link href="/" className="text-sm text-blue-700 underline">All engagements</Link>
-      <h1 className="mt-2 text-2xl font-semibold">{engagement.clientName}</h1>
-      <p className="mt-1 text-sm text-slate-600">{engagement.periodStart} to {engagement.periodEnd}</p>
+    <div className="py-8 text-ink">
+      <PageHeader
+        breadcrumb={[{ label: "All engagements", href: "/" }]}
+        title="Journal entries"
+        meta={
+          <>
+            <span>{engagement.clientName}</span>
+            <span aria-hidden="true">·</span>
+            <span>
+              {engagement.periodStart} to {engagement.periodEnd}
+            </span>
+          </>
+        }
+        subtitle={accounts.length === 0 ? "Import a trial balance before posting journal entries." : entriesSentence(list)}
+      />
       <EngagementNav id={id} current="journals" status={engagement.status} />
 
-      {accounts.length === 0 ? (
-        <p className="mt-6 text-sm text-slate-600">Import a trial balance before posting journal entries.</p>
-      ) : (
-        <>
-          <section className="mt-6 rounded border border-slate-200 bg-slate-50 p-4">
-            <h2 className="text-base font-semibold">New entry</h2>
-            <div className="mt-3">
-              <JournalForm engagementId={id} accounts={accounts.map((a) => ({ id: a.id, code: a.code, name: a.name }))} />
-            </div>
-          </section>
+      <div className="mt-6 min-w-0 space-y-6">
+        {accounts.length === 0 ? (
+          <EmptyState
+            title="Import a trial balance first"
+            description="Journal entries adjust the trial balance, so there has to be one. Import it, then post entries here."
+            action={
+              <LinkButton href={`/engagements/${id}/trial-balance`} variant="primary">
+                Trial balance and mapping
+              </LinkButton>
+            }
+          />
+        ) : (
+          <>
+            <p className="max-w-3xl text-sm text-ink-muted">Entries adjust the trial balance that the lead sheets and the financial statements are built from.</p>
 
-          <section className="mt-8">
-            <h2 className="text-lg font-semibold">Posted entries</h2>
-            {list.length === 0 ? (
-              <p className="mt-2 text-sm text-slate-600">No entries yet. Lead sheets and statements show the trial balance as imported.</p>
-            ) : (
-              list.map((j) => (
-                <div key={j.id} className="mt-4 overflow-x-auto rounded border border-slate-200">
-                  <table className="w-full text-left text-sm">
-                    <caption className="border-b border-slate-200 bg-slate-50 px-3 py-2 text-left">
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <span>
-                          <span className="font-semibold">
-                            {j.type === "adjusting" ? "AJE" : "RJE"} {j.number}
-                          </span>
-                          <span className="ml-2">{j.description}</span>
-                          <span className="ml-2 text-xs text-slate-600">{j.createdAt}</span>
-                        </span>
-                        {engagement.status === "open" && canDeleteJournal(session.role, j.createdBy === session.userId) && (
-                        <form action={deleteJournalAction}>
-                          <input type="hidden" name="engagementId" value={id} />
-                          <input type="hidden" name="journalId" value={j.id} />
-                          <DeleteJournalButton label={`${j.type === "adjusting" ? "AJE" : "RJE"} ${j.number}`} />
-                        </form>
-                        )}
-                      </div>
-                    </caption>
-                    <thead className="text-slate-600">
-                      <tr>
-                        <th className="px-3 py-1.5 font-medium">Code</th>
-                        <th className="py-1.5 font-medium">Account</th>
-                        <th className={`${num} font-medium`}>Debit</th>
-                        <th className={`${num} pr-3 font-medium`}>Credit</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {j.lines.map((l, i) => (
-                        <tr key={i} className="border-t border-slate-100">
-                          <td className="px-3 py-1.5 font-mono text-xs">{l.accountCode}</td>
-                          <td className="py-1.5">{l.accountName}</td>
-                          <td className={num}>{l.amountMinor > 0 ? formatAmount(l.amountMinor) : ""}</td>
-                          <td className={`${num} pr-3`}>{l.amountMinor < 0 ? formatAmount(-l.amountMinor) : ""}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ))
-            )}
-          </section>
-        </>
-      )}
+            {open &&
+              (list.length === 0 ? (
+                <Card title="New entry">{form}</Card>
+              ) : (
+                <Disclosure summary="Post a new entry">
+                  <h2 className="mb-3 text-base font-semibold text-ink">New entry</h2>
+                  {form}
+                </Disclosure>
+              ))}
+
+            <Section title="Posted entries">
+              {list.length === 0 ? (
+                <p className="text-sm text-ink-muted">No entries yet. Lead sheets and statements show the trial balance as imported.</p>
+              ) : (
+                <ul className="space-y-4">
+                  {list.map((j) => {
+                    const ref = entryReference(j.type, j.number);
+                    const totals = entryTotals(j.lines);
+                    return (
+                      <li key={j.id}>
+                        <Card
+                          title={
+                            <span className="flex flex-wrap items-center gap-2">
+                              <Badge tone="info">{ref}</Badge>
+                              <span>{j.description}</span>
+                            </span>
+                          }
+                          description={`Posted ${j.createdAt}`}
+                          actions={
+                            open && canDeleteJournal(session.role, j.createdBy === session.userId) ? (
+                              <form action={deleteJournalAction}>
+                                <input type="hidden" name="engagementId" value={id} />
+                                <input type="hidden" name="journalId" value={j.id} />
+                                <DeleteJournalButton label={ref} />
+                              </form>
+                            ) : undefined
+                          }
+                        >
+                          <Table caption={`Lines of ${ref}`}>
+                            <THead>
+                              <TRow>
+                                <TCell header="col">Code</TCell>
+                                <TCell header="col">Account</TCell>
+                                <TCell header="col" numeric>
+                                  Debit
+                                </TCell>
+                                <TCell header="col" numeric>
+                                  Credit
+                                </TCell>
+                              </TRow>
+                            </THead>
+                            <tbody>
+                              {j.lines.map((l, i) => (
+                                <TRow key={i}>
+                                  <TCell className="font-mono text-sm">{l.accountCode}</TCell>
+                                  <TCell>{l.accountName}</TCell>
+                                  <TCell numeric>{l.amountMinor > 0 ? formatAmount(l.amountMinor) : ""}</TCell>
+                                  <TCell numeric>{l.amountMinor < 0 ? formatAmount(-l.amountMinor) : ""}</TCell>
+                                </TRow>
+                              ))}
+                              <TRow className="bg-surface-muted font-semibold">
+                                <TCell colSpan={2}>Totals</TCell>
+                                <TCell numeric>{formatAmount(totals.debitMinor)}</TCell>
+                                <TCell numeric>{formatAmount(totals.creditMinor)}</TCell>
+                              </TRow>
+                            </tbody>
+                          </Table>
+                        </Card>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </Section>
+          </>
+        )}
+      </div>
     </div>
   );
 }
