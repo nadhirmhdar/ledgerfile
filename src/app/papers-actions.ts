@@ -6,6 +6,8 @@ import { getSession } from "@/server/session";
 import { getFileStore } from "@/server/file-store";
 import { uploadTooLargeMessage } from "@/server/config";
 import * as papers from "@/server/working-papers";
+import { beginDirectUpload, directUploadAvailable, finishDirectUpload } from "@/server/direct-upload";
+import { blobOps } from "@/server/blob-file-store";
 import type { FormState } from "./actions";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -69,4 +71,37 @@ export async function fileWorkingPaperAction(_prev: FormState, form: FormData): 
   }
   revalidatePath(`/engagements/${engagementId}`, "layout");
   return { ok: true, message: "Saved." };
+}
+
+// --- Direct upload to the private Blob store (hosted, FILE_STORE=vercel-blob) --------------------------------------------------
+
+export type BeginUploadResult = { ok: true; key: string } | { ok: false; message: string };
+
+/** Step 1: check the file's declared name, size and purpose, and get the one key the browser may write. */
+export async function beginUploadAction(input: { engagementId: string; supports: string; fileName: string; sizeBytes: number; description: string }): Promise<BeginUploadResult> {
+  const session = await getSession();
+  if (!directUploadAvailable()) return { ok: false, message: "This deployment cannot take large uploads." };
+  if (!UUID.test(String(input?.engagementId))) return { ok: false, message: "Engagement not found." };
+  if (typeof input.fileName !== "string" || typeof input.supports !== "string" || typeof input.description !== "string") return { ok: false, message: "Choose a file to upload." };
+  if (!Number.isSafeInteger(input.sizeBytes) || input.sizeBytes <= 0) return { ok: false, message: "Choose a file to upload." };
+  const [targetKind, target] = input.supports.split(":");
+  try {
+    const begun = await beginDirectUpload(await getDb(), session, blobOps(), { engagementId: input.engagementId, targetKind, target: target || null, fileName: input.fileName, sizeBytes: input.sizeBytes, description: input.description });
+    return { ok: true, key: begun.key };
+  } catch (e) {
+    return { ok: false, message: failure(e, "The file was not uploaded.").message };
+  }
+}
+
+/** Step 3: the server reads what arrived, checks it against the declaration and only then makes it a working paper. */
+export async function finishUploadAction(key: string): Promise<FormState> {
+  const session = await getSession();
+  if (!directUploadAvailable()) return { ok: false, message: "This deployment cannot take large uploads." };
+  try {
+    const done = await finishDirectUpload(await getDb(), session, blobOps(), String(key));
+    revalidatePath(`/engagements/${done.engagementId}`, "layout");
+    return { ok: true, message: `Uploaded ${done.fileName}.` };
+  } catch (e) {
+    return failure(e, "The file was not uploaded.");
+  }
 }

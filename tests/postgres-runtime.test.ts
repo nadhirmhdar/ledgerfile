@@ -1,7 +1,9 @@
-import { randomBytes } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import * as auth from "../src/server/auth";
-import { withFirm, type Db } from "../src/server/db";
+import { withAuth, withFirm, type Db } from "../src/server/db";
+import * as repo from "../src/server/repo";
+import { beginDirectUpload, finishDirectUpload, tokenOptionsFor, type BlobOps } from "../src/server/direct-upload";
 import { databaseUrl } from "../src/server/config";
 import { assertSchemaCurrent } from "../src/server/migrations";
 import { createPostgresDb } from "../src/server/pg-adapter";
@@ -97,6 +99,26 @@ describe.skipIf(!URL)("the Postgres adapter as the runtime role", () => {
   it("does not let tenant work reach sessions or password hashes", async () => {
     await expect(withFirm(db, a.firmId, (tx) => tx.query("select * from sessions"))).rejects.toThrow(/permission denied/);
     await expect(withFirm(db, a.firmId, (tx) => tx.query("select password_hash from users"))).rejects.toThrow(/permission denied/);
+  });
+
+  it("runs a direct upload begin and finish as the runtime role: the row is the firm's own, the sign-in role cannot read it", async () => {
+    const sa = { firmId: a.firmId, userId: a.userId, role: "partner" } as repo.Session;
+    const engagementId = await withFirm(db, a.firmId, async (tx) => repo.createEngagement(tx, sa, await repo.createClient(tx, sa, "Direct upload client"), "2025-01-01", "2025-12-31"));
+    const data = new TextEncoder().encode("direct upload through the runtime role");
+    const stored = new Map<string, Uint8Array>();
+    const ops: BlobOps = {
+      inspect: async (key) => (stored.has(key) ? { size: stored.get(key)!.byteLength, sha256: createHash("sha256").update(stored.get(key)!).digest("hex") } : null),
+      remove: async (key) => void stored.delete(key),
+    };
+    const { key } = await beginDirectUpload(db, sa, ops, { engagementId, targetKind: "engagement", target: null, fileName: "scan.pdf", sizeBytes: data.byteLength, description: "" });
+    // Another firm sees nothing; the sign-in role has no access to the table at all.
+    expect(await withFirm(db, b.firmId, async (tx) => (await tx.query("select 1 from pending_uploads where key = $1", [key])).rows.length)).toBe(0);
+    await expect(withAuth(db, (tx) => tx.query("select 1 from pending_uploads"))).rejects.toThrow(/permission denied/);
+    await expect(tokenOptionsFor(db, { firmId: b.firmId, userId: b.userId, role: "admin" } as repo.Session, key)).rejects.toThrow(/not allowed/);
+    stored.set(key, data);
+    const done = await finishDirectUpload(db, sa, ops, key);
+    expect(await withFirm(db, a.firmId, async (tx) => (await tx.query("select 1 from working_papers where id::text = $1", [done.id])).rows.length)).toBe(1);
+    expect(await withFirm(db, a.firmId, async (tx) => (await tx.query("select 1 from pending_uploads where key = $1", [key])).rows.length)).toBe(0);
   });
 
   it("leaves nothing on the connection after a transaction, which is what makes a transaction pooler safe", async () => {

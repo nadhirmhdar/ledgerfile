@@ -31,7 +31,7 @@ The Neon integration injects `DATABASE_URL` holding the **owner's** credentials.
 | `LEDGERFILE_APP_PASSWORD` | **you** | runtime and setup | **yes** | Password of `ledgerfile_app`, 24+ characters |
 | `SAMPLE_ADMIN_PASSWORD`, `SAMPLE_PARTNER_PASSWORD`, `SAMPLE_REVIEWER_PASSWORD`, `SAMPLE_PREPARER_PASSWORD` | **you** | setup | **yes** | Passwords of the invented sample firm's four users (optional) |
 | `FILE_STORE` | you (not secret) | runtime | no | `vercel-blob` |
-| `BLOB_READ_WRITE_TOKEN` or `BLOB_STORE_ID` and OIDC | Blob connection | runtime | yes | Server-only credentials the Blob SDK reads. Never `NEXT_PUBLIC_` |
+| `BLOB_READ_WRITE_TOKEN` or `BLOB_STORE_ID` and OIDC | Blob connection | runtime | yes | Server-only credentials the Blob SDK reads. Never `NEXT_PUBLIC_`. Uploads over 4 MB need the token |
 | `VERCEL` | Vercel | runtime | no | Marks the deployment as hosted |
 | `SIGNUP_OPEN` | you (not secret) | runtime | no | `1` opens firm sign-up; unset means closed when hosted |
 | `LEDGERFILE_DATABASE_URL` | you (optional) | runtime | yes | An explicit runtime URL that overrides the Neon parts (for another host). Refused if its user is a known owner |
@@ -55,7 +55,11 @@ From the Vercel Blob docs ([private storage](https://vercel.com/docs/vercel-blob
 
 ## Uploads and downloads
 
-Vercel Functions limit a request body to 4.5 MB ([limitations](https://vercel.com/docs/functions/limitations)), so hosted uploads stay capped at **4 MB** from one helper (`maxUploadBytes()`). Going past it needs client uploads with a server-issued token that accepts only our key, then a server action that verifies size and sha256; that is a follow-up, not built here. The docs say the response cap "doesn't apply to" streamed responses, but nothing in them confirms this for a Next.js route handler, and the download route checks the file's hash before serving, so it still refuses a stored file over 4.5 MB (413, logged as `download_refused`).
+Vercel Functions limit a request body to 4.5 MB ([limitations](https://vercel.com/docs/functions/limitations)), so an upload that passes through a function stays capped at **4 MB** (`maxUploadBytes()`). That applies to the spreadsheet imports (trial balance, journals, schedules), which the server reads and parses, and to every upload when `BLOB_READ_WRITE_TOKEN` is not set.
+
+**Working papers up to 50 MB** go straight from the browser to the private Blob store when `FILE_STORE=vercel-blob` **and `BLOB_READ_WRITE_TOKEN` is set** (the SDK signs client tokens with the read-write token; the store id with OIDC alone cannot, so that setup keeps the 4 MB form). The flow is begin (the server checks the user and the file's declared name and size and records a key in `pending_uploads`), token (`/api/blob-upload` issues a token for that key only, limited to the declared size, no overwrite, no random suffix, valid for 15 minutes), then finish (the server reads the object, checks its size against the declaration, hashes it itself and only then creates the working paper). A file that does not match is deleted and refused. An upload that is never finished expires after 15 minutes and is swept, with its blob, by the next upload in that firm. The limit is one constant, `DIRECT_UPLOAD_BYTES` in `src/server/config.ts`.
+
+Downloads still go through the logged route and are streamed, so a 50 MB file is not subject to the 4.5 MB response cap (the docs say the cap "doesn't apply to" streamed responses; that is not confirmed for a Next.js route handler until it is tried on a deployment). The route reads the whole file and checks its sha256 before it sends the first byte, so a file that has changed is still refused (409).
 
 ## Regions
 
