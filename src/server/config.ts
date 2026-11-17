@@ -163,3 +163,16 @@ export const RESPONSE_CAP_BYTES = 4.5 * 1024 * 1024;
  * Decided before the download is logged, so the audit trail records only downloads that really happened.
  */
 export const responseTooLarge = (bytes: number, env: Env = process.env): boolean => isHosted(env) && bytes > RESPONSE_CAP_BYTES;
+
+/**
+ * Refuses to run a development server (next dev) against a database that is not on this machine. A pulled Vercel environment, or a
+ * stray variable, could otherwise point a local dev server at the production database as ledgerfile_app, on hosted-mode settings and
+ * real client data. LEDGERFILE_ALLOW_REMOTE_DEV=1 allows it knowingly. The message names no host, user or secret.
+ */
+export function assertDevSafe(env: Env = process.env): void {
+  if (env.NODE_ENV !== "development" || env.LEDGERFILE_ALLOW_REMOTE_DEV === "1") return;
+  const url = databaseUrl(env);
+  if (url && !isLoopbackHost(parseUrl(url, "The runtime connection").hostname)) {
+    throw new HostedConfigError("This development server would connect to a database that is not on this machine. Remove the hosted variables from your local environment, or set LEDGERFILE_ALLOW_REMOTE_DEV=1 if you mean it.");
+  }
+}

@@ -11,9 +11,9 @@
     "typecheck": "tsc --noEmit",
     "sample": "node scripts/make-sample-tb.mjs && node scripts/make-sample-journals.mjs",
     "seed": "tsx --env-file-if-exists=.env.local scripts/seed-demo.mts",
-    "seed:sample-hosted": "tsx scripts/seed-sample-hosted.mts",
-    "db:migrate": "tsx --env-file-if-exists=.env.local scripts/migrate.mts",
-    "db:setup-hosted": "tsx --env-file-if-exists=.env.local scripts/setup-hosted.mts",
+    "seed:sample-hosted": "tsx --env-file-if-exists=.env.vercel scripts/seed-sample-hosted.mts",
+    "db:migrate": "tsx --env-file-if-exists=.env.vercel scripts/migrate.mts",
+    "db:setup-hosted": "tsx --env-file-if-exists=.env.vercel scripts/setup-hosted.mts",
     "sample:statements": "tsx scripts/sample-statements.mts",
     "methodology": "tsx scripts/build-methodology.mts"
   },

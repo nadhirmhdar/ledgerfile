@@ -1,7 +1,7 @@
 import { PGlite } from "@electric-sql/pglite";
 import { mkdirSync } from "node:fs";
 import path from "node:path";
-import { databaseUrl, redact } from "./config";
+import { assertDevSafe, databaseUrl, redact } from "./config";
 import { applyMigrations, assertSchemaCurrent, upsertGroups } from "./migrations";
 import { createPostgresDb } from "./pg-adapter";
 
@@ -78,6 +78,7 @@ export async function withAuth<T>(db: Db, fn: (tx: Tx) => Promise<T>): Promise<T
 const holder = globalThis as unknown as { __ledgerfileDb?: Promise<Db> };
 
 async function openForProcess(): Promise<Db> {
+  assertDevSafe();
   const url = databaseUrl();
   if (!url) return openDatabase(path.join(process.cwd(), ".data", "pg"));
   // Hosted: the schema is migrated by `npm run db:migrate`, never at start. Refuse to run against a different version.
