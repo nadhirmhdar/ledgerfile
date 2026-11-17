@@ -37,7 +37,7 @@ const form = (email: string) => {
 
 beforeAll(async () => {
   db = await openDatabase();
-}, 60000);
+});
 afterEach(() => vi.unstubAllEnvs());
 
 describe("signUpAction and the SIGNUP_OPEN switch", () => {
