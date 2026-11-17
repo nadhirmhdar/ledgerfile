@@ -72,3 +72,12 @@ describe("redact", () => {
     expect(redact("The file is larger than 4 MB.", {})).toBe("The file is larger than 4 MB.");
   });
 });
+
+describe("responseTooLarge", () => {
+  it("only refuses a file over the cap, and only when hosted", async () => {
+    const { responseTooLarge, RESPONSE_CAP_BYTES } = await import("../src/server/config");
+    expect(responseTooLarge(RESPONSE_CAP_BYTES + 1, { VERCEL: "1" })).toBe(true);
+    expect(responseTooLarge(RESPONSE_CAP_BYTES, { VERCEL: "1" })).toBe(false);
+    expect(responseTooLarge(RESPONSE_CAP_BYTES + 1, {})).toBe(false);
+  });
+});

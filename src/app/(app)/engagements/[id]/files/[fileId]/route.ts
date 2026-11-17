@@ -1,14 +1,11 @@
 import { getDb, withFirm } from "@/server/db";
 import { getSession } from "@/server/session";
 import { getFileStore } from "@/server/file-store";
-import { isHosted } from "@/server/config";
+import { responseTooLarge } from "@/server/config";
 import * as repo from "@/server/repo";
 import { readWorkingPaper } from "@/server/working-papers";
 
 export const dynamic = "force-dynamic";
-
-/** Vercel Functions cap a response body at about 4.5 MB; stay under it. */
-const RESPONSE_CAP_BYTES = 4.5 * 1024 * 1024;
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -19,10 +16,15 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   if (!UUID.test(id) || !UUID.test(fileId)) return new Response("Not found", { status: 404 });
 
   let paper: Awaited<ReturnType<typeof readWorkingPaper>>;
+  let refused = false;
   try {
     paper = await withFirm(await getDb(), session.firmId, async (tx) => {
       const found = await readWorkingPaper(tx, getFileStore(), id, fileId);
-      if (found) await repo.audit(tx, session, "download", "working_paper", fileId, { engagementId: id });
+      if (found) {
+        // A file too large to serve is not downloaded, so no "download" entry: the refusal is logged instead.
+        refused = responseTooLarge(found.data.byteLength);
+        await repo.audit(tx, session, refused ? "download_refused" : "download", "working_paper", fileId, { engagementId: id });
+      }
       return found;
     });
   } catch (e) {
@@ -35,11 +37,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   }
   if (!paper) return new Response("Not found", { status: 404 });
 
-  // The download is logged above, before any byte is served. A function response is capped (about 4.5 MB on Vercel); a file kept
-  // from before the hosted upload limit may be larger, and is reported rather than sent as a body that would be cut off.
-  if (isHosted() && paper.data.byteLength > RESPONSE_CAP_BYTES) {
-    return new Response("This file is too large to download from the hosted site.", { status: 413 });
-  }
+  // A function response is capped (about 4.5 MB on Vercel); a file kept from before the hosted upload limit may be larger.
+  if (refused) return new Response("This file is too large to download from the hosted site.", { status: 413 });
 
   // Uploaded files are untrusted. They are always sent as a download of unspecified type, never
   // displayed in the page, and the name in the header is reduced to plain characters.

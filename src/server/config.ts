@@ -56,3 +56,12 @@ export function redact(text: string, env: Env = process.env): string {
   }
   return out;
 }
+
+/** Vercel Functions cap a response body at about 4.5 MB. */
+export const RESPONSE_CAP_BYTES = 4.5 * 1024 * 1024;
+
+/**
+ * Whether a file must not be served as a response body: hosted, and over the cap (a file stored before the upload limit applied).
+ * Decided before the download is logged, so the audit trail records only downloads that really happened.
+ */
+export const responseTooLarge = (bytes: number, env: Env = process.env): boolean => isHosted(env) && bytes > RESPONSE_CAP_BYTES;
