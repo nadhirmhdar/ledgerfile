@@ -115,6 +115,7 @@ export function appPasswordProblems(env: Env = process.env): string[] {
   if (!v) return ["LEDGERFILE_APP_PASSWORD is not set."];
   const problems: string[] = [];
   if (v.length < 24) problems.push("LEDGERFILE_APP_PASSWORD is shorter than 24 characters.");
+  else if (passwordEntropyBits(v) < 60) problems.push("LEDGERFILE_APP_PASSWORD is too predictable (Neon needs at least 60 bits of entropy): use a long random string.");
   if (v === PUBLIC_DEMO_PASSWORD) problems.push("LEDGERFILE_APP_PASSWORD is the public demo password.");
   for (const k of ["SAMPLE_ADMIN_PASSWORD", "SAMPLE_PARTNER_PASSWORD", "SAMPLE_REVIEWER_PASSWORD", "SAMPLE_PREPARER_PASSWORD"]) {
     if (env[k] && env[k] === v) problems.push(`LEDGERFILE_APP_PASSWORD is the same as ${k}.`);
@@ -148,11 +149,40 @@ export const uploadTooLargeMessage = (env: Env = process.env): string => `The fi
 /** Replace anything that looks like a connection string, and any configured secret value, so an error can be logged safely. */
 export function redact(text: string, env: Env = process.env): string {
   let out = text.replace(/\bpostgres(?:ql)?:\/\/[^\s'"]*/gi, "postgres://[redacted]");
-  for (const key of ["DATABASE_URL", "DATABASE_URL_UNPOOLED", "DATABASE_URL_MIGRATIONS", "LEDGERFILE_DATABASE_URL", "LEDGERFILE_APP_PASSWORD", "PGPASSWORD", "SUPABASE_SERVICE_ROLE_KEY", "BLOB_READ_WRITE_TOKEN", "TEST_DATABASE_URL"]) {
+  for (const key of ["DATABASE_URL", "DATABASE_URL_UNPOOLED", "DATABASE_URL_MIGRATIONS", "LEDGERFILE_DATABASE_URL", "PGPASSWORD", "SUPABASE_SERVICE_ROLE_KEY", "BLOB_READ_WRITE_TOKEN", "TEST_DATABASE_URL"]) {
     const v = env[key]?.trim();
     if (v && v.length >= 6) out = out.split(v).join("[redacted]");
   }
+  // Passwords are removed as typed AND in the forms they take inside SQL text and URLs: a quote-doubled literal, one with backslashes
+  // doubled too (what node-postgres escapeLiteral writes), and the URL-encoded form.
+  for (const key of ["LEDGERFILE_APP_PASSWORD", "SAMPLE_ADMIN_PASSWORD", "SAMPLE_PARTNER_PASSWORD", "SAMPLE_REVIEWER_PASSWORD", "SAMPLE_PREPARER_PASSWORD"]) {
+    const v = env[key];
+    if (!v || v.length < 6) continue;
+    const forms = [v, v.replace(/'/g, "''"), v.replace(/\\/g, "\\\\").replace(/'/g, "''"), encodeURIComponent(v)];
+    // Longest first, so a form that contains another is removed whole.
+    for (const f of [...new Set(forms)].sort((a, b) => b.length - a.length)) out = out.split(f).join("[redacted]");
+  }
   return out;
+}
+
+/** Neon rejects a password set through SQL below 60 bits of entropy. A conservative estimate: length times the size of the character pool, and a floor on distinct characters. */
+export function passwordEntropyBits(password: string): number {
+  const pool = (/[a-z]/.test(password) ? 26 : 0) + (/[A-Z]/.test(password) ? 26 : 0) + (/[0-9]/.test(password) ? 10 : 0) + (/[^a-zA-Z0-9]/.test(password) ? 33 : 0);
+  if (pool === 0 || new Set(password).size < 8) return 0;
+  return password.length * Math.log2(pool);
+}
+
+/** Never weakens a URL: for any host that is not on this machine, sslmode becomes verify-full (require, verify-ca, disable, or none included). */
+export function withVerifiedTls(connectionString: string): string {
+  let u: URL;
+  try {
+    u = new URL(connectionString);
+  } catch {
+    return connectionString;
+  }
+  if (isLoopbackHost(u.hostname)) return connectionString;
+  u.searchParams.set("sslmode", "verify-full");
+  return u.toString();
 }
 
 /** Vercel Functions cap a response body at about 4.5 MB. */
