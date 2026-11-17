@@ -41,9 +41,11 @@ export default async function ProgrammePage({ params, searchParams }: { params: 
   if (!/^[0-9a-f-]{36}$/i.test(id) || !area) notFound();
 
   const session = await getSession();
-  const { engagement, procedures, files, overview, scheduleList, requestSummary, confirmationCounts } = await withFirm(await getDb(), session.firmId, async (tx) => ({
+  const { engagement, procedures, files, overview, scheduleList, requestSummary, confirmationCounts, selfReviewAllowed } = await withFirm(await getDb(), session.firmId, async (tx) => ({
     engagement: await repo.getEngagement(tx, id),
-    procedures: await audit.listProcedures(tx, id, area.code),
+    procedures: await audit.listProcedures(tx, id, area.code, session.userId),
+    // Whether the firm may let a reviewer review work they did themselves (the server's own rule).
+    selfReviewAllowed: await repo.canSelfReviewAudit(tx),
     files: await papers.listWorkingPapers(tx, id),
     overview: await audit.getAuditOverview(tx, id),
     scheduleList: checklist ? [] : await listSchedules(tx, id, area.code),
@@ -62,7 +64,7 @@ export default async function ProgrammePage({ params, searchParams }: { params: 
   const waiting = view.counts.waiting;
   const reviewedCount = procedures.filter((p) => p.reviewedAt).length;
   const here = (s: ProcedureShow) => `${base}/audit/${area.code}${s === "all" ? "" : `?show=${s}`}`;
-  const ctx = { open, auditOn, role: session.role, userId: session.userId };
+  const ctx = { open, auditOn, role: session.role, userId: session.userId, selfReviewAllowed };
 
   const sentence =
     procedures.length === 0
@@ -388,6 +390,12 @@ export default async function ProgrammePage({ params, searchParams }: { params: 
                             </div>
                           )}
 
+                          {c.workedOnIt === "waiting" && (
+                            <div className="mt-3 flex flex-wrap items-center gap-2">
+                              <Badge tone="neutral">Waiting for another reviewer</Badge>
+                              <span className="text-sm text-ink-muted">You did this work, so another reviewer signs it off.</span>
+                            </div>
+                          )}
                           {c.review && (
                             <ActionForm action={reviewProcedureAction} fields={{ procedureId: p.id, withdraw: p.reviewedAt ? "true" : "false" }} className="mt-3">
                               <Button variant={c.review === "review" ? "primary" : "secondary"} size="sm">
@@ -395,6 +403,7 @@ export default async function ProgrammePage({ params, searchParams }: { params: 
                               </Button>
                             </ActionForm>
                           )}
+                          {c.workedOnIt === "self" && <p className="mt-2 text-sm text-ink-muted">You did this work, so the review will be recorded as self-reviewed.</p>}
                         </Card>
                       </li>
                     );

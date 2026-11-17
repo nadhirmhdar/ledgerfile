@@ -193,6 +193,14 @@ describe("external confirmations", () => {
     await expect(as(prep, (tx) => conf.reviewConfirmation(tx, prep, id))).rejects.toThrow(/Only a reviewer or partner/);
     await db.query("update users set role = 'reviewer' where id = $1", [prep2.userId]);
     await expect(as({ ...prep2, role: "reviewer" }, (tx) => conf.reviewConfirmation(tx, { ...prep2, role: "reviewer" }, id))).rejects.toThrow(/different person/);
+    // The page is told what the server will decide: a contributor sees viewerWorkedOnIt, another reviewer does not, and with no viewer it is false.
+    const seenBy = async (viewer?: string) => (await as(rev, (tx) => conf.listConfirmations(tx, e2025, viewer))).find((c) => c.id === id)!.viewerWorkedOnIt;
+    expect(await seenBy(prep2.userId)).toBe(true);
+    expect(await seenBy(prep.userId)).toBe(true);
+    expect(await seenBy(rev.userId)).toBe(false);
+    expect(await seenBy()).toBe(false);
+    // This firm has other reviewers, so self-review is not allowed: the server's own rule, which the page asks for.
+    expect(await as(rev, (tx) => repo.canSelfReviewAudit(tx))).toBe(false);
     await db.query("update users set role = 'preparer' where id = $1", [prep2.userId]);
     await as(rev, (tx) => conf.reviewConfirmation(tx, rev, id));
     expect(await get(e2025, id)).toMatchObject({ state: "reviewed", reviewedByName: "reviewer 2", selfReviewed: false });

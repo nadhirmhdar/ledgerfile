@@ -94,3 +94,24 @@ describe("controls", () => {
     }
   });
 });
+
+describe("controls when the viewer did the work", () => {
+  const ctx = (role: "preparer" | "reviewer" | "partner", selfReviewAllowed?: boolean) => ({ open: true, auditOn: true, role, userId: "u1", selfReviewAllowed });
+  const mine = p({ status: "done", viewerWorkedOnIt: true });
+  it("offers review as before when the viewer did not do the work", () => {
+    expect(procedureControls(p({ status: "done", viewerWorkedOnIt: false }), ctx("reviewer"))).toMatchObject({ review: "review" });
+    expect(procedureControls(p({ status: "done" }), ctx("reviewer")).workedOnIt).toBeUndefined();
+  });
+  it("withholds review from a reviewer who did the work where the firm has another reviewer", () => {
+    for (const role of ["reviewer", "partner"] as const) expect(procedureControls(mine, ctx(role, false))).toMatchObject({ review: null, workedOnIt: "waiting" });
+  });
+  it("keeps review, marked as a self-review, where the firm may self-review", () => {
+    expect(procedureControls(mine, ctx("reviewer", true))).toMatchObject({ review: "review", workedOnIt: "self" });
+  });
+  it("leaves withdrawing a review, a preparer, an open procedure and a partner's step alone", () => {
+    expect(procedureControls(reviewed({ viewerWorkedOnIt: true }), ctx("reviewer", false))).toMatchObject({ review: "withdraw" });
+    expect(procedureControls(mine, ctx("preparer", false)).workedOnIt).toBeUndefined();
+    expect(procedureControls(p({ viewerWorkedOnIt: true }), ctx("reviewer", false))).toMatchObject({ review: null });
+    expect(procedureControls(p({ status: "done", partnerStep: true, viewerWorkedOnIt: true }), ctx("partner", false)).workedOnIt).toBeUndefined();
+  });
+});

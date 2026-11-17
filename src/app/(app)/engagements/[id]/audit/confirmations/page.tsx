@@ -45,6 +45,7 @@ import {
   confirmationsSentence,
   filterConfirmations,
   nextAction,
+  SELF_REVIEW_NOTE,
   parseConfirmationSearch,
   parseConfirmationShow,
   replyPill,
@@ -70,13 +71,15 @@ export default async function ConfirmationsPage({ params, searchParams }: { para
 
   const session = await getSession();
   const today = todayIso();
-  const { engagement, auditOn, all, summary, papers } = await withFirm(await getDb(), session.firmId, async (tx) => {
+  const { engagement, auditOn, all, summary, papers, selfReviewAllowed } = await withFirm(await getDb(), session.firmId, async (tx) => {
     const engagement = await repo.getEngagement(tx, id);
     const auditOn = engagement ? ((await getAuditOverview(tx, id))?.enabled ?? false) : false;
     return {
       engagement,
       auditOn,
-      all: auditOn ? await listConfirmations(tx, id) : [],
+      all: auditOn ? await listConfirmations(tx, id, session.userId) : [],
+      // Whether the firm may let a reviewer review work they did themselves (the server's own rule).
+      selfReviewAllowed: auditOn ? await repo.canSelfReviewAudit(tx) : false,
       summary: auditOn ? await confirmationSummary(tx, id) : null,
       papers: auditOn ? await listWorkingPapers(tx, id) : [],
     };
@@ -320,7 +323,7 @@ export default async function ConfirmationsPage({ params, searchParams }: { para
                             const editable = open && !c.reviewedByName;
                             const pill = statePill(c);
                             const rp = replyPill(c.reply);
-                            const next = nextAction(c, session.role, locked, auditOn);
+                            const next = nextAction(c, session.role, locked, auditOn, { workedOnIt: c.viewerWorkedOnIt, selfReviewAllowed });
                             return (
                               <TwoLineRow
                                 key={c.id}
@@ -359,13 +362,21 @@ export default async function ConfirmationsPage({ params, searchParams }: { para
                                       </Button>
                                     </ActionForm>
                                   ) : next.kind === "review" ? (
-                                    <ActionForm action={reviewConfirmationAction} fields={{ confirmationId: c.id }}>
-                                      <Button variant="primary" size="sm">
-                                        Mark reviewed
-                                      </Button>
-                                    </ActionForm>
+                                    <span className="flex flex-wrap items-center gap-2">
+                                      <ActionForm action={reviewConfirmationAction} fields={{ confirmationId: c.id }}>
+                                        <Button variant="primary" size="sm">
+                                          Mark reviewed
+                                        </Button>
+                                      </ActionForm>
+                                      {next.selfReview && <span className="text-sm text-ink-muted">{SELF_REVIEW_NOTE}</span>}
+                                    </span>
                                   ) : next.kind === "waiting_review" ? (
                                     <Badge tone="neutral">Waiting for review</Badge>
+                                  ) : next.kind === "waiting_other_reviewer" ? (
+                                    <span className="flex flex-wrap items-center gap-2">
+                                      <Badge tone="neutral">Waiting for another reviewer</Badge>
+                                      <span className="text-sm text-ink-muted">{next.reason}</span>
+                                    </span>
                                   ) : undefined
                                 }
                               >

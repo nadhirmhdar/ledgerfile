@@ -175,25 +175,35 @@ export type NextAction =
   | { kind: "record_reply" }
   | { kind: "add_work"; reason: string }
   | { kind: "prepare" }
-  | { kind: "review" }
+  | { kind: "review"; selfReview?: true }
   | { kind: "waiting_review" }
+  | { kind: "waiting_other_reviewer"; reason: string }
   | { kind: "none" };
 
 /**
  * The single thing to offer inline on a row. Nothing on a locked engagement, with the audit off, or once reviewed. Reviewing is for
- * a reviewer or partner; a preparer sees that it is waiting. The page cannot know whether a reviewer also did the work, so a
- * reviewer is offered the button and the server refuses a self-review where the firm has another reviewer.
+ * a reviewer or partner; a preparer sees that it is waiting. A reviewer who worked on it (`viewer.workedOnIt`, from the server's own
+ * worker list) is not offered the button where the firm has another reviewer: they see that another reviewer must sign it off. Where
+ * the firm may self-review (a sole practitioner) the button stays and is marked as a self-review. The server still decides.
  */
+export const SELF_REVIEW_WAITING_REASON = "You worked on this, so another reviewer signs it off.";
+export const SELF_REVIEW_NOTE = "You worked on this, so it will be recorded as self-reviewed.";
+
 export function nextAction(
   c: { state: ConfirmationState; sentOn: string | null; reply: Reply | null; reconciliation: string | null; alternativeProcedures: string | null },
   role: Role,
   locked: boolean,
   auditOn: boolean,
+  viewer: { workedOnIt: boolean; selfReviewAllowed: boolean } = { workedOnIt: false, selfReviewAllowed: false },
 ): NextAction {
   if (locked || !auditOn || c.state === "reviewed") return { kind: "none" };
   if (!c.sentOn) return { kind: "mark_sent" };
   if (!c.reply) return { kind: "record_reply" };
-  if (c.state === "prepared") return canReview(role) ? { kind: "review" } : { kind: "waiting_review" };
+  if (c.state === "prepared") {
+    if (!canReview(role)) return { kind: "waiting_review" };
+    if (viewer.workedOnIt) return viewer.selfReviewAllowed ? { kind: "review", selfReview: true } : { kind: "waiting_other_reviewer", reason: SELF_REVIEW_WAITING_REASON };
+    return { kind: "review" };
+  }
   const reason = prepareBlocker({ sentOn: c.sentOn, reply: c.reply, reconciliation: c.reconciliation, alternativeProcedures: c.alternativeProcedures });
   return reason ? { kind: "add_work", reason } : { kind: "prepare" };
 }

@@ -12,6 +12,8 @@ export interface ProcedureLike {
   reviewedByName: string | null;
   selfReviewed: boolean;
   partnerStep: boolean;
+  /** The viewer did the work (from the server's own check). Optional: a caller with no viewer leaves it out. */
+  viewerWorkedOnIt?: boolean;
 }
 
 export type ProcedureShow = "all" | "open" | "waiting" | "done";
@@ -74,6 +76,8 @@ export interface ControlsInput {
   auditOn: boolean;
   role: Role;
   userId: string;
+  /** The firm may let a reviewer review work they did themselves (a sole practitioner). Default false. */
+  selfReviewAllowed?: boolean;
 }
 
 export interface Controls {
@@ -82,6 +86,8 @@ export interface Controls {
   /** A reviewed procedure cannot be changed until the review is withdrawn. */
   lockedByReview: boolean;
   review: "review" | "withdraw" | null;
+  /** Only for a reviewer who did the work on a procedure waiting for review: "waiting" (another reviewer signs it) or "self" (the button stays, recorded as self-reviewed). */
+  workedOnIt?: "waiting" | "self";
   attach: boolean;
   /** Whether this viewer may remove an attached file uploaded by `uploadedBy`. */
   canRemove: (uploadedBy: string) => boolean;
@@ -89,10 +95,15 @@ export interface Controls {
 
 export function procedureControls(p: ProcedureLike, c: ControlsInput): Controls {
   const live = c.open && c.auditOn;
+  const reviewable = live && canReview(c.role) && p.status !== "open" && !p.partnerStep;
+  // A reviewer who did the work is not offered the review where the firm has another reviewer: the server would refuse it. Where the firm may
+  // self-review the button stays, with a note. Withdrawing a review is unchanged.
+  const mine = reviewable && !p.reviewedAt && !!p.viewerWorkedOnIt;
   return {
     edit: live && !p.reviewedAt,
     lockedByReview: live && !!p.reviewedAt,
-    review: live && canReview(c.role) && p.status !== "open" && !p.partnerStep ? (p.reviewedAt ? "withdraw" : "review") : null,
+    review: reviewable ? (p.reviewedAt ? "withdraw" : mine && !c.selfReviewAllowed ? null : "review") : null,
+    ...(mine ? { workedOnIt: c.selfReviewAllowed ? ("self" as const) : ("waiting" as const) } : {}),
     attach: live,
     canRemove: (uploadedBy) => live && (uploadedBy === c.userId || canReview(c.role)),
   };

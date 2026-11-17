@@ -14,7 +14,7 @@ import { Button, buttonClass } from "@/ui/button";
 import { Callout } from "@/ui/feedback";
 import { Field, Input, Select, Textarea } from "@/ui/form";
 import { Card, PageHeader, Section } from "@/ui/layout";
-import { keyItemsSentence, readOnlyReason, reviewBadge, scheduleSentence, signOffControls } from "@/ui/schedule-view";
+import { keyItemsSentence, readOnlyReason, reviewBadge, SCHEDULE_SELF_NOTE, SCHEDULE_WAITING_REASON, scheduleSentence, signOffControls } from "@/ui/schedule-view";
 import { SummaryChevron, summaryRow } from "@/ui/summary-cue";
 import { scheduleCrumbs } from "@/ui/engagement-nav";
 import { EngagementNav } from "../../../../nav";
@@ -37,9 +37,11 @@ export default async function SchedulePage({ params }: { params: Promise<{ id: s
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
 
   const session = await getSession();
-  const { engagement, schedule } = await withFirm(await getDb(), session.firmId, async (tx) => ({
+  const { engagement, schedule, selfReviewAllowed } = await withFirm(await getDb(), session.firmId, async (tx) => ({
     engagement: await repo.getEngagement(tx, id),
-    schedule: await getSchedule(tx, scheduleId),
+    schedule: await getSchedule(tx, scheduleId, undefined, session.userId),
+    // Whether the firm may let a reviewer review work they did themselves (the server's own rule).
+    selfReviewAllowed: await repo.canSelfReviewAudit(tx),
   }));
   if (!engagement || !schedule || schedule.engagementId !== id || schedule.areaCode !== area) notFound();
 
@@ -49,7 +51,7 @@ export default async function SchedulePage({ params }: { params: Promise<{ id: s
   const money = (n: number) => formatAmount(n);
   const badge = reviewBadge(schedule);
   const readOnly = readOnlyReason({ open, auditOn, reviewed: schedule.reviewed });
-  const signOff = signOffControls({ role: session.role, open, auditOn, reviewed: schedule.reviewed, hasConclusion: !!schedule.conclusion?.trim() });
+  const signOff = signOffControls({ role: session.role, open, auditOn, reviewed: schedule.reviewed, hasConclusion: !!schedule.conclusion?.trim(), viewerWorkedOnIt: schedule.viewerWorkedOnIt, selfReviewAllowed });
   const untestedKeys = schedule.coverage.keyItems - schedule.coverage.keyItemsTested;
   const exportHref = `/engagements/${id}/audit/${area}/schedules/${schedule.id}/export`;
 
@@ -223,12 +225,19 @@ export default async function SchedulePage({ params }: { params: Promise<{ id: s
           )}
         </Section>
 
-        {(signOff.review || signOff.delete) && (
+        {(signOff.review || signOff.delete || signOff.workedOnIt) && (
           <Section title="Sign-off">
             {signOff.review && (
               <ActionForm action={reviewScheduleAction} fields={{ scheduleId: schedule.id, withdraw: schedule.reviewed ? "true" : "false" }}>
                 <Button variant={signOff.review === "review" ? "primary" : "secondary"}>{signOff.review === "withdraw" ? "Withdraw review" : "Review this schedule"}</Button>
               </ActionForm>
+            )}
+            {signOff.workedOnIt === "self" && <p className="mt-2 text-sm text-ink-muted">{SCHEDULE_SELF_NOTE}</p>}
+            {signOff.workedOnIt === "waiting" && (
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge tone="neutral">Waiting for another reviewer</Badge>
+                <span className="text-sm text-ink-muted">{SCHEDULE_WAITING_REASON}</span>
+              </div>
             )}
             {signOff.delete && (
               <div className={signOff.review ? "mt-6 border-t border-border pt-4" : ""}>
