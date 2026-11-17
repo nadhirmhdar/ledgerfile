@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { Fragment, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { parseAmount, formatAmount } from "@/domain/money";
 import { TICKMARKS } from "@/domain/tickmarks";
@@ -44,6 +44,8 @@ interface Row {
 const plainAmount = (minor: number) => (minor / 100).toFixed(2);
 const toRow = (l: LineData): Row => ({ key: l.id, id: l.id, description: l.description, docRef: l.docRef ?? "", amount: plainAmount(l.amountMinor), tested: l.tested, tickmarks: l.tickmarks, workingPaperId: l.workingPaperId ?? "", remarks: l.remarks ?? "", prior: l.priorAmountMinor, dirty: false });
 const cell = `${ctl} w-full min-h-9 px-2`;
+const th = "px-3 py-2.5 font-medium";
+const td = "px-3 py-2";
 
 /**
  * The editable line table. Edits are kept in the page and saved together, only the rows that changed, so a long listing is
@@ -158,20 +160,12 @@ export function LinesTable({
       <Table className="mt-4" caption="Lines of the schedule">
         <THead>
           <TRow>
-            <TCell header="col" className="sticky left-0 z-10 min-w-64 bg-surface-muted">Line</TCell>
-            <TCell header="col">Reference</TCell>
-            <TCell header="col" numeric>Amount</TCell>
-            {hasPrior && <TCell header="col" numeric>Last year</TCell>}
-            {hasPrior && <TCell header="col" numeric>Movement</TCell>}
-            <TCell header="col">Tested</TCell>
-            <TCell header="col">Tickmarks</TCell>
-            <TCell header="col">Evidence</TCell>
-            <TCell header="col">Remarks</TCell>
-            {editable && (
-              <TCell header="col">
-                <span className="sr-only">Remove</span>
-              </TCell>
-            )}
+            <th scope="col" className={`${th} sticky left-0 z-10 min-w-56 bg-surface-muted`}>Line</th>
+            <th scope="col" className={th}>Reference</th>
+            <th scope="col" className={`${th} text-right`}>Amount</th>
+            {hasPrior && <th scope="col" className={`${th} text-right`}>Last year</th>}
+            {hasPrior && <th scope="col" className={`${th} text-right`}>Movement</th>}
+            <th scope="col" className={th}>Tested</th>
           </TRow>
         </THead>
         <tbody>
@@ -181,81 +175,100 @@ export function LinesTable({
             const move = movement(parsed[i].amountMinor, r.prior);
             const fileName = files.find((f) => f.id === r.workingPaperId)?.fileName;
             const bg = key || keyMove ? "bg-warning-soft" : "bg-surface";
+            const cols = 4 + (hasPrior ? 2 : 0);
+            const hasDetail = r.tickmarks.length > 0 || !!fileName || !!r.remarks;
             return (
-              <TRow key={r.key} className={`align-top ${bg}`}>
-                <TCell className={`sticky left-0 z-[1] min-w-64 ${bg}`}>
-                  <div className="flex flex-wrap items-center gap-1 text-sm text-ink-muted">
-                    <span>Line {i + 1}</span>
-                    {key && <Badge tone="warning">Key</Badge>}
-                    {keyMove && <Badge tone="warning">Key movement</Badge>}
-                  </div>
-                  {editable ? <input aria-label={`Description, line ${i + 1}`} className={`${cell} mt-1 min-w-56`} maxLength={500} value={r.description} onChange={(e) => update(r.key, { description: e.target.value })} /> : <div className="mt-1 text-ink">{r.description}</div>}
-                </TCell>
-                <TCell>{editable ? <input aria-label={`Reference, line ${i + 1}`} className={`${cell} min-w-28`} maxLength={100} value={r.docRef} onChange={(e) => update(r.key, { docRef: e.target.value })} /> : r.docRef}</TCell>
-                <TCell numeric>
-                  {editable ? (
-                    <input aria-label={`Amount, line ${i + 1}`} inputMode="decimal" aria-invalid={parsed[i].invalid || undefined} className={`${cell} min-w-36 text-right ${parsed[i].invalid ? "border-danger bg-danger-soft" : ""}`} value={r.amount} onChange={(e) => update(r.key, { amount: e.target.value })} />
-                  ) : (
-                    formatAmount(parsed[i].amountMinor)
-                  )}
-                </TCell>
-                {hasPrior && <TCell numeric className="text-ink-muted">{r.prior === null ? "" : formatAmount(r.prior)}</TCell>}
-                {hasPrior && <TCell numeric>{move === null ? "" : formatAmount(move)}</TCell>}
-                <TCell>
-                  <input type="checkbox" className="size-5" aria-label={`Tested, line ${i + 1}`} disabled={!editable} checked={r.tested} onChange={(e) => update(r.key, { tested: e.target.checked })} />
-                </TCell>
-                <TCell>
-                  <div className="flex min-w-48 flex-wrap gap-1">
-                    {TICKMARKS.map((t) => {
-                      const on = r.tickmarks.includes(t.code);
-                      return editable ? (
-                        <button
-                          key={t.code}
-                          type="button"
-                          title={t.meaning}
-                          aria-label={`${t.meaning} (line ${i + 1})`}
-                          aria-pressed={on}
-                          onClick={() => toggleTick(r, t.code)}
-                          className={`inline-flex min-h-8 min-w-8 items-center justify-center rounded-md border px-1.5 text-sm ${on ? "border-accent bg-accent font-bold text-surface underline decoration-2 underline-offset-2" : "border-border-strong bg-surface text-ink-muted hover:bg-surface-muted"}`}
-                        >
-                          {t.symbol}
-                        </button>
-                      ) : on ? (
-                        <span key={t.code} role="img" title={t.meaning} aria-label={t.meaning} className="inline-flex min-h-7 min-w-7 items-center justify-center rounded-md border border-border-strong bg-surface px-1.5 text-sm font-medium text-ink">
-                          {t.symbol}
-                        </span>
-                      ) : null;
-                    })}
-                  </div>
-                </TCell>
-                <TCell>
-                  {editable ? (
-                    <select aria-label={`Evidence, line ${i + 1}`} className={`${cell} min-w-44`} value={r.workingPaperId} onChange={(e) => update(r.key, { workingPaperId: e.target.value })}>
-                      <option value="">None</option>
-                      {files.map((f) => (
-                        <option key={f.id} value={f.id}>
-                          {f.fileName}
-                        </option>
-                      ))}
-                    </select>
-                  ) : fileName ? (
-                    <span className="text-sm break-all">{fileName}</span>
-                  ) : null}
-                </TCell>
-                <TCell>{editable ? <input aria-label={`Remarks, line ${i + 1}`} className={`${cell} min-w-44`} maxLength={1000} value={r.remarks} onChange={(e) => update(r.key, { remarks: e.target.value })} /> : r.remarks}</TCell>
-                {editable && (
-                  <TCell>
-                    <Button type="button" variant="danger" size="sm" aria-label={`Remove line ${i + 1}`} onClick={() => remove(r)}>
-                      Remove
-                    </Button>
-                  </TCell>
+              <Fragment key={r.key}>
+                {/* The first row is what the line is and its figures; the second holds how it was tested. Two rows keep the table inside its box. */}
+                <tr className={`align-top ${bg} ${editable || hasDetail ? "" : "border-b border-border"}`}>
+                  <td className={`${td} sticky left-0 z-[1] min-w-56 ${bg}`}>
+                    <div className="flex flex-wrap items-center gap-1 text-sm text-ink-muted">
+                      <span>Line {i + 1}</span>
+                      {key && <Badge tone="warning">Key</Badge>}
+                      {keyMove && <Badge tone="warning">Key movement</Badge>}
+                    </div>
+                    {editable ? <input aria-label={`Description, line ${i + 1}`} className={`${cell} mt-1 min-w-52`} maxLength={500} value={r.description} onChange={(e) => update(r.key, { description: e.target.value })} /> : <div className="mt-1 text-ink">{r.description}</div>}
+                  </td>
+                  <td className={td}>{editable ? <input aria-label={`Reference, line ${i + 1}`} className={`${cell} min-w-28`} maxLength={100} value={r.docRef} onChange={(e) => update(r.key, { docRef: e.target.value })} /> : r.docRef}</td>
+                  <td className={`${td} text-right tabular-nums`}>
+                    {editable ? (
+                      <input aria-label={`Amount, line ${i + 1}`} inputMode="decimal" aria-invalid={parsed[i].invalid || undefined} className={`${cell} min-w-36 text-right ${parsed[i].invalid ? "border-danger bg-danger-soft" : ""}`} value={r.amount} onChange={(e) => update(r.key, { amount: e.target.value })} />
+                    ) : (
+                      formatAmount(parsed[i].amountMinor)
+                    )}
+                  </td>
+                  {hasPrior && <td className={`${td} text-right whitespace-nowrap text-ink-muted tabular-nums`}>{r.prior === null ? "" : formatAmount(r.prior)}</td>}
+                  {hasPrior && <td className={`${td} text-right whitespace-nowrap tabular-nums`}>{move === null ? "" : formatAmount(move)}</td>}
+                  <td className={td}>
+                    <input type="checkbox" className="size-5" aria-label={`Tested, line ${i + 1}`} disabled={!editable} checked={r.tested} onChange={(e) => update(r.key, { tested: e.target.checked })} />
+                  </td>
+                </tr>
+                {(editable || hasDetail) && (
+                  <tr className={`border-b border-border ${bg}`}>
+                    <td colSpan={cols} className="px-3 pt-0 pb-3">
+                      <div className="flex flex-wrap items-end gap-x-6 gap-y-3">
+                        <div>
+                          {editable && <div className="mb-1 text-sm font-medium text-ink">Tickmarks</div>}
+                          <div className="flex flex-wrap gap-1">
+                            {TICKMARKS.map((t) => {
+                              const on = r.tickmarks.includes(t.code);
+                              return editable ? (
+                                <button
+                                  key={t.code}
+                                  type="button"
+                                  title={t.meaning}
+                                  aria-label={`${t.meaning} (line ${i + 1})`}
+                                  aria-pressed={on}
+                                  onClick={() => toggleTick(r, t.code)}
+                                  className={`inline-flex min-h-8 min-w-8 items-center justify-center rounded-md border px-1.5 text-sm ${on ? "border-accent bg-accent font-bold text-surface underline decoration-2 underline-offset-2" : "border-border-strong bg-surface text-ink-muted hover:bg-surface-muted"}`}
+                                >
+                                  {t.symbol}
+                                </button>
+                              ) : on ? (
+                                <span key={t.code} role="img" title={t.meaning} aria-label={t.meaning} className="inline-flex min-h-7 min-w-7 items-center justify-center rounded-md border border-border-strong bg-surface px-1.5 text-sm font-medium text-ink">
+                                  {t.symbol}
+                                </span>
+                              ) : null;
+                            })}
+                          </div>
+                        </div>
+                        {editable ? (
+                          <>
+                            <label className="block text-sm font-medium text-ink">
+                              Evidence
+                              <select aria-label={`Evidence, line ${i + 1}`} className={`${cell} mt-1 w-48`} value={r.workingPaperId} onChange={(e) => update(r.key, { workingPaperId: e.target.value })}>
+                                <option value="">None</option>
+                                {files.map((f) => (
+                                  <option key={f.id} value={f.id}>
+                                    {f.fileName}
+                                  </option>
+                                ))}
+                              </select>
+                            </label>
+                            <label className="block min-w-48 flex-1 text-sm font-medium text-ink">
+                              Remarks
+                              <input aria-label={`Remarks, line ${i + 1}`} className={`${cell} mt-1`} maxLength={1000} value={r.remarks} onChange={(e) => update(r.key, { remarks: e.target.value })} />
+                            </label>
+                            <Button type="button" variant="danger" size="sm" className="ml-auto" aria-label={`Remove line ${i + 1}`} onClick={() => remove(r)}>
+                              Remove
+                            </Button>
+                          </>
+                        ) : (
+                          <>
+                            {fileName && <span className="text-sm break-all text-ink-muted">Evidence: {fileName}</span>}
+                            {r.remarks && <span className="text-sm text-ink-muted">Remarks: {r.remarks}</span>}
+                          </>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
                 )}
-              </TRow>
+              </Fragment>
             );
           })}
           {rows.length === 0 && (
             <TRow>
-              <TCell colSpan={11} className="text-ink-muted">
+              <TCell colSpan={6} className="text-ink-muted">
                 No lines yet. Import a listing above or add a line.
               </TCell>
             </TRow>
