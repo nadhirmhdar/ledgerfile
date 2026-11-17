@@ -150,3 +150,25 @@ describe("the one next action", () => {
     }
   });
 });
+
+describe("nextAction when the viewer worked on it", () => {
+  const prepared = { state: "prepared" as ConfirmationState, sentOn: "2026-01-01", reply: "agreed" as const, reconciliation: null, alternativeProcedures: null };
+  it("offers a reviewer who did not work on it the button, as before", () => {
+    expect(nextAction(prepared, "reviewer", false, true, { workedOnIt: false, selfReviewAllowed: false })).toEqual({ kind: "review" });
+    expect(nextAction(prepared, "partner", false, true, { workedOnIt: false, selfReviewAllowed: true })).toEqual({ kind: "review" });
+    expect(nextAction(prepared, "reviewer", false, true)).toEqual({ kind: "review" });
+  });
+  it("withholds the button from a reviewer who worked on it where the firm has another reviewer, and says why", () => {
+    for (const role of ["reviewer", "partner"] as const) {
+      expect(nextAction(prepared, role, false, true, { workedOnIt: true, selfReviewAllowed: false })).toEqual({ kind: "waiting_other_reviewer", reason: "You worked on this, so another reviewer signs it off." });
+    }
+  });
+  it("keeps the button, marked as a self-review, where the firm may self-review", () => {
+    expect(nextAction(prepared, "reviewer", false, true, { workedOnIt: true, selfReviewAllowed: true })).toEqual({ kind: "review", selfReview: true });
+  });
+  it("does not change what a preparer sees, or anything locked, off or already reviewed", () => {
+    expect(nextAction(prepared, "preparer", false, true, { workedOnIt: true, selfReviewAllowed: false })).toEqual({ kind: "waiting_review" });
+    expect(nextAction(prepared, "reviewer", true, true, { workedOnIt: true, selfReviewAllowed: false })).toEqual({ kind: "none" });
+    expect(nextAction({ ...prepared, state: "reviewed" }, "reviewer", false, true, { workedOnIt: true, selfReviewAllowed: false })).toEqual({ kind: "none" });
+  });
+});

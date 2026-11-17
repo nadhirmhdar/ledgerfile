@@ -66,6 +66,8 @@ export interface ConfirmationView {
   reviewedAt: string | null;
   /** The reviewer also did some of the work (possible only where the firm has no other reviewer). */
   selfReviewed: boolean;
+  /** The person asking is among those who worked on it, so the server will not let them review it unless the firm may self-review. False when no viewer was given. */
+  viewerWorkedOnIt: boolean;
   state: ConfirmationState;
   files: ConfirmationFile[];
 }
@@ -147,7 +149,7 @@ async function nextSeq(tx: Tx, engagementId: string): Promise<number> {
 }
 
 /** Every confirmation on the engagement, by area then reference, with files, names and the derived difference and state. */
-export async function listConfirmations(tx: Tx, engagementId: string): Promise<ConfirmationView[]> {
+export async function listConfirmations(tx: Tx, engagementId: string, viewerId?: string): Promise<ConfirmationView[]> {
   const { rows } = await tx.query<Row>(`${SELECT} where c.engagement_id = $1 order by c.seq`, [engagementId]);
   if (rows.length === 0) return [];
   const linked = await tx.query<{ confirmationId: string; id: string; fileName: string; sizeBytes: number }>(
@@ -183,6 +185,8 @@ export async function listConfirmations(tx: Tx, engagementId: string): Promise<C
       reviewedByName: r.reviewedByName,
       reviewedAt: r.reviewedAt,
       selfReviewed: !!r.reviewedBy && workedBy(r).includes(r.reviewedBy),
+      // The same list assertMayReview is given on review, so the page and the server cannot disagree.
+      viewerWorkedOnIt: !!viewerId && workedBy(r).includes(viewerId),
       state: confirmationState({ sentOn: r.sentOn, reply: r.reply, prepared: r.preparedBy !== null, reviewed: r.reviewedBy !== null }),
       files: files.get(r.id) ?? [],
     }))

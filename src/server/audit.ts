@@ -140,6 +140,8 @@ export interface ProcedureRow {
   selfReviewed: boolean;
   /** The partner's own sign-off step: it needs no further review. */
   partnerStep: boolean;
+  /** The person asking did the work, so the server will not let them review it unless the firm may self-review. False when no viewer was given. */
+  viewerWorkedOnIt: boolean;
 }
 
 /**
@@ -510,14 +512,16 @@ export async function approveRiskAssessment(tx: Tx, s: Session, engagementId: st
   await log(tx, s, "approve_risk_assessment", "engagement", engagementId, { reapproval: overview.approval.state === "lapsed" });
 }
 
-export async function listProcedures(tx: Tx, engagementId: string, areaCode: string): Promise<ProcedureRow[]> {
+export async function listProcedures(tx: Tx, engagementId: string, areaCode: string, viewerId?: string): Promise<ProcedureRow[]> {
   const { rows } = await tx.query<ProcedureRow>(
     `select p.id, p.template_id as "templateId", p.tier, p.assertions, p.body, p.evidence, p.reference, p.status,
             p.work_done as "workDone", p.conclusion, u.name as "performedByName", to_char(p.performed_at, 'YYYY-MM-DD') as "performedAt",
-            r.name as "reviewedByName", to_char(p.reviewed_at, 'YYYY-MM-DD') as "reviewedAt", p.reviewed_by is not null and p.reviewed_by = p.performed_by as "selfReviewed", p.evidence ~* ${PARTNER_STEP} as "partnerStep"
+            r.name as "reviewedByName", to_char(p.reviewed_at, 'YYYY-MM-DD') as "reviewedAt", p.reviewed_by is not null and p.reviewed_by = p.performed_by as "selfReviewed", p.evidence ~* ${PARTNER_STEP} as "partnerStep",
+            -- The same test assertMayReview makes on review: the viewer is the person who did the work.
+            coalesce(p.performed_by = $3::uuid, false) as "viewerWorkedOnIt"
      from audit_procedures p left join users u on u.id = p.performed_by left join users r on r.id = p.reviewed_by
      where p.engagement_id = $1 and p.area_code = $2`,
-    [engagementId, areaCode],
+    [engagementId, areaCode, viewerId ?? null],
   );
   // C5.2 sorts before C5.10.
   return rows.sort((a, b) => a.templateId.localeCompare(b.templateId, undefined, { numeric: true }));

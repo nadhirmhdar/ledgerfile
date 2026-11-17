@@ -93,6 +93,22 @@ describe("self-review where the firm has only one reviewer-level user", () => {
     expect(o.blockers.some((x) => x.toLowerCase().includes("self"))).toBe(false);
   });
 
+  it("tells the page who did a procedure and whether the firm may self-review, and the server still decides", async () => {
+    const two = await mkFirm(["partner", "reviewer", "preparer"]);
+    const other = two.users.find((u) => u.role === "reviewer")!;
+    const [step] = await procs(two);
+    await as(two.lead, (tx) => audit.updateProcedure(tx, two.lead, step.id, work("Done by the partner")));
+    const seenBy = async (v?: repo.Session) => (await as(two.lead, (tx) => audit.listProcedures(tx, two.engagement, two.area, v?.userId))).find((p) => p.id === step.id)!.viewerWorkedOnIt;
+    expect(await seenBy(two.lead)).toBe(true);
+    expect(await seenBy(other)).toBe(false);
+    expect(await seenBy()).toBe(false);
+    expect(await as(two.lead, (tx) => repo.canSelfReviewAudit(tx))).toBe(false);
+    await expect(as(two.lead, (tx) => audit.reviewProcedure(tx, two.lead, step.id))).rejects.toThrow(/different person/);
+    // A sole reviewer-level user may self-review, so the page keeps the button for them.
+    const solo = await mkFirm(["partner", "preparer"]);
+    expect(await as(solo.lead, (tx) => repo.canSelfReviewAudit(tx))).toBe(true);
+  });
+
   it("keeps the different-person rule where the firm has two reviewer-level users", async () => {
     const f = await mkFirm(["partner", "reviewer", "preparer"]);
     const [a, b] = await procs(f);

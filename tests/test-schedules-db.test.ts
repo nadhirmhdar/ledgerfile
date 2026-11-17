@@ -215,6 +215,12 @@ describe("test schedules", () => {
     await conclude(rev, id);
     await expect(as(prep, (tx) => schedules.reviewSchedule(tx, prep, id))).rejects.toThrow(/Only a reviewer or partner/);
     await expect(as(rev, (tx) => schedules.reviewSchedule(tx, rev, id))).rejects.toThrow(/different person/);
+    // The page is told what the server just decided: the reviewer who recorded the conclusion worked on it, another reviewer did not.
+    const seenBy = async (v?: repo.Session) => (await as(prep, (tx) => schedules.getSchedule(tx, id, undefined, v?.userId)))!.viewerWorkedOnIt;
+    expect(await seenBy(rev)).toBe(true);
+    expect(await seenBy(rev2)).toBe(false);
+    expect(await seenBy()).toBe(false);
+    expect(await as(rev, (tx) => repo.canSelfReviewAudit(tx))).toBe(false);
     await expect(as(prep, (tx) => schedules.unreviewSchedule(tx, prep, id))).rejects.toThrow(/Only a reviewer or partner/);
     await expect(as(rev2, (tx) => schedules.unreviewSchedule(tx, rev2, id))).rejects.toThrow(/has not been reviewed/);
     await as(rev2, (tx) => schedules.reviewSchedule(tx, rev2, id));

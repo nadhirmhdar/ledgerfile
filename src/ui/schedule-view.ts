@@ -53,18 +53,26 @@ export function readOnlyReason(s: { open: boolean; auditOn: boolean; reviewed: b
 export interface SignOffControls {
   /** "review" or "withdraw" for a reviewer or partner; null for anyone else. */
   review: "review" | "withdraw" | null;
+  /** Only for a reviewer who worked on the schedule: "waiting" (another reviewer signs it) or "self" (the button stays, recorded as self-reviewed). */
+  workedOnIt?: "waiting" | "self";
   delete: boolean;
 }
 
 /** What the sign-off section shows. Nothing when the engagement is locked or the audit is off. */
-export function signOffControls(s: { role: Role; open: boolean; auditOn: boolean; reviewed: boolean; hasConclusion: boolean }): SignOffControls {
+export function signOffControls(s: { role: Role; open: boolean; auditOn: boolean; reviewed: boolean; hasConclusion: boolean; viewerWorkedOnIt?: boolean; selfReviewAllowed?: boolean }): SignOffControls {
   if (!s.open || !s.auditOn) return { review: null, delete: false };
   const reviewer = canReview(s.role);
-  return {
-    review: reviewer ? (s.reviewed ? "withdraw" : "review") : null,
-    delete: !s.reviewed && (reviewer || !s.hasConclusion),
-  };
+  const canDelete = !s.reviewed && (reviewer || !s.hasConclusion);
+  // A reviewer who worked on the schedule is not offered the review where the firm has another reviewer: the server would refuse it.
+  // Where the firm may self-review the button stays, with a note. Withdrawing a review is unchanged.
+  if (reviewer && !s.reviewed && s.viewerWorkedOnIt) {
+    return s.selfReviewAllowed ? { review: "review", workedOnIt: "self", delete: canDelete } : { review: null, workedOnIt: "waiting", delete: canDelete };
+  }
+  return { review: reviewer ? (s.reviewed ? "withdraw" : "review") : null, delete: canDelete };
 }
+
+export const SCHEDULE_WAITING_REASON = "You worked on this schedule, so another reviewer signs it off.";
+export const SCHEDULE_SELF_NOTE = "You worked on this schedule, so the review will be recorded as self-reviewed.";
 
 /** "3 unsaved changes" / "1 unsaved change". */
 export const unsavedLabel = (n: number): string => `${count(n, "unsaved change")}`;

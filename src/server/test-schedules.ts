@@ -73,6 +73,8 @@ export interface ScheduleView {
   reviewedAt: string | null;
   /** The reviewer is the person who recorded the conclusion: only where the firm has no other reviewer. */
   selfReviewed: boolean;
+  /** The person asking is among those who worked on the schedule, so the server will not let them review it unless the firm may self-review. False when no viewer was given. */
+  viewerWorkedOnIt: boolean;
   lines: LineView[];
   totalMinor: number;
   balanceMinor: number | null;
@@ -287,7 +289,7 @@ export async function listSchedules(tx: Tx, engagementId: string, areaCode: stri
   }));
 }
 
-export async function getSchedule(tx: Tx, scheduleId: string, inScope?: Set<string>): Promise<ScheduleView | null> {
+export async function getSchedule(tx: Tx, scheduleId: string, inScope?: Set<string>, viewerId?: string): Promise<ScheduleView | null> {
   if (!/^[0-9a-f-]{36}$/i.test(scheduleId)) return null;
   const found = await tx.query<Row>(`select ${COLUMNS} from test_schedules s where s.id = $1`, [scheduleId]);
   const r = found.rows[0];
@@ -342,6 +344,8 @@ export async function getSchedule(tx: Tx, scheduleId: string, inScope?: Set<stri
     reviewedByName: n.reviewer,
     reviewedAt: n.reviewedAt,
     selfReviewed: selfReviewedBy(r),
+    // The same list the review check uses, so the page and the server cannot disagree.
+    viewerWorkedOnIt: !!viewerId && workedBy(r).includes(viewerId),
     lines: lines.rows,
     totalMinor,
     balanceMinor,
