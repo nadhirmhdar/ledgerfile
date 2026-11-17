@@ -3,11 +3,12 @@ import type { Tone } from "./status";
 
 /** How the journal entry testing page words its facts and shows an entry's state. Pure: it only rearranges what the ledger gave it. */
 
-/** "16 entries imported: 3 selected, 1 tested." / "No journal listing yet." / "The audit is off for this engagement." */
+/** "16 entries imported: 3 selected, 1 of them tested." / "No journal listing yet." / "The audit is off for this engagement." */
 export function journalSentence(s: { enabled: boolean; entryCount: number | null; selected: number; tested: number }): string {
   if (!s.enabled) return "The audit is off for this engagement.";
   if (s.entryCount === null) return "No journal listing yet.";
-  return `${count(s.entryCount, "entry", "entries")} imported: ${s.selected} selected, ${s.tested} tested.`;
+  const picked = s.selected === 0 ? "0 selected." : `${s.selected} selected, ${s.tested} of them tested.`;
+  return `${count(s.entryCount, "entry", "entries")} imported: ${picked}`;
 }
 
 export type EntryState = "none" | "selected" | "tested";

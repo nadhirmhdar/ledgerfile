@@ -158,7 +158,7 @@ export function LinesTable({
       <Table className="mt-4" caption="Lines of the schedule">
         <THead>
           <TRow>
-            <TCell header="col" className="sticky left-0 z-10 min-w-44 bg-surface-muted">Line</TCell>
+            <TCell header="col" className="sticky left-0 z-10 min-w-64 bg-surface-muted">Line</TCell>
             <TCell header="col">Reference</TCell>
             <TCell header="col" numeric>Amount</TCell>
             {hasPrior && <TCell header="col" numeric>Last year</TCell>}
@@ -183,18 +183,18 @@ export function LinesTable({
             const bg = key || keyMove ? "bg-warning-soft" : "bg-surface";
             return (
               <TRow key={r.key} className={`align-top ${bg}`}>
-                <TCell className={`sticky left-0 z-[1] min-w-44 ${bg}`}>
+                <TCell className={`sticky left-0 z-[1] min-w-64 ${bg}`}>
                   <div className="flex flex-wrap items-center gap-1 text-sm text-ink-muted">
                     <span>Line {i + 1}</span>
                     {key && <Badge tone="warning">Key</Badge>}
                     {keyMove && <Badge tone="warning">Key movement</Badge>}
                   </div>
-                  {editable ? <input aria-label={`Description, line ${i + 1}`} className={`${cell} mt-1`} maxLength={500} value={r.description} onChange={(e) => update(r.key, { description: e.target.value })} /> : <div className="mt-1 text-ink">{r.description}</div>}
+                  {editable ? <input aria-label={`Description, line ${i + 1}`} className={`${cell} mt-1 min-w-56`} maxLength={500} value={r.description} onChange={(e) => update(r.key, { description: e.target.value })} /> : <div className="mt-1 text-ink">{r.description}</div>}
                 </TCell>
-                <TCell>{editable ? <input aria-label={`Reference, line ${i + 1}`} className={`${cell} w-28`} maxLength={100} value={r.docRef} onChange={(e) => update(r.key, { docRef: e.target.value })} /> : r.docRef}</TCell>
+                <TCell>{editable ? <input aria-label={`Reference, line ${i + 1}`} className={`${cell} min-w-28`} maxLength={100} value={r.docRef} onChange={(e) => update(r.key, { docRef: e.target.value })} /> : r.docRef}</TCell>
                 <TCell numeric>
                   {editable ? (
-                    <input aria-label={`Amount, line ${i + 1}`} inputMode="decimal" aria-invalid={parsed[i].invalid || undefined} className={`${cell} w-32 text-right ${parsed[i].invalid ? "border-danger bg-danger-soft" : ""}`} value={r.amount} onChange={(e) => update(r.key, { amount: e.target.value })} />
+                    <input aria-label={`Amount, line ${i + 1}`} inputMode="decimal" aria-invalid={parsed[i].invalid || undefined} className={`${cell} min-w-36 text-right ${parsed[i].invalid ? "border-danger bg-danger-soft" : ""}`} value={r.amount} onChange={(e) => update(r.key, { amount: e.target.value })} />
                   ) : (
                     formatAmount(parsed[i].amountMinor)
                   )}
@@ -230,7 +230,7 @@ export function LinesTable({
                 </TCell>
                 <TCell>
                   {editable ? (
-                    <select aria-label={`Evidence, line ${i + 1}`} className={`${cell} w-40`} value={r.workingPaperId} onChange={(e) => update(r.key, { workingPaperId: e.target.value })}>
+                    <select aria-label={`Evidence, line ${i + 1}`} className={`${cell} min-w-44`} value={r.workingPaperId} onChange={(e) => update(r.key, { workingPaperId: e.target.value })}>
                       <option value="">None</option>
                       {files.map((f) => (
                         <option key={f.id} value={f.id}>
@@ -242,7 +242,7 @@ export function LinesTable({
                     <span className="text-sm break-all">{fileName}</span>
                   ) : null}
                 </TCell>
-                <TCell>{editable ? <input aria-label={`Remarks, line ${i + 1}`} className={`${cell} w-44`} maxLength={1000} value={r.remarks} onChange={(e) => update(r.key, { remarks: e.target.value })} /> : r.remarks}</TCell>
+                <TCell>{editable ? <input aria-label={`Remarks, line ${i + 1}`} className={`${cell} min-w-44`} maxLength={1000} value={r.remarks} onChange={(e) => update(r.key, { remarks: e.target.value })} /> : r.remarks}</TCell>
                 {editable && (
                   <TCell>
                     <Button type="button" variant="danger" size="sm" aria-label={`Remove line ${i + 1}`} onClick={() => remove(r)}>

@@ -3,7 +3,7 @@ import type { HTMLAttributes, ReactNode, TdHTMLAttributes } from "react";
 /** A real table, for figures and for lists of records with several columns. Numbers go in numeric cells, right-aligned. */
 export function Table({ caption, sticky = false, children, className = "" }: { caption?: string; sticky?: boolean; children: ReactNode; className?: string }) {
   return (
-    <div className={`overflow-x-auto rounded-lg border border-border bg-surface ${sticky ? "max-h-[70vh] overflow-y-auto" : ""} ${className}`}>
+    <div className={`relative overflow-x-auto rounded-lg border border-border bg-surface ${sticky ? "max-h-[70vh] overflow-y-auto" : ""} ${className}`}>
       <table className="w-full text-left text-sm">
         {caption && <caption className="sr-only">{caption}</caption>}
         {children}

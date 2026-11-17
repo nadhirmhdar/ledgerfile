@@ -141,7 +141,7 @@ export default async function JournalTestingPage({ params, searchParams }: { par
                       />
                     </li>
                     <li>
-                      <Stat label="Selected" value={overview.selected} />
+                      <Stat label="Selected" value={overview.selected} hint="includes those tested" />
                     </li>
                     <li>
                       <Stat label="Tested" value={overview.tested} />

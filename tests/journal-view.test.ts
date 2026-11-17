@@ -9,8 +9,8 @@ describe("journalSentence", () => {
     expect(journalSentence({ enabled: true, entryCount: null, selected: 0, tested: 0 })).toBe("No journal listing yet.");
   });
   it("counts the entries imported, with plain plurals", () => {
-    expect(journalSentence({ enabled: true, entryCount: 16, selected: 3, tested: 1 })).toBe("16 entries imported: 3 selected, 1 tested.");
-    expect(journalSentence({ enabled: true, entryCount: 1, selected: 0, tested: 0 })).toBe("1 entry imported: 0 selected, 0 tested.");
+    expect(journalSentence({ enabled: true, entryCount: 16, selected: 3, tested: 1 })).toBe("16 entries imported: 3 selected, 1 of them tested.");
+    expect(journalSentence({ enabled: true, entryCount: 1, selected: 0, tested: 0 })).toBe("1 entry imported: 0 selected.");
   });
 });
 
