@@ -7,8 +7,9 @@ Contents:
 2. Management representation letter template (supports D5)
 3. Fraud risk factor prompt list (supports B4.04)
 4. Going-concern indicator list (supports B7.01)
+5. Auditor's report template (draft, not yet reviewed)
 
-All wording is original and written for small, owner-managed entities. It has not been compared line by line with the requirements of ISA 210, ISA 580, ISA 240 or ISA 570; the reviewer should do that, and a lawyer should review the engagement letter's liability, fee and governing-law terms before use.
+All wording is original and written for small, owner-managed entities. It has not been compared line by line with the requirements of ISA 210, ISA 580, ISA 240, ISA 570 or, for the report template, ISA 700, ISA 705 and ISA 706; the reviewer should do that, and a lawyer should review the engagement letter's liability, fee and governing-law terms before use.
 
 Fields in {braces} are filled by the product from the engagement record. Paragraphs marked **[If ...]** are included only when the condition is true.
 
@@ -284,3 +285,153 @@ Where indicators are present, note any of the following, which feed D4:
 - realistic plans to dispose of assets, reduce costs or raise capital;
 - order book or contracts secured after the period end;
 - cash received after the period end.
+
+---
+
+## 5. Auditor's report template (draft, not yet reviewed)
+
+**Status: unreviewed draft.** This wording is LedgerFile's own and is plain on purpose. It has not been checked against ISA 700, ISA 705, ISA 706 or ISA 570, and it has not been reviewed by a lawyer or approved for use on any engagement. The reviewer should compare it with those standards, and with the firm's own requirements, before any report is issued from it. It was written to carry the elements the standards require in its own sentences; it is not the illustrative text of any standard-setter, software vendor or firm.
+
+The first paragraph of every generated report is the notice below; the report cannot be issued until it is deleted.
+
+[Draft report wording, not yet reviewed. Check it against ISA 700, 705, 706 and 570 and your firm's own requirements, complete the bracketed items, and delete this paragraph before the report is issued.]
+
+Fields in {braces} come from the engagement or from the partner's decision. A value that is missing is left as [the field name]. Paragraphs marked **[If ...]** are included only when the condition is true. The partner writes the basis for any modification, the emphasis of matter and the other matter in their own words.
+
+**Independent auditor's report**
+
+To the shareholders of {client name}
+
+**[If the opinion is unmodified]**
+
+**Opinion**
+
+We audited the financial statements of {client name}. They consist of the statement of financial position at {period end}, the statements of comprehensive income, changes in equity and cash flows for the year then ended, and the notes with the accounting policies.
+
+In our opinion the financial statements present fairly, in all material respects, the financial position of {client name} at {period end} and its financial performance and cash flows for the year then ended, in accordance with {framework}.
+
+**Basis for opinion**
+
+We carried out this audit under the International Standards on Auditing (ISA 700 and the related standards). The Auditor's responsibilities section of this report explains what those standards ask of us.
+
+The firm is independent of the Company under the ethical rules that apply to this audit, and we have kept to the other ethical duties those rules place on us.
+
+In our judgement the evidence we gathered is sufficient and appropriate as a basis for our opinion.
+
+**[If the opinion is qualified]**
+
+**Qualified opinion**
+
+We audited the financial statements of {client name}. They consist of the statement of financial position at {period end}, the statements of comprehensive income, changes in equity and cash flows for the year then ended, and the notes with the accounting policies.
+
+In our opinion, except for the effects of the matter described in the Basis for qualified opinion section, the financial statements present fairly, in all material respects, the financial position of {client name} at {period end} and its financial performance and cash flows for the year then ended, in accordance with {framework}.
+
+**Basis for qualified opinion**
+
+{basis for modification}
+
+We carried out this audit under the International Standards on Auditing (ISA 700 and the related standards). The Auditor's responsibilities section of this report explains what those standards ask of us.
+
+The firm is independent of the Company under the ethical rules that apply to this audit, and we have kept to the other ethical duties those rules place on us.
+
+In our judgement the evidence we gathered is sufficient and appropriate as a basis for our qualified opinion.
+
+**[If the opinion is adverse]**
+
+**Adverse opinion**
+
+We audited the financial statements of {client name}. They consist of the statement of financial position at {period end}, the statements of comprehensive income, changes in equity and cash flows for the year then ended, and the notes with the accounting policies.
+
+In our opinion the financial statements do not present fairly the financial position of {client name} at {period end}, or its financial performance and cash flows for the year then ended, in accordance with {framework}. The reason is the matter described in the Basis for adverse opinion section, which is of great significance to the statements.
+
+**Basis for adverse opinion**
+
+{basis for modification}
+
+We carried out this audit under the International Standards on Auditing (ISA 700 and the related standards). The Auditor's responsibilities section of this report explains what those standards ask of us.
+
+The firm is independent of the Company under the ethical rules that apply to this audit, and we have kept to the other ethical duties those rules place on us.
+
+In our judgement the evidence we gathered is sufficient and appropriate as a basis for our adverse opinion.
+
+**[If the auditor disclaims an opinion]**
+
+**Disclaimer of opinion**
+
+We were engaged to audit the financial statements of {client name}. They consist of the statement of financial position at {period end}, the statements of comprehensive income, changes in equity and cash flows for the year then ended, and the notes with the accounting policies.
+
+We do not express an opinion on the financial statements. The matter described in the Basis for disclaimer of opinion section is so significant that we could not gather enough appropriate audit evidence to base an opinion on.
+
+**Basis for disclaimer of opinion**
+
+{basis for modification}
+
+For the reason given above we could not gather enough appropriate audit evidence to form an opinion.
+
+The firm is independent of the Company under the ethical rules that apply to this audit, and we have kept to the other ethical duties those rules place on us.
+
+**[If the partner records a material uncertainty about going concern that is adequately disclosed. Not for a disclaimer in this draft.]**
+
+**Material uncertainty related to going concern**
+
+Note {note reference} to the financial statements describes a material uncertainty about whether the Company can continue as a going concern. This matter does not change our opinion.
+
+**[If the partner adds an emphasis of matter. Not for a disclaimer in this draft.]**
+
+**Emphasis of matter**
+
+{emphasis of matter text}
+
+This matter does not change our opinion.
+
+**[If the partner adds an other matter]**
+
+**Other matter**
+
+{other matter text}
+
+**Responsibilities of management and those charged with governance**
+
+Management of the Company is responsible for:
+
+- preparing financial statements that present fairly, in all material respects, in accordance with {framework};
+- the internal control it judges necessary so that the statements can be prepared without material misstatement, whether from fraud or error;
+- assessing whether the Company can continue as a going concern, and disclosing the going concern matters that call for it.
+
+Management prepares the statements on the going concern basis. It departs from that basis only if it plans to wind the Company up or to stop trading, or has no real alternative.
+
+Overseeing how the Company reports its financial results is the responsibility of those charged with governance.
+
+**Auditor's responsibilities**
+
+**[If the opinion is unmodified, qualified or adverse]**
+
+Our job is to form an opinion on these financial statements and to report it. To do that we seek reasonable assurance that they contain no material misstatement, whether from fraud or error.
+
+Reasonable assurance is a high degree of comfort but not a promise: an audit that is properly carried out can still miss a material misstatement. We treat a misstatement as material when it is large enough to change what a reader of the statements would decide.
+
+Throughout the audit we exercised professional judgement and kept a questioning mind. In particular:
+
+- we assessed where the statements might be materially misstated through fraud or error, then chose and carried out procedures aimed at those risks;
+- we learned enough about the Company's internal control to choose suitable procedures, and we did not examine that control in order to give an opinion on it;
+- we examined the accounting policies, management's estimates and the matching disclosures, and judged whether they are reasonable;
+- we considered whether management is right to use the going concern basis, and whether the evidence shows a material uncertainty about going concern. Where we find one, this report must point to the disclosure of it or, if that disclosure falls short, our opinion must be modified;
+- we looked at the statements as a whole, including the disclosures, and asked whether they show the underlying transactions and events fairly.
+
+We also report to those charged with governance on the scope and timing we planned and on our significant findings, including any significant weaknesses in internal control that we found.
+
+**[If the auditor disclaims an opinion]**
+
+We were engaged to audit under the International Standards on Auditing and to report on the result. For the reason given in the Basis for disclaimer of opinion section we could not gather enough appropriate audit evidence, so we cannot give an opinion on these financial statements.
+
+**Report on other legal and regulatory requirements**
+
+[Complete as required by local law]
+
+{firm name}
+
+{engagement partner}
+
+{city}
+
+{report date}
