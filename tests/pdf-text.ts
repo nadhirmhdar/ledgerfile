@@ -31,7 +31,8 @@ export function pdfPages(buffer: Buffer): string[][] {
     for (const tj of content.matchAll(/\[((?:<[0-9a-f]*>|\s|-?[\d.]+)*)\]\s*TJ/g)) {
       pieces.push([...tj[1].matchAll(/<([0-9a-f]*)>/g)].map((h) => decode(h[1])).join(""));
     }
-    pages.push(pieces);
+    // Streams with no text (the pictures) are not pages.
+    if (pieces.length > 0) pages.push(pieces);
   }
   return pages;
 }

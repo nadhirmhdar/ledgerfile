@@ -108,6 +108,8 @@ export interface ReportInput {
   goingConcern?: { noteReference?: string } | null;
   emphasisOfMatter?: string;
   otherMatter?: string;
+  /** The firm's address and registration lines, printed under its name in the signature block when it has set them. */
+  firmLines?: string[];
 }
 
 const isModified = (k: OpinionKind) => k !== "unmodified";
@@ -192,6 +194,8 @@ export function buildReport(input: ReportInput): Block[] {
   }
 
   blocks.push({ kind: "heading", text: R.legal.heading }, para(R.legal.para));
-  blocks.push({ kind: "signature", lines: R.signature.map(f) });
+  // The firm's name, then its address and registration lines (when it has set them), then the partner, the city and the date.
+  const [firmName, ...rest] = R.signature.map(f);
+  blocks.push({ kind: "signature", lines: [firmName, ...(input.firmLines ?? []), ...rest] });
   return blocks;
 }

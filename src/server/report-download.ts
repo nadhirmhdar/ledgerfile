@@ -3,6 +3,9 @@ import * as repo from "./repo";
 import { getLetterContext } from "./letters";
 import { getOpinion, type AuditOpinion } from "./opinion";
 import { plainName } from "./http";
+import { getFileStore, type FileStore } from "./file-store";
+import { loadBrandingForOutputs } from "./branding";
+import { hasBranding, signatureFirmLines, type LogoImage } from "../domain/branding";
 import { buildReport, reportProblems, type ReportInput } from "../domain/report";
 import type { Block } from "../domain/letters";
 
@@ -22,6 +25,8 @@ export interface ReportFacts {
   periodEnd: string;
   framework: string;
   firmName: string;
+  /** The firm's address and registration lines for the signature block; none when it has set no branding. */
+  firmLines?: string[];
 }
 
 const MAX_FIELD = 200;
@@ -49,6 +54,7 @@ export function assembleReportInput(facts: ReportFacts, opinion: AuditOpinion | 
     goingConcern: opinion.goingConcernNote ? { noteReference: opinion.goingConcernNote } : null,
     emphasisOfMatter: opinion.emphasisOfMatter ?? undefined,
     otherMatter: opinion.otherMatter ?? undefined,
+    firmLines: facts.firmLines,
   };
   const problems = reportProblems(input);
   if (problems.length > 0) return { ok: false, message: `The recorded opinion cannot be turned into a report yet. ${problems.join(" ")}` };
@@ -59,14 +65,16 @@ export function assembleReportInput(facts: ReportFacts, opinion: AuditOpinion | 
 export type ReportFormat = "docx" | "pdf";
 export const reportFileName = (clientName: string, periodEnd: string, format: ReportFormat = "docx"): string => `Auditors-report-${plainName(clientName)}-${periodEnd}-draft.${format}`;
 
-export type GeneratedReport = { kind: "ok"; title: string; /** The client and period, for the page header of the PDF. */ header: string; fileName: string; blocks: Block[] } | { kind: "not_found" } | { kind: "refused"; message: string };
+export type GeneratedReport = { kind: "ok"; title: string; /** The client and period, for the page header of the PDF. */ header: string; fileName: string; blocks: Block[]; /** The firm's logo, drawn after the draft notice, or null. */ logo: LogoImage | null } | { kind: "not_found" } | { kind: "refused"; message: string };
 
 /** Build the report for an engagement and record the download. Not found for another firm's engagement or one that is not being audited. */
-export async function generateReport(tx: Tx, s: repo.Session, engagementId: string, form: ReportForm, format: ReportFormat = "docx"): Promise<GeneratedReport> {
+export async function generateReport(tx: Tx, s: repo.Session, engagementId: string, form: ReportForm, format: ReportFormat = "docx", store: () => FileStore = getFileStore): Promise<GeneratedReport> {
   const context = await getLetterContext(tx, engagementId);
   if (!context) return { kind: "not_found" };
   const opinion = await getOpinion(tx, engagementId);
-  const assembled = assembleReportInput(context, opinion, form);
+  const branding = await loadBrandingForOutputs(tx, store);
+  const branded = hasBranding(branding);
+  const assembled = assembleReportInput({ ...context, firmLines: branded ? signatureFirmLines(branding) : undefined }, opinion, form);
   if (!assembled.ok) return { kind: "refused", message: assembled.message };
   await repo.audit(tx, s, "download_report", "engagement", engagementId, { opinion: assembled.input.opinion, format });
   return {
@@ -75,5 +83,6 @@ export async function generateReport(tx: Tx, s: repo.Session, engagementId: stri
     header: `${context.clientName}, independent auditor's report, period ended ${context.periodEnd}`,
     fileName: reportFileName(context.clientName, context.periodEnd, format),
     blocks: buildReport(assembled.input),
+    logo: branded ? branding.logo : null,
   };
 }

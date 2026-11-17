@@ -17,7 +17,7 @@ Fields in {braces} are filled by the product from the engagement record. Paragra
 
 ## 1. Engagement letter template
 
-{Firm letterhead}
+{Firm letterhead: the firm's logo if it has set one, its name, and its address, contact and registration lines from the Firm page}
 
 {Date}
 

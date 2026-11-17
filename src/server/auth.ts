@@ -195,7 +195,7 @@ export async function listTeam(db: Db, firmId: string): Promise<TeamMember[]> {
 // --- Managing existing users -------------------------------------------------
 
 /** Confirm from the database that the acting user is an active administrator of their firm. */
-async function requireAdmin(db: Queryable, admin: AuthSession): Promise<void> {
+export async function requireAdmin(db: Queryable, admin: AuthSession): Promise<void> {
   const current = await db.query<{ role: string; active: boolean }>("select role, active from users where id = $1 and firm_id = $2", [admin.userId, admin.firmId]);
   if (current.rows[0]?.role !== "admin" || !current.rows[0].active) throw new AuthError("Only an administrator can manage users.");
 }

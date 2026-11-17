@@ -50,6 +50,8 @@ export interface EngagementLetterInput {
   otherServices: boolean;
   /** Include the sentence disclosing the use of artificial-intelligence tools. */
   aiFeatures: boolean;
+  /** The firm's letterhead lines under its name (address, contact, registration), when it has set them. None leaves the letter as it was. */
+  letterhead?: string[];
 }
 
 export const ENGAGEMENT = {
@@ -127,6 +129,7 @@ export function buildEngagementLetter(input: EngagementLetterInput): Block[] {
   const blocks: Block[] = [
     { kind: "para", text: LETTER_NOTICE },
     { kind: "para", text: f("{Firm name}") },
+    ...(input.letterhead ?? []).map((text): Block => ({ kind: "para", text })),
     { kind: "para", text: f("{Date}") },
     { kind: "para", text: f("To: {Addressee}, {Client legal name}") },
     { kind: "heading", text: f(ENGAGEMENT.title) },

@@ -1,6 +1,7 @@
 import PDFDocument from "pdfkit";
 import type { Block } from "../domain/letters";
 import type { FigureRow, StatementBlock } from "../domain/statements-document";
+import { fitLogo, type LogoImage } from "../domain/branding";
 
 /**
  * A small PDF renderer for the downloads: A4, headings, paragraphs, bullets and numbered items, tables of figures (right-aligned, bold
@@ -20,6 +21,10 @@ export interface PdfOptions {
   header: string;
   /** Tests turn compression off to read the text back. */
   compress?: boolean;
+  /** The firm's logo for a letterhead or report: drawn right after the first block (the draft notice). */
+  logo?: LogoImage | null;
+  /** A discreet firm header for every page (the statements): the logo, small, and the firm's name at the right. */
+  brand?: { firmName: string; logo: LogoImage | null } | null;
 }
 
 // --- WinAnsi ------------------------------------------------------------------------------------------------------------------
@@ -144,6 +149,17 @@ function drawFigures(doc: Doc, rows: FigureRow[], labelPct: number) {
   doc.x = MARGIN.left;
 }
 
+/** Draw a logo at the current position, at its own proportions within a box. A logo the library cannot embed is left out, never failing the document. */
+function drawLogo(doc: Doc, logo: LogoImage, maxWidth: number, maxHeight: number, x: number, y: number): { width: number; height: number } | null {
+  const size = fitLogo(logo, maxWidth, maxHeight);
+  try {
+    doc.image(Buffer.from(logo.data), x, y, { width: size.width, height: size.height });
+    return size;
+  } catch {
+    return null;
+  }
+}
+
 /** Make room: start a new page when fewer than `needed` points are left. */
 function ensure(doc: Doc, needed: number) {
   if (doc.y + needed > PAGE.height - MARGIN.bottom) doc.addPage();
@@ -238,7 +254,15 @@ export function renderPdf(blocks: PdfBlock[], options: PdfOptions): Promise<Buff
     try {
       doc.x = MARGIN.left;
       doc.y = MARGIN.top;
-      for (const b of blocks) render(doc, b);
+      blocks.forEach((b, i) => {
+        render(doc, b);
+        if (i === 0 && options.logo) {
+          ensure(doc, 70);
+          const drawn = drawLogo(doc, options.logo, 170, 46, MARGIN.left, doc.y);
+          if (drawn) doc.y += drawn.height + 8;
+          doc.x = MARGIN.left;
+        }
+      });
 
       const { start, count } = doc.bufferedPageRange();
       for (let i = start; i < start + count; i++) {
@@ -247,7 +271,14 @@ export function renderPdf(blocks: PdfBlock[], options: PdfOptions): Promise<Buff
         const saved = doc.page.margins.bottom;
         doc.page.margins.bottom = 0;
         doc.font("Helvetica").fontSize(8).fillColor("#555555");
-        doc.text(toWinAnsi(options.header), MARGIN.left, 34, { width: CONTENT_WIDTH, align: "left", lineBreak: false });
+        const brand = options.brand;
+        let textX = MARGIN.left;
+        if (brand?.logo) {
+          const drawn = drawLogo(doc, brand.logo, 56, 20, MARGIN.left, 24);
+          if (drawn) textX += drawn.width + 8;
+        }
+        doc.text(toWinAnsi(options.header), textX, 34, { width: CONTENT_WIDTH - (textX - MARGIN.left) - (brand ? 150 : 0), align: "left", lineBreak: false });
+        if (brand) doc.text(toWinAnsi(brand.firmName), PAGE.width - MARGIN.right - 146, 34, { width: 146, align: "right", lineBreak: false });
         doc.lineWidth(0.4).strokeColor("#999999").moveTo(MARGIN.left, 50).lineTo(PAGE.width - MARGIN.right, 50).stroke();
         doc.text(`Page ${i - start + 1} of ${count}`, MARGIN.left, PAGE.height - 40, { width: CONTENT_WIDTH, align: "center", lineBreak: false });
         doc.page.margins.bottom = saved;
