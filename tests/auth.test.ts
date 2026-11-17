@@ -15,7 +15,7 @@ beforeAll(async () => {
   db = await openDatabase();
   firmA = await auth.signUp(db, { firmName: "Alpha Audit", name: "Aisha Admin", email: "Aisha@Alpha.test", password: PASSWORD });
   firmB = await auth.signUp(db, { firmName: "Beta Audit", name: "Bilal Admin", email: "bilal@beta.test", password: OTHER });
-}, 30000);
+});
 
 describe("passwords", () => {
   it("hashes with a random salt and verifies", async () => {
@@ -82,7 +82,7 @@ describe("sign-in and sessions", () => {
     await expect(auth.signIn(db, "bilal@beta.test", OTHER)).rejects.toThrow(/locked/);
     await db.query("update users set locked_until = now() - interval '1 minute' where id = $1", [firmB.userId]);
     expect(await auth.signIn(db, "bilal@beta.test", OTHER)).toBeTruthy();
-  }, 30000);
+  });
 
   it("replacing a password ends existing sessions", async () => {
     const token = await auth.signIn(db, "bilal@beta.test", OTHER);

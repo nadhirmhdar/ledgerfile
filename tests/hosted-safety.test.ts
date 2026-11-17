@@ -43,7 +43,7 @@ describe("sign-in on a hosted site", () => {
     // A user who happens to have the public demo password, as a local demo seed would have created.
     await auth.signUp(db, { firmName: "Demo Audit", name: "Demo Admin", email: "demo@ledgerfile.test", password: PUBLIC_DEMO_PASSWORD });
     await auth.signUp(db, { firmName: "Real Audit", name: "Real Admin", email: "real@firm.test", password: "invented-real-passphrase" });
-  }, 60000);
+  });
 
   it("accepts the demo password locally", async () => {
     expect(await auth.signIn(db, "demo@ledgerfile.test", PUBLIC_DEMO_PASSWORD)).toBeTruthy();

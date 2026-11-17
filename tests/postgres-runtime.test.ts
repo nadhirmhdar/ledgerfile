@@ -29,7 +29,7 @@ describe.skipIf(!URL)("the Postgres adapter as the runtime role", () => {
     single = createPostgresDb(URL!, { max: 1 });
     a = await auth.signUp(db, { firmName: "Runtime Alpha", name: "Ada Admin", email: `ada-${suffix}@alpha.test`, password: PASSWORD });
     b = await auth.signUp(db, { firmName: "Runtime Beta", name: "Ben Admin", email: `ben-${suffix}@beta.test`, password: PASSWORD });
-  }, 120000);
+  });
   afterAll(async () => {
     await db?.close();
     await single?.close();
