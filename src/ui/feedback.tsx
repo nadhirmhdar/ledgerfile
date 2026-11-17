@@ -1,13 +1,14 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { StatusBadge } from "./badge";
-import { AlertIcon, InboxIcon, InfoIcon, LockIcon, SparkIcon } from "./icons";
+import { AlertIcon, CheckIcon, InboxIcon, InfoIcon, LockIcon, SparkIcon } from "./icons";
 import type { Status } from "./status";
 import { fraction } from "./text";
 
-type CalloutVariant = "info" | "warning" | "danger" | "draft" | "locked";
+type CalloutVariant = "info" | "success" | "warning" | "danger" | "draft" | "locked";
 const CALLOUT: Record<CalloutVariant, { box: string; icon: ReactNode }> = {
   info: { box: "border-info bg-info-soft text-info-strong", icon: <InfoIcon /> },
+  success: { box: "border-success bg-success-soft text-success-strong", icon: <CheckIcon /> },
   warning: { box: "border-warning bg-warning-soft text-warning-strong", icon: <AlertIcon /> },
   danger: { box: "border-danger bg-danger-soft text-danger-strong", icon: <AlertIcon /> },
   // Machine-written text that no person has checked yet: it must stay clearly visible wherever it is shown.
