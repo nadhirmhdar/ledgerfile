@@ -1,5 +1,7 @@
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { HostedConfigError, isHosted } from "./config";
+import { supabaseFileStore } from "./supabase-file-store";
 
 /**
  * Where working paper files are kept. Development uses a folder on disk; production
@@ -14,12 +16,13 @@ export interface FileStore {
   remove(key: string): Promise<void>;
 }
 
-const KEY = /^[0-9a-f-]{36}\/[0-9a-f-]{36}$/;
+/** Exactly two identifiers: the firm and a random id. The same rule for every store. */
+export const FILE_KEY = /^[0-9a-f-]{36}\/[0-9a-f-]{36}$/;
 
 export function localFileStore(root: string): FileStore {
   const resolve = (key: string) => {
     // Refuse anything that is not exactly two identifiers, whatever the caller passed.
-    if (!KEY.test(key)) throw new Error("Invalid storage key.");
+    if (!FILE_KEY.test(key)) throw new Error("Invalid storage key.");
     return path.join(root, ...key.split("/"));
   };
   return {
@@ -45,7 +48,27 @@ export function localFileStore(root: string): FileStore {
 
 let store: FileStore | undefined;
 
-/** The file store for the running application: a folder beside the development database. */
+type Env = Record<string, string | undefined>;
+
+/** Which store the environment asks for. Pure, so the choice is tested without building a store. */
+export function fileStoreKind(env: Env = process.env): "local" | "supabase" {
+  const v = env.FILE_STORE?.trim().toLowerCase();
+  if (v === "supabase") return "supabase";
+  if (v === "local") return "local";
+  // Hosted with nothing chosen fails closed: a serverless disk is read-only or thrown away, so "local" would lose files.
+  if (isHosted(env)) throw new HostedConfigError("This deployment is hosted but FILE_STORE is not set. Set FILE_STORE=supabase (or FILE_STORE=local on a server with a persistent disk).");
+  return "local";
+}
+
+/** The file store for the running application: Supabase Storage when FILE_STORE=supabase, otherwise a folder beside the development database. */
 export function getFileStore(): FileStore {
-  return (store ??= localFileStore(path.join(process.cwd(), ".data", "files")));
+  if (store) return store;
+  if (fileStoreKind() === "supabase") {
+    const { SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, SUPABASE_STORAGE_BUCKET } = process.env;
+    if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY || !SUPABASE_STORAGE_BUCKET) {
+      throw new HostedConfigError("FILE_STORE=supabase needs SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY and SUPABASE_STORAGE_BUCKET.");
+    }
+    return (store = supabaseFileStore({ url: SUPABASE_URL, serviceRoleKey: SUPABASE_SERVICE_ROLE_KEY, bucket: SUPABASE_STORAGE_BUCKET }));
+  }
+  return (store = localFileStore(path.join(process.cwd(), ".data", "files")));
 }

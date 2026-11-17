@@ -11,6 +11,8 @@
     "typecheck": "tsc --noEmit",
     "sample": "node scripts/make-sample-tb.mjs && node scripts/make-sample-journals.mjs",
     "seed": "tsx --env-file-if-exists=.env.local scripts/seed-demo.mts",
+    "seed:sample-hosted": "tsx scripts/seed-sample-hosted.mts",
+    "db:migrate": "tsx --env-file-if-exists=.env.local scripts/migrate.mts",
     "sample:statements": "tsx scripts/sample-statements.mts",
     "methodology": "tsx scripts/build-methodology.mts"
   },
@@ -19,12 +21,14 @@
     "docx": "^9.15.3",
     "exceljs": "^4.4.0",
     "next": "16.4.6",
+    "pg": "^8.23.1",
     "react": "19.3.0",
     "react-dom": "19.3.0"
   },
   "devDependencies": {
     "@tailwindcss/turbopack": "4.3.3",
     "@types/node": "^24.19.2",
+    "@types/pg": "^8.23.1",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",

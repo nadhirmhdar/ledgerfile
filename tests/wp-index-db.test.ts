@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { beforeAll, describe, expect, it } from "vitest";
 import ExcelJS from "exceljs";
-import type { PGlite } from "@electric-sql/pglite";
+import type { Db } from "../src/server/db";
 import { openDatabase, withFirm } from "../src/server/db";
 import * as repo from "../src/server/repo";
 import * as audit from "../src/server/audit";
@@ -33,7 +33,7 @@ describe("the working paper index", () => {
   const rev = user(2, "reviewer");
   const partner = user(3, "partner");
   const outsider = user(4, "partner", OTHER);
-  let db: PGlite;
+  let db: Db;
   let audited: string;
   let plain: string; // the audit never turned on
   let locked: string;

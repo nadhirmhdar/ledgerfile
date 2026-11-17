@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, it } from "vitest";
-import type { PGlite } from "@electric-sql/pglite";
+import type { Db } from "../src/server/db";
 import JSZip from "jszip";
 import { openDatabase, withFirm } from "../src/server/db";
 import * as repo from "../src/server/repo";
@@ -31,7 +31,7 @@ describe("letters for an engagement", () => {
     { code: "3000", name: "Share capital", closingMinor: -10000000, priorMinor: -10000000 },
     { code: "4000", name: "Sales", closingMinor: -10000000, priorMinor: 0 },
   ];
-  let db: PGlite;
+  let db: Db;
   let engagement: string;
   type T = Parameters<Parameters<typeof withFirm>[2]>[0];
   const as = <R,>(s: repo.Session, fn: (tx: T) => Promise<R>) => withFirm(db, s.firmId, fn);

@@ -5,7 +5,13 @@
 -- Foreign keys between tenant tables include firm_id: referential checks bypass row-level
 -- security, so a plain key would let one firm attach rows to another firm's records.
 
-create role app_user nologin;
+-- Roles belong to the whole database cluster, not to one database, so on a host where the role already exists this must not fail.
+do $$
+begin
+  if not exists (select from pg_roles where rolname = 'app_user') then
+    create role app_user nologin;
+  end if;
+end $$;
 
 create table firms (
   id uuid primary key default gen_random_uuid(),

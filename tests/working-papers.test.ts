@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import type { PGlite } from "@electric-sql/pglite";
+import type { Db } from "../src/server/db";
 import { mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -22,7 +22,7 @@ const partner = user(4, "partner");
 const outsider = user(5, "partner", OTHER);
 const bytes = (text: string) => new TextEncoder().encode(text);
 
-let db: PGlite;
+let db: Db;
 let root: string;
 let store: FileStore;
 let engagement: string;

@@ -1,7 +1,7 @@
 import ExcelJS from "exceljs";
 import { parseCsv } from "../domain/tb-parse";
+import { maxUploadBytes, uploadTooLargeMessage } from "./config";
 
-const MAX_BYTES = 10 * 1024 * 1024;
 const MAX_ROWS = 20000;
 
 /** Reduce an Excel cell to a plain value: formulas to their result, rich text to its text. */
@@ -19,7 +19,7 @@ function plain(value: ExcelJS.CellValue): unknown {
 /** Read the first worksheet of an .xlsx file, or a .csv file, into a grid of cells. */
 export async function readGrid(fileName: string, data: ArrayBuffer, maxRows: number = MAX_ROWS): Promise<unknown[][]> {
   if (data.byteLength === 0) throw new Error("The file is empty.");
-  if (data.byteLength > MAX_BYTES) throw new Error("The file is larger than 10 MB.");
+  if (data.byteLength > maxUploadBytes()) throw new Error(uploadTooLargeMessage());
   const lower = fileName.toLowerCase();
 
   if (lower.endsWith(".csv")) {

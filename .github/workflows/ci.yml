@@ -27,3 +27,60 @@ jobs:
       - run: npm test
       - run: npm run build
       - run: npm run typecheck
+
+  # The same database-backed tests, and a migration run, against a real PostgreSQL server in a throwaway service container
+  # (no account, no cloud resource). The roles imitate Supabase: the owner is NOT a superuser (it has CREATEROLE and CREATEDB, as
+  # Supabase's `postgres` does), and the app connects as a separate login role that owns nothing. PostgreSQL 17 is what Supabase
+  # runs for new projects.
+  postgres:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          # The container is ephemeral and reachable only from this job. Every other password below is generated per run and masked.
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      PGPASSWORD: postgres
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Create the owner role and an empty database
+        run: |
+          MIGRATOR_PASSWORD=$(openssl rand -hex 16)
+          APP_PASSWORD=$(openssl rand -hex 16)
+          echo "::add-mask::$MIGRATOR_PASSWORD"
+          echo "::add-mask::$APP_PASSWORD"
+          echo "MIGRATOR_PASSWORD=$MIGRATOR_PASSWORD" >> "$GITHUB_ENV"
+          echo "APP_PASSWORD=$APP_PASSWORD" >> "$GITHUB_ENV"
+          psql -h localhost -U postgres -v ON_ERROR_STOP=1 -c "create role lf_migrator login password '$MIGRATOR_PASSWORD' nosuperuser createdb createrole"
+          psql -h localhost -U postgres -v ON_ERROR_STOP=1 -c "create database ledgerfile_ci owner lf_migrator"
+      - name: Migrate (first run applies everything)
+        run: npm run db:migrate
+        env:
+          DATABASE_URL_MIGRATIONS: postgres://lf_migrator:${{ env.MIGRATOR_PASSWORD }}@localhost:5432/ledgerfile_ci
+      - name: Migrate again (nothing to apply: proves it can be re-run)
+        run: npm run db:migrate
+        env:
+          DATABASE_URL_MIGRATIONS: postgres://lf_migrator:${{ env.MIGRATOR_PASSWORD }}@localhost:5432/ledgerfile_ci
+      - name: Create the runtime login role (docs/hosted-roles.sql)
+        run: psql "postgres://lf_migrator:${MIGRATOR_PASSWORD}@localhost:5432/ledgerfile_ci" -v ON_ERROR_STOP=1 -v app_password="$APP_PASSWORD" -f docs/hosted-roles.sql
+      - name: Run every test, against PostgreSQL where there is a database
+        run: npx vitest run
+        env:
+          # Each test file gets its own freshly migrated database on this server (see src/server/test-database.ts).
+          TEST_DATABASE_URL: postgres://lf_migrator:${{ env.MIGRATOR_PASSWORD }}@localhost:5432/postgres
+          # The runtime-role test connects as the login role to the database prepared above.
+          TEST_RUNTIME_DATABASE_URL: postgres://ledgerfile_app:${{ env.APP_PASSWORD }}@localhost:5432/ledgerfile_ci

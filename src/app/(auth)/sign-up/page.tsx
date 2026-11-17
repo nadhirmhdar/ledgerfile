@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getOptionalSession } from "@/server/session";
 import { MIN_PASSWORD_LENGTH } from "@/server/auth";
+import { signupOpen, SIGNUP_CLOSED_MESSAGE } from "@/server/config";
 import { SignUpForm } from "@/app/auth-forms";
 import { AuthShell } from "@/ui/auth-shell";
 
@@ -9,6 +10,21 @@ export const dynamic = "force-dynamic";
 
 export default async function SignUpPage() {
   if (await getOptionalSession()) redirect("/");
+  if (!signupOpen()) {
+    return (
+      <AuthShell
+        title="Create a firm account"
+        intro={SIGNUP_CLOSED_MESSAGE}
+        footer={
+          <Link href="/sign-in" className="font-medium text-accent hover:underline">
+            Sign in
+          </Link>
+        }
+      >
+        {null}
+      </AuthShell>
+    );
+  }
   return (
     <AuthShell
       title="Create a firm account"

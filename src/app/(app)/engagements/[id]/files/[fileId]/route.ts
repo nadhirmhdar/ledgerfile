@@ -1,10 +1,14 @@
 import { getDb, withFirm } from "@/server/db";
 import { getSession } from "@/server/session";
 import { getFileStore } from "@/server/file-store";
+import { isHosted } from "@/server/config";
 import * as repo from "@/server/repo";
 import { readWorkingPaper } from "@/server/working-papers";
 
 export const dynamic = "force-dynamic";
+
+/** Vercel Functions cap a response body at about 4.5 MB; stay under it. */
+const RESPONSE_CAP_BYTES = 4.5 * 1024 * 1024;
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -30,6 +34,12 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     return new Response("The file could not be downloaded.", { status: 500 });
   }
   if (!paper) return new Response("Not found", { status: 404 });
+
+  // The download is logged above, before any byte is served. A function response is capped (about 4.5 MB on Vercel); a file kept
+  // from before the hosted upload limit may be larger, and is reported rather than sent as a body that would be cut off.
+  if (isHosted() && paper.data.byteLength > RESPONSE_CAP_BYTES) {
+    return new Response("This file is too large to download from the hosted site.", { status: 413 });
+  }
 
   // Uploaded files are untrusted. They are always sent as a download of unspecified type, never
   // displayed in the page, and the name in the header is reduced to plain characters.

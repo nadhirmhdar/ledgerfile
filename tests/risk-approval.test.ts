@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, it } from "vitest";
-import type { PGlite } from "@electric-sql/pglite";
+import type { Db } from "../src/server/db";
 import { openDatabase, withFirm } from "../src/server/db";
 import * as repo from "../src/server/repo";
 import * as audit from "../src/server/audit";
@@ -42,7 +42,7 @@ describe("partner approval of the risk assessment", () => {
     { code: "6100", name: "Office rent", closingMinor: 40000000, priorMinor: null },
   ];
   const materiality = { benchmark: "revenue", percentageBp: 100, performancePct: 75, trivialPct: 5, rationale: "Revenue is the measure the owners watch." };
-  let db: PGlite;
+  let db: Db;
   let engagement: string;
   type T = Parameters<Parameters<typeof withFirm>[2]>[0];
   const as = <R,>(s: repo.Session, fn: (tx: T) => Promise<R>) => withFirm(db, s.firmId, fn);

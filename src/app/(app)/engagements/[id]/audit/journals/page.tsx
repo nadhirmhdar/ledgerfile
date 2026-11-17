@@ -11,6 +11,7 @@ import { formatAmount } from "@/domain/money";
 import { ActionForm } from "@/app/action-form";
 import { FileInput } from "@/app/file-input";
 import { importLedgerAction, recordJournalTestAction, selectEntryAction } from "@/app/ledger-actions";
+import { maxUploadBytes } from "@/server/config";
 import { EngagementNav } from "../../nav";
 
 export const dynamic = "force-dynamic";
@@ -79,7 +80,7 @@ export default async function JournalTestingPage({ params, searchParams }: { par
             <ActionForm action={importLedgerAction} fields={{ engagementId: id }} className="mt-6 rounded border border-slate-200 bg-slate-50 p-4">
               <h3 className="text-base font-semibold">{overview.listing ? "Replace the journal listing" : "Import the journal listing"}</h3>
               <div className="mt-3 flex flex-wrap items-end gap-3">
-                <FileInput maxBytes={10 * 1024 * 1024} accept=".xlsx,.csv" label="Journal listing file" className="text-sm text-slate-900" />
+                <FileInput maxBytes={maxUploadBytes()} accept=".xlsx,.csv" label="Journal listing file" className="text-sm text-slate-900" />
                 <button className="rounded bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-700">{overview.listing ? "Replace" : "Import"}</button>
               </div>
               <p className="mt-2 text-xs text-slate-600">

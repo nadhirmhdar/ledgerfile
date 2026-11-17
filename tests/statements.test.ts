@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, it } from "vitest";
-import type { PGlite } from "@electric-sql/pglite";
+import type { Db } from "../src/server/db";
 import { createFirm, openDatabase, withFirm } from "../src/server/db";
 import * as repo from "../src/server/repo";
 import * as journals from "../src/server/journals";
@@ -136,7 +136,7 @@ describe("journals in the database", () => {
       { accountId: credit, amountMinor: -cr },
     ],
   });
-  let db: PGlite;
+  let db: Db;
   let engagement: string;
   let ids: Record<string, string>;
 

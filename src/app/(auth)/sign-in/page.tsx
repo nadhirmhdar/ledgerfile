@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getOptionalSession } from "@/server/session";
+import { signupOpen } from "@/server/config";
 import { SignInForm } from "@/app/auth-forms";
 import { AuthShell } from "@/ui/auth-shell";
 
@@ -12,12 +13,14 @@ export default async function SignInPage() {
     <AuthShell
       title="Sign in to LedgerFile"
       footer={
-        <>
-          New firm?{" "}
-          <Link href="/sign-up" className="font-medium text-accent hover:underline">
-            Create a firm account
-          </Link>
-        </>
+        signupOpen() ? (
+          <>
+            New firm?{" "}
+            <Link href="/sign-up" className="font-medium text-accent hover:underline">
+              Create a firm account
+            </Link>
+          </>
+        ) : undefined
       }
     >
       <SignInForm />
