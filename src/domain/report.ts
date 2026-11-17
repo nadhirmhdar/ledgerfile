@@ -121,7 +121,7 @@ export function reportProblems(input: ReportInput): string[] {
   const problems: string[] = [];
   if (!(OPINION_KINDS as readonly string[]).includes(input.opinion)) problems.push("Choose the kind of opinion: unmodified, qualified, adverse or disclaimer.");
   if (isModified(input.opinion) && OPINION_KINDS.includes(input.opinion) && !given(input.basisForModification)) {
-    problems.push(`A ${OPINION_LABEL[input.opinion].toLowerCase()} needs the basis for the modification: say what the matter is and what it affects.`);
+    problems.push(`${/^[aeiou]/i.test(OPINION_LABEL[input.opinion]) ? "An" : "A"} ${OPINION_LABEL[input.opinion].toLowerCase()} needs the basis for the modification: say what the matter is and what it affects.`);
   }
   if (input.opinion === "disclaimer" && input.goingConcern) {
     problems.push("This draft does not allow a disclaimer of opinion together with a going-concern material uncertainty section. Take one of them out. The reviewer decides whether the standards allow the combination.");

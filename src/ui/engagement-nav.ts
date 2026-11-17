@@ -40,6 +40,7 @@ export const NAV_GROUPS = [
     // The letters are written at the end, with the review.
     items: [
       { key: "letters", label: "Letters", path: "/audit/letters" },
+      { key: "report", label: "Auditor's report", path: "/audit/report" },
       { key: "review", label: "Review and sign-off", path: "/review" },
     ],
   },

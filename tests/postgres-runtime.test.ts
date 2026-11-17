@@ -3,6 +3,8 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import * as auth from "../src/server/auth";
 import { withAuth, withFirm, type Db } from "../src/server/db";
 import * as repo from "../src/server/repo";
+import * as audit from "../src/server/audit";
+import { getOpinion, recordOpinion } from "../src/server/opinion";
 import { beginDirectUpload, finishDirectUpload, tokenOptionsFor, type BlobOps } from "../src/server/direct-upload";
 import { databaseUrl } from "../src/server/config";
 import { assertSchemaCurrent } from "../src/server/migrations";
@@ -119,6 +121,18 @@ describe.skipIf(!URL)("the Postgres adapter as the runtime role", () => {
     const done = await finishDirectUpload(db, sa, ops, key);
     expect(await withFirm(db, a.firmId, async (tx) => (await tx.query("select 1 from working_papers where id::text = $1", [done.id])).rows.length)).toBe(1);
     expect(await withFirm(db, a.firmId, async (tx) => (await tx.query("select 1 from pending_uploads where key = $1", [key])).rows.length)).toBe(0);
+  });
+
+  it("records an audit opinion as the runtime role: the row is the firm's own, another firm sees nothing, the sign-in role has no access", async () => {
+    const sa = { firmId: a.firmId, userId: a.userId, role: "partner" } as repo.Session;
+    const engagementId = await withFirm(db, a.firmId, async (tx) => repo.createEngagement(tx, sa, await repo.createClient(tx, sa, "Opinion client"), "2025-01-01", "2025-12-31"));
+    await withFirm(db, a.firmId, (tx) => audit.setAuditEnabled(tx, sa, engagementId, true));
+    await withFirm(db, a.firmId, (tx) => recordOpinion(tx, sa, engagementId, { opinion: "qualified", basisForModification: "A matter.", goingConcern: false, goingConcernNote: "", emphasisOfMatter: "", otherMatter: "", reportDate: "2026-03-15" }));
+    expect((await withFirm(db, a.firmId, (tx) => getOpinion(tx, engagementId)))?.opinion).toBe("qualified");
+    expect(await withFirm(db, b.firmId, async (tx) => (await tx.query("select 1 from audit_opinions")).rows.length)).toBe(0);
+    await expect(withAuth(db, (tx) => tx.query("select 1 from audit_opinions"))).rejects.toThrow(/permission denied/);
+    const reviewer = { ...sa, role: "reviewer" } as repo.Session;
+    await expect(withFirm(db, a.firmId, (tx) => recordOpinion(tx, reviewer, engagementId, { opinion: "unmodified", basisForModification: "", goingConcern: false, goingConcernNote: "", emphasisOfMatter: "", otherMatter: "", reportDate: "2026-03-15" }))).rejects.toThrow(/Only a partner/);
   });
 
   it("leaves nothing on the connection after a transaction, which is what makes a transaction pooler safe", async () => {
