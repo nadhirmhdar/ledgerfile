@@ -144,6 +144,20 @@ describe("secrets never come back out", () => {
     await expect(ensureAppRole(db, { verifier: scramVerifier(PW), plaintext: PW })).rejects.toThrow(/\[XX000\]/);
     await ensureAppRole(db, { verifier: scramVerifier(PW), plaintext: PW }).catch((e: Error) => expect(e.message).not.toContain(PW));
   });
+  it("a refusal on the plaintext retry is not passed up raw either: only the SQLSTATE and a plain sentence leave", async () => {
+    const raw = Object.assign(new Error(`Received HTTP code 400 from control plane: Neon only supports being given plaintext passwords ${PW}`), { code: "XX000", detail: `statement with ${PW}`, where: `create role x password '${PW}'` });
+    const { db } = fakeDb({ failExec: () => raw });
+    try {
+      await ensureAppRole(db, { verifier: scramVerifier(PW), plaintext: PW });
+      expect.unreachable();
+    } catch (e) {
+      expect(e).not.toBe(raw);
+      expect((e as { detail?: unknown }).detail).toBeUndefined();
+      expect((e as { where?: unknown }).where).toBeUndefined();
+      expect((e as Error).message).toBe("A role statement failed [XX000]: the database refused the plaintext password too.");
+      expect(JSON.stringify({ m: (e as Error).message, ...(e as object) })).not.toContain(PW);
+    }
+  });
   it("a permission error keeps its (harmless) message", async () => {
     const { db } = fakeDb({ failExec: (sql) => (sql.startsWith("create role") ? Object.assign(new Error("permission denied to create role"), { code: "42501" }) : null) });
     await expect(ensureAppRole(db, { verifier: scramVerifier(PW) })).rejects.toThrow("permission denied to create role");

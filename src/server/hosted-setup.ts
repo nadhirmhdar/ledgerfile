@@ -32,14 +32,16 @@ class SecretStatementError extends Error {
  * pg field: not the message, detail, where, internalQuery or position, any of which can quote the statement. Only the SQLSTATE
  * does, and for permission errors the message too, because those never contain the statement.
  */
-async function runSecretStatement(db: Db, sql: string): Promise<void> {
+async function runSecretStatement(db: Db, sql: string, passRefusal: boolean): Promise<void> {
   try {
     await db.exec(sql);
   } catch (e) {
-    if (isPlaintextOnlyRefusal(e)) throw e;
+    // Only the verifier attempt may hand the raw refusal up, so the caller can fall back. The plaintext attempt never does.
+    if (passRefusal && isPlaintextOnlyRefusal(e)) throw e;
     const code = e && typeof e === "object" && typeof (e as { code?: unknown }).code === "string" ? (e as { code: string }).code : undefined;
     const message = e && typeof e === "object" && typeof (e as { message?: unknown }).message === "string" ? (e as { message: string }).message : undefined;
-    throw new SecretStatementError(code, code && SAFE_CODES.has(code) && message ? message : undefined);
+    const refused = isPlaintextOnlyRefusal(e);
+    throw new SecretStatementError(code, refused ? `A role statement failed${code ? ` [${code}]` : ""}: the database refused the plaintext password too.` : code && SAFE_CODES.has(code) && message ? message : undefined);
   }
 }
 
@@ -80,14 +82,14 @@ export async function ensureAppRole(db: Db, password: RolePassword, appRole: str
     exists ? `alter role ${appRole} with password ${secret}` : `create role ${appRole} login nosuperuser nocreatedb nocreaterole noinherit nobypassrls password ${secret}`;
   let usedPlaintext = false;
   try {
-    await runSecretStatement(db, statement(`'${password.verifier}'`));
+    await runSecretStatement(db, statement(`'${password.verifier}'`), true);
   } catch (e) {
     if (!isPlaintextOnlyRefusal(e) || !password.plaintext) {
       if (isPlaintextOnlyRefusal(e)) throw new Error("This database only accepts a plaintext password for a role, and none was given.");
       throw e;
     }
     usedPlaintext = true;
-    await runSecretStatement(db, statement(quoteLiteral(password.plaintext)));
+    await runSecretStatement(db, statement(quoteLiteral(password.plaintext)), false);
   }
   const attrs = (await db.query<{ rolsuper: boolean; rolbypassrls: boolean; rolcreatedb: boolean; rolcreaterole: boolean; rolinherit: boolean; rolcanlogin: boolean }>(
     "select rolsuper, rolbypassrls, rolcreatedb, rolcreaterole, rolinherit, rolcanlogin from pg_roles where rolname = $1",
