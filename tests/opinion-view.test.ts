@@ -79,6 +79,7 @@ describe("the lock blockers the page speaks to", () => {
   it("picks out the opinion and the misstatement blockers only", () => {
     expect(isOpinionBlocker("Audit: the partner has not recorded the audit opinion.")).toBe(true);
     expect(isOpinionBlocker("Audit: uncorrected misstatements reach overall materiality. Correct them, or have the partner record a modified opinion with its basis.")).toBe(true);
+    expect(isOpinionBlocker("Record the date of the auditor's report on the Auditor's report page.")).toBe(true);
     expect(isOpinionBlocker("Audit: materiality has not been set.")).toBe(false);
     expect(isOpinionBlocker("Audit: the partner has not approved the risk assessment.")).toBe(false);
   });
