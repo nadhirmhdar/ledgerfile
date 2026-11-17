@@ -26,7 +26,9 @@ describe("scramVerifier", () => {
   });
 });
 
-describe("ensureAppRole", () => {
+// On a real server the role already exists cluster-wide (made by setup) and the runtime-role test logs in with its password, so this test
+// changes only the throwaway PGlite database. CI proves the real-server path by running db:setup-hosted twice.
+describe.skipIf(!!process.env.TEST_DATABASE_URL)("ensureAppRole", () => {
   it("creates the runtime role with every restriction, and updates it when run again", async () => {
     const db = await openDatabase();
     const first = await ensureAppRole(db, scramVerifier("a-long-generated-app-password-0001"));
