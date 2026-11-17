@@ -8,14 +8,19 @@ import { DAYS_IN_YEAR, FLAG_RULE_TEXT, type RatioRow } from "@/domain/analytics"
 import { formatAmount } from "@/domain/money";
 import { ActionForm } from "@/app/action-form";
 import { reconfirmExplanationAction, saveExplanationAction } from "@/app/analytics-actions";
+import type { Show } from "@/ui/analytics-view";
+import { analyticsSentence, chips, explainLinkLabel, filterRows, formMode, groupBySection, parseShow, reviewCounts, rowState, showHref, statePill } from "@/ui/analytics-view";
+import { Badge } from "@/ui/badge";
+import { Button, LinkButton } from "@/ui/button";
+import { SummaryChevron } from "@/ui/summary-cue";
+import { Callout, EmptyState } from "@/ui/feedback";
+import { Field, Textarea } from "@/ui/form";
+import { PageHeader, Section } from "@/ui/layout";
+import { Table, TCell, THead, TRow } from "@/ui/table";
+import { count } from "@/ui/text";
 import { EngagementNav } from "../../nav";
 
 export const dynamic = "force-dynamic";
-
-const input = "w-full rounded border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-900";
-const small = "rounded border border-slate-400 px-2 py-1 text-xs hover:bg-slate-100";
-const th = "py-2 pl-4 text-right font-medium";
-const td = "py-1.5 pl-4 text-right tabular-nums";
 
 function percent(r: AnalyticsRow): string {
   if (r.pct !== null) return `${r.pct.toFixed(1)}%`;
@@ -36,9 +41,10 @@ function changeText(value: number | null, unit: RatioRow["unit"]): string {
   return sign + ratioText(Math.abs(value), unit).replace(/^\(|\)$/g, "");
 }
 
-export default async function AnalyticsPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function AnalyticsPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const { id } = await params;
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
+  const show = parseShow((await searchParams).show);
 
   const session = await getSession();
   const { engagement, data } = await withFirm(await getDb(), session.firmId, async (tx) => ({
@@ -47,160 +53,280 @@ export default async function AnalyticsPage({ params }: { params: Promise<{ id: 
   }));
   if (!engagement || !data) notFound();
   const base = `/engagements/${id}/audit`;
+  const page = `${base}/analytics`;
+  const counts = reviewCounts(data.rows);
+  const shown = filterRows(data.rows, show);
+  const sections = groupBySection(shown);
+  const chipList = chips(data.rows);
+  const flagging = data.hasComparatives && !!data.thresholds;
 
   return (
-    <div className="py-8 text-slate-900">
-      <Link href="/" className="text-sm text-blue-700 underline">All engagements</Link>
-      <h1 className="mt-2 text-2xl font-semibold">{engagement.clientName}</h1>
-      <p className="mt-1 text-sm text-slate-600">{engagement.periodStart} to {engagement.periodEnd}</p>
+    <div className="py-8 text-ink">
+      <PageHeader
+        breadcrumb={[{ label: "All engagements", href: "/" }]}
+        title="Analytical review and ratios"
+        meta={
+          <>
+            <span>{engagement.clientName}</span>
+            <span aria-hidden="true">·</span>
+            <span>
+              {engagement.periodStart} to {engagement.periodEnd}
+            </span>
+            <span aria-hidden="true">·</span>
+            <Link href={base} className="text-accent hover:underline">
+              Back to audit planning
+            </Link>
+          </>
+        }
+        subtitle={analyticsSentence({ hasComparatives: data.hasComparatives, hasThresholds: !!data.thresholds, ...counts })}
+      />
       <EngagementNav id={id} current="audit" status={engagement.status} />
 
-      <p className="mt-6 text-sm"><Link href={base} className="text-blue-700 underline">Back to audit planning</Link></p>
-      <h2 className="mt-3 text-lg font-semibold">Analytical review and ratios</h2>
-      <p className="mt-1 text-sm text-slate-700">
-        Year-on-year movement of every line in the statements, from the adjusted trial balance. Borrowings are shown as one line here, so each row matches its lead sheet. Use it at planning to decide where to look, and again at completion to
-        check the finished statements still make sense.
-      </p>
+      <div className="mt-6 min-w-0 space-y-6">
+        <p className="max-w-3xl text-sm text-ink-muted">
+          Year-on-year movement of every line in the statements, from the adjusted trial balance. Borrowings are shown as one line here, so each row matches its lead sheet. Use it at planning to decide where to look, and again at
+          completion to check the finished statements still make sense.
+        </p>
 
-      {!data.auditOn && <p className="mt-3 rounded border border-slate-300 bg-slate-50 px-3 py-2 text-sm">The audit is off for this engagement, so explanations cannot be written. Turn it on from the audit planning page.</p>}
-      {data.auditOn && engagement.status !== "open" && <p className="mt-3 rounded border border-slate-300 bg-slate-50 px-3 py-2 text-sm">This engagement is locked. The review is shown as it stands.</p>}
-      {!data.hasComparatives ? (
-        <p role="note" className="mt-3 rounded border border-amber-400 bg-amber-50 px-3 py-2 text-sm">
-          There is no prior year on this engagement, so there is nothing to compare with: no movement is flagged and the prior-year ratios are n/a. Link or import the prior year to use this page fully.
-        </p>
-      ) : !data.thresholds ? (
-        <p role="note" className="mt-3 rounded border border-amber-400 bg-amber-50 px-3 py-2 text-sm">
-          Materiality has not been set, so no movement can be flagged yet. <Link href={base} className="text-blue-700 underline">Set materiality on the audit planning page</Link> first.
-        </p>
-      ) : (
-        <p className="mt-3 text-sm text-slate-700">
-          {FLAG_RULE_TEXT} Performance materiality is {formatAmount(data.thresholds.performanceMinor)}; clearly trivial is {formatAmount(data.thresholds.trivialMinor)}.
-          {data.unexplained > 0 ? (
-            <span className="ml-1 font-medium text-amber-900">{data.unexplained} flagged movement(s) have no explanation that still stands, which holds up the lock.</span>
-          ) : (
-            <span className="ml-1 font-medium text-emerald-800">Every flagged movement is explained.</span>
-          )}
-        </p>
-      )}
+        {!data.auditOn && <Callout variant="info">The audit is off for this engagement, so explanations cannot be written. Turn it on from the audit planning page.</Callout>}
+        {data.auditOn && engagement.status !== "open" && <Callout variant="info">This engagement is locked. The review is shown as it stands.</Callout>}
+        {!data.hasComparatives ? (
+          <Callout variant="warning">There is no prior year on this engagement, so there is nothing to compare with: no movement is flagged and the prior-year ratios are n/a. Link or import the prior year to use this page fully.</Callout>
+        ) : !data.thresholds ? (
+          <Callout variant="warning">
+            Materiality has not been set, so no movement can be flagged yet.{" "}
+            <Link href={base} className="font-medium underline">
+              Set materiality on the audit planning page
+            </Link>{" "}
+            first.
+          </Callout>
+        ) : (
+          <>
+            <p className="max-w-3xl text-sm text-ink-muted">
+              {FLAG_RULE_TEXT} Performance materiality is {formatAmount(data.thresholds.performanceMinor)}; clearly trivial is {formatAmount(data.thresholds.trivialMinor)}.
+            </p>
+            {data.unexplained > 0 ? (
+              <Callout variant="warning">
+                {count(data.unexplained, "flagged movement")} {data.unexplained === 1 ? "has" : "have"} no explanation that still stands, which holds up the lock.
+                {data.editable && show !== "unexplained" && (
+                  <div className="mt-2">
+                    <LinkButton href={showHref(page, "unexplained")} variant="secondary" size="sm">
+                      {explainLinkLabel(data.unexplained)}
+                    </LinkButton>
+                  </div>
+                )}
+              </Callout>
+            ) : (
+              <Callout variant="success">Every flagged movement is explained.</Callout>
+            )}
+          </>
+        )}
 
-      {data.rows.length === 0 ? (
-        <p className="mt-6 text-sm text-slate-600">Import a trial balance and map its accounts to see the comparison.</p>
-      ) : (
-        <section className="mt-6">
-          <h3 className="font-semibold">Year-on-year comparison</h3>
-          <div className="mt-2 overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="border-b border-slate-300 text-slate-600">
-                <tr>
-                  <th className="py-2 font-medium">Line</th>
-                  <th className={th}>Current year</th>
-                  <th className={th}>Prior year</th>
-                  <th className={th}>Change</th>
-                  <th className={th}>Change %</th>
-                </tr>
-              </thead>
-              {["Statement of comprehensive income", "Statement of financial position"].map((section) => (
-                <tbody key={section}>
-                  <tr>
-                    <th colSpan={5} className="pt-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">{section}</th>
-                  </tr>
-                  {data.rows
-                    .filter((r) => r.section === section)
-                    .map((r) => (
-                      <RowView key={`${section}:${r.key}`} r={r} id={id} editable={data.editable} />
+        {data.rows.length === 0 ? (
+          <EmptyState
+            title="No trial balance yet"
+            description="Import a trial balance and map its accounts to see the comparison."
+            action={
+              <LinkButton href={`/engagements/${id}/trial-balance`} variant="secondary">
+                Trial balance and mapping
+              </LinkButton>
+            }
+          />
+        ) : (
+          <Section title="Year-on-year comparison">
+            {flagging && (
+              <nav aria-label="Filter lines" className="mb-3">
+                <ul className="flex flex-wrap gap-2">
+                  {chipList.map((c) => {
+                    const active = show === c.show;
+                    return (
+                      <li key={c.show}>
+                        <Link
+                          href={showHref(page, c.show)}
+                          aria-current={active ? "true" : undefined}
+                          className={`inline-flex min-h-10 items-center rounded-full border px-4 text-sm font-medium ${active ? "border-accent bg-accent text-surface" : "border-border-strong bg-surface text-ink hover:bg-surface-muted"}`}
+                        >
+                          {c.label} {c.count}
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </nav>
+            )}
+            {shown.length === 0 ? (
+              <EmptyState title="Nothing to show" description="No line matches this filter." action={<LinkButton href={page}>Show all lines</LinkButton>} />
+            ) : (
+              <Table caption="Year-on-year comparison">
+                <THead>
+                  <TRow>
+                    <TCell header="col" className="sticky left-0 z-10 min-w-40 bg-surface-muted">
+                      Line
+                    </TCell>
+                    <TCell header="col" numeric>Current year</TCell>
+                    <TCell header="col" numeric>Prior year</TCell>
+                    <TCell header="col" numeric>Change</TCell>
+                    <TCell header="col" numeric>Change %</TCell>
+                  </TRow>
+                </THead>
+                {sections.map((g) => (
+                  <tbody key={g.section}>
+                    <TRow>
+                      <TCell header="row" colSpan={5} className="bg-surface-muted text-sm font-semibold tracking-wide text-ink-muted uppercase">
+                        {g.section}
+                      </TCell>
+                    </TRow>
+                    {g.rows.map((r) => (
+                      <RowView key={`${g.section}:${r.key}`} r={r} id={id} editable={data.editable} show={show} />
                     ))}
-                </tbody>
-              ))}
-            </table>
-          </div>
-        </section>
-      )}
+                  </tbody>
+                ))}
+              </Table>
+            )}
+          </Section>
+        )}
 
-      <section className="mt-10">
-        <h3 className="font-semibold">Ratios</h3>
-        <p className="mt-1 text-sm text-slate-600">
-          Worked out from the period-end balances in the statements as issued (current portion of borrowings split out), not from averages. Days use a {DAYS_IN_YEAR}-day year whatever the length of the period. A ratio is n/a when what it
-          divides by is zero or negative, or when the year has no figures.
-        </p>
-        <div className="mt-2 overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead className="border-b border-slate-300 text-slate-600">
-              <tr>
-                <th className="py-2 font-medium">Ratio</th>
-                <th className="py-2 pl-4 font-medium">Formula</th>
-                <th className={th}>Current year</th>
-                <th className={th}>Prior year</th>
-                <th className={th}>Change</th>
-              </tr>
-            </thead>
+        <Section
+          title="Ratios"
+          description={`Worked out from the period-end balances in the statements as issued (current portion of borrowings split out), not from averages. Days use a ${DAYS_IN_YEAR}-day year whatever the length of the period. A ratio is n/a when what it divides by is zero or negative, or when the year has no figures.`}
+        >
+          <Table caption="Ratios">
+            <THead>
+              <TRow>
+                <TCell header="col" className="sticky left-0 z-10 min-w-40 bg-surface-muted">
+                  Ratio
+                </TCell>
+                <TCell header="col" className="hidden md:table-cell">
+                  Formula
+                </TCell>
+                <TCell header="col" numeric>Current year</TCell>
+                <TCell header="col" numeric>Prior year</TCell>
+                <TCell header="col" numeric>Change</TCell>
+              </TRow>
+            </THead>
             <tbody>
               {data.ratios.map((r) => (
-                <tr key={r.key} className="border-b border-slate-100">
-                  <td className="py-1.5 font-medium">{r.label}</td>
-                  <td className="py-1.5 pl-4 text-slate-600">{r.formula}</td>
-                  <td className={td}>{ratioText(r.current, r.unit)}</td>
-                  <td className={td}>{ratioText(r.prior, r.unit)}</td>
-                  <td className={td}>{changeText(r.change, r.unit)}</td>
-                </tr>
+                <TRow key={r.key}>
+                  <TCell header="row" className="sticky left-0 z-[1] min-w-40 bg-surface">
+                    {r.label}
+                    <span className="mt-0.5 block text-sm font-normal text-ink-muted md:hidden">{r.formula}</span>
+                  </TCell>
+                  <TCell className="hidden text-ink-muted md:table-cell">{r.formula}</TCell>
+                  <TCell numeric>{ratioText(r.current, r.unit)}</TCell>
+                  <TCell numeric>{ratioText(r.prior, r.unit)}</TCell>
+                  <TCell numeric>{changeText(r.change, r.unit)}</TCell>
+                </TRow>
               ))}
             </tbody>
-          </table>
-        </div>
-      </section>
+          </Table>
+        </Section>
+      </div>
     </div>
   );
 }
 
-function RowView({ r, id, editable }: { r: AnalyticsRow; id: string; editable: boolean }) {
+function RowView({ r, id, editable, show }: { r: AnalyticsRow; id: string; editable: boolean; show: Show }) {
   const strong = r.kind !== "line";
   const e = r.explanation;
+  const state = rowState(r);
+  const pill = statePill(state);
+  const mode = formMode(show, state);
+  const bg = r.flag ? "bg-warning-soft" : "bg-surface";
   return (
     <>
-      <tr className={`border-b border-slate-100 ${r.flag ? "bg-amber-50" : ""} ${strong ? "font-semibold" : ""}`}>
-        <td className="py-1.5">
+      <TRow className={`${bg} ${strong ? "font-semibold" : ""}`}>
+        <TCell className={`sticky left-0 z-[1] min-w-40 ${bg}`}>
           {r.label}
-          {r.flag && <span className="ml-2 rounded bg-amber-200 px-1.5 py-0.5 text-xs font-medium text-amber-950">Explain</span>}
-        </td>
-        <td className={td}>{formatAmount(r.current)}</td>
-        <td className={td}>{formatAmount(r.prior)}</td>
-        <td className={td}>{formatAmount(r.change)}</td>
-        <td className={td}>{percent(r)}</td>
-      </tr>
+          {pill && (
+            <span className="ml-2 align-middle">
+              <Badge tone={pill.tone}>{pill.label}</Badge>
+            </span>
+          )}
+        </TCell>
+        <TCell numeric>{formatAmount(r.current)}</TCell>
+        <TCell numeric>{formatAmount(r.prior)}</TCell>
+        <TCell numeric>{formatAmount(r.change)}</TCell>
+        <TCell numeric>{percent(r)}</TCell>
+      </TRow>
       {r.flag && (
-        <tr className="border-b border-slate-200 bg-amber-50">
-          <td colSpan={5} className="pb-3 pl-2 pr-2 text-sm">
-            <p className="text-xs text-slate-700">{r.flag.reason}</p>
+        <TRow className={bg}>
+          <TCell colSpan={5} className="pt-0 text-sm">
             {e && (
-              <p className="mt-1">
-                <span className="font-medium">Explanation:</span> {e.text}{" "}
-                <span className="text-xs text-slate-600">Written by {e.writtenByName} on {e.writtenAt}{e.confirmedByName && `; re-confirmed by ${e.confirmedByName} on ${e.confirmedAt}`}</span>
+              <p>
+                <span className="font-semibold">Explanation:</span> {e.text}{" "}
+                <span className="text-ink-muted">
+                  Written by {e.writtenByName} on {e.writtenAt}
+                  {e.confirmedByName && `; re-confirmed by ${e.confirmedByName} on ${e.confirmedAt}`}
+                </span>
               </p>
             )}
-            {e?.stale && (
-              <p className="mt-1 font-medium text-amber-900">
-                The figures have changed since this was written. Re-confirm it still holds, or rewrite it. Until then it does not count towards the lock.
-              </p>
+            {e?.stale && <p className="mt-1.5 font-semibold text-warning-strong">The figures have changed since this was written. Re-confirm it still holds, or rewrite it. Until then it does not count towards the lock.</p>}
+            {editable && e?.stale && (
+              <ActionForm action={reconfirmExplanationAction} fields={{ engagementId: id, lineKey: r.key }} className="mt-2">
+                <Button variant="secondary" size="sm">
+                  Re-confirm as written
+                </Button>
+              </ActionForm>
             )}
-            {editable && (
-              <>
-                <ActionForm action={saveExplanationAction} fields={{ engagementId: id, lineKey: r.key }} className="mt-2">
-                  <label className="flex flex-col gap-1 text-xs text-slate-700">
-                    {e ? "Rewrite the explanation" : "Explanation: the cause, and what you did to confirm it"}
-                    <textarea name="explanation" rows={2} maxLength={3000} required defaultValue={e?.text ?? ""} className={input} />
-                  </label>
-                  <button className={`${small} mt-1`}>Save explanation</button>
-                </ActionForm>
-                {e?.stale && (
-                  <ActionForm action={reconfirmExplanationAction} fields={{ engagementId: id, lineKey: r.key }} className="mt-1">
-                    <button className={small}>Re-confirm as written</button>
-                  </ActionForm>
-                )}
-              </>
+            {editable && mode === "rewrite" ? (
+              <InlineFold reason={r.flag.reason} text="Rewrite" suffix={`, the explanation for ${r.label}`} className={e ? "mt-1.5" : ""}>
+                <ExplanationForm id={id} r={r} label="Rewrite the explanation" />
+              </InlineFold>
+            ) : editable && mode === "write-closed" ? (
+              <InlineFold reason={r.flag.reason} text="Write an explanation" suffix={`, ${r.label}`}>
+                <ExplanationForm id={id} r={r} label="Explanation: the cause, and what you did to confirm it" />
+              </InlineFold>
+            ) : (
+              <p className={`text-ink-muted ${e ? "mt-1.5" : ""}`}>{r.flag.reason}</p>
             )}
-            {!editable && !e && <p className="mt-1 text-xs text-slate-600">No explanation recorded.</p>}
-          </td>
-        </tr>
+            {editable && mode === "write-open" && (
+              <div className="mt-2">
+                <ExplanationForm id={id} r={r} label="Explanation: the cause, and what you did to confirm it" />
+              </div>
+            )}
+            {!editable && !e && <p className="mt-1.5 text-ink-muted">No explanation recorded.</p>}
+          </TCell>
+        </TRow>
       )}
     </>
+  );
+}
+
+/**
+ * The flag reason with a light, link-style control after it that opens a form below. Closed it is one line, with no card or border;
+ * the panel appears only when open. Its accessible name is the reason plus the control's text and a hidden suffix naming the line, so nothing visible is dropped.
+ */
+function InlineFold({ reason, text, suffix, className = "", children }: { reason: string; text: string; suffix: string; className?: string; children: React.ReactNode }) {
+  return (
+    <details className={`group ${className}`}>
+      <summary className="flex cursor-pointer list-none flex-wrap items-baseline gap-x-3 gap-y-0.5 rounded-sm [&::-webkit-details-marker]:hidden">
+        <span className="text-ink-muted">{reason}</span>
+        <span className="inline-flex items-center gap-1 font-medium text-accent hover:underline">
+          <span aria-hidden="true" className="inline-flex">
+            <SummaryChevron />
+          </span>
+          <span>
+            {text}
+            <span className="sr-only">{suffix}</span>
+          </span>
+        </span>
+      </summary>
+      <div className="mt-2 rounded-lg border border-border bg-surface p-3">{children}</div>
+    </details>
+  );
+}
+
+function ExplanationForm({ id, r, label }: { id: string; r: AnalyticsRow; label: string }) {
+  return (
+    <ActionForm action={saveExplanationAction} fields={{ engagementId: id, lineKey: r.key }}>
+      <div className="flex flex-col gap-2 md:flex-row md:items-end">
+        <Field label={label} className="min-w-0 flex-1">
+          <Textarea name="explanation" rows={2} maxLength={3000} required defaultValue={r.explanation?.text ?? ""} aria-label={`${label}, ${r.label}`} />
+        </Field>
+        <Button variant="primary" size="sm" className="self-start md:self-auto">
+          Save explanation
+        </Button>
+      </div>
+    </ActionForm>
   );
 }
