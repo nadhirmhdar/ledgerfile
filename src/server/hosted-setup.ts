@@ -11,9 +11,21 @@ import type { Db } from "./db";
  */
 export async function ensureAppRole(db: Db, verifier: string): Promise<{ created: boolean }> {
   if (!/^SCRAM-SHA-256\$[0-9A-Za-z+/=:$]+$/.test(verifier)) throw new Error("The password verifier is not in SCRAM-SHA-256 form.");
-  const attrs = "login nosuperuser nocreatedb nocreaterole noinherit nobypassrls";
   const exists = (await db.query("select 1 from pg_roles where rolname = $1", [APP_ROLE])).rows.length > 0;
-  await db.exec(`${exists ? "alter" : "create"} role ${APP_ROLE} ${exists ? "with " : ""}${attrs} password '${verifier}'`);
+  // BYPASSRLS defaults to off when the role is created. ALTER ROLE may not name it (even as NOBYPASSRLS) unless the caller itself has
+  // BYPASSRLS, which a non-superuser owner like Neon's may lack, so it is only named on create and checked after.
+  await db.exec(
+    exists
+      ? `alter role ${APP_ROLE} with login nosuperuser nocreatedb nocreaterole noinherit password '${verifier}'`
+      : `create role ${APP_ROLE} login nosuperuser nocreatedb nocreaterole noinherit nobypassrls password '${verifier}'`,
+  );
+  const attrs = (await db.query<{ rolsuper: boolean; rolbypassrls: boolean; rolcreatedb: boolean; rolcreaterole: boolean; rolinherit: boolean; rolcanlogin: boolean }>(
+    "select rolsuper, rolbypassrls, rolcreatedb, rolcreaterole, rolinherit, rolcanlogin from pg_roles where rolname = $1",
+    [APP_ROLE],
+  )).rows[0];
+  if (!attrs || attrs.rolsuper || attrs.rolbypassrls || attrs.rolcreatedb || attrs.rolcreaterole || attrs.rolinherit || !attrs.rolcanlogin) {
+    throw new Error(`The ${APP_ROLE} role does not have the expected restrictions. Drop it and run setup again.`);
+  }
 
   // Postgres 16 and later name the membership options; earlier versions have the one form (and the role has NOINHERIT either way).
   const version = Number((await db.query<{ v: string }>("show server_version_num")).rows[0].v);
