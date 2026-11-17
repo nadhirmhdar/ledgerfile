@@ -3,7 +3,7 @@
 import { useActionState, useState } from "react";
 import { createJournalAction, type FormState } from "@/app/actions";
 import { Badge } from "@/ui/badge";
-import { Button } from "@/ui/button";
+import { Button, buttonClass } from "@/ui/button";
 import { Field, Input, Select } from "@/ui/form";
 import { balancePill, formatEntryAmount } from "@/ui/journal-entries-view";
 import { Table, TCell, THead, TRow } from "@/ui/table";
@@ -36,12 +36,17 @@ export function JournalForm(props: Props) {
   }, initial);
   return (
     <form action={action}>
-      <Fields key={state.posted} pending={pending} message={state.message} ok={state.ok} {...props} />
+      <Fields key={state.posted} pending={pending} {...props} />
+      {state.message && (
+        <p role="status" className={`mt-3 rounded-md border px-3 py-2 text-sm font-medium ${state.ok ? "border-success bg-success-soft text-success-strong" : "border-danger bg-danger-soft text-danger-strong"}`}>
+          {plainCount(state.message)}
+        </p>
+      )}
     </form>
   );
 }
 
-function Fields({ engagementId, accounts, pending, message, ok }: Props & { pending: boolean; message: string; ok: boolean }) {
+function Fields({ engagementId, accounts, pending }: Props & { pending: boolean }) {
   const [lines, setLines] = useState<Line[]>([blank(), blank()]);
   const [type, setType] = useState("adjusting");
   const [description, setDescription] = useState("");
@@ -130,12 +135,25 @@ function Fields({ engagementId, accounts, pending, message, ok }: Props & { pend
         <Badge tone={balance.tone}>{balance.label}</Badge>
         <span className="text-sm text-ink-muted">{balance.blocked ?? "Debits equal credits."}</span>
       </div>
-      {message && (
-        <p role="status" className={`mt-3 rounded-md border px-3 py-2 text-sm font-medium ${ok ? "border-success bg-success-soft text-success-strong" : "border-danger bg-danger-soft text-danger-strong"}`}>
-          {plainCount(message)}
-        </p>
-      )}
     </>
+  );
+}
+
+/**
+ * The new-entry form in a panel that stays where the user left it. It is the same component in the same place whether or not there are
+ * entries, so posting the first one (which re-renders the page with a list) neither remounts the form, which would lose the confirmation
+ * message, nor closes the panel: it opens once, when there are no entries, and after that only the user opens and closes it.
+ */
+export function NewEntryPanel({ startOpen, ...props }: Props & { startOpen: boolean }) {
+  const [open, setOpen] = useState(startOpen);
+  return (
+    <details open={open} onToggle={(e) => setOpen(e.currentTarget.open)} className="rounded-lg border border-border bg-surface shadow-card">
+      <summary className={`${buttonClass("secondary")} m-3 w-fit cursor-pointer list-none [&::-webkit-details-marker]:hidden`}>Post a new entry</summary>
+      <div className="border-t border-border px-4 py-4 sm:px-5">
+        <h2 className="mb-3 text-base font-semibold text-ink">New entry</h2>
+        <JournalForm {...props} />
+      </div>
+    </details>
   );
 }
 

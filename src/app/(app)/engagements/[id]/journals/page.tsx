@@ -8,13 +8,12 @@ import { canDeleteJournal } from "@/domain/permissions";
 import { deleteJournalAction } from "@/app/actions";
 import { Badge } from "@/ui/badge";
 import { LinkButton } from "@/ui/button";
-import { Disclosure } from "@/ui/controls";
 import { EmptyState } from "@/ui/feedback";
 import { entriesSentence, entryReference, entryTotals } from "@/ui/journal-entries-view";
 import { Card, PageHeader, Section } from "@/ui/layout";
 import { Table, TCell, THead, TRow } from "@/ui/table";
 import { EngagementNav } from "../nav";
-import { DeleteJournalButton, JournalForm } from "./journal-form";
+import { DeleteJournalButton, NewEntryPanel } from "./journal-form";
 
 export const dynamic = "force-dynamic";
 
@@ -30,8 +29,6 @@ export default async function JournalsPage({ params }: { params: Promise<{ id: s
   }));
   if (!engagement) notFound();
   const open = engagement.status === "open";
-
-  const form = <JournalForm engagementId={id} accounts={accounts.map((a) => ({ id: a.id, code: a.code, name: a.name }))} />;
 
   return (
     <div className="py-8 text-ink">
@@ -66,15 +63,7 @@ export default async function JournalsPage({ params }: { params: Promise<{ id: s
           <>
             <p className="max-w-3xl text-sm text-ink-muted">Entries adjust the trial balance that the lead sheets and the financial statements are built from.</p>
 
-            {open &&
-              (list.length === 0 ? (
-                <Card title="New entry">{form}</Card>
-              ) : (
-                <Disclosure summary="Post a new entry">
-                  <h2 className="mb-3 text-base font-semibold text-ink">New entry</h2>
-                  {form}
-                </Disclosure>
-              ))}
+            {open && <NewEntryPanel startOpen={list.length === 0} engagementId={id} accounts={accounts.map((a) => ({ id: a.id, code: a.code, name: a.name }))} />}
 
             <Section title="Posted entries">
               {list.length === 0 ? (
