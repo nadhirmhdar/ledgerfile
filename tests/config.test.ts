@@ -18,11 +18,11 @@ describe("databaseUrl fails closed", () => {
     expect(databaseUrl({})).toBeNull();
   });
   it("returns the URL when set", () => {
-    expect(databaseUrl({ DATABASE_URL: " postgres://placeholder " })).toBe("postgres://placeholder");
+    expect(databaseUrl({ DATABASE_URL: " postgres://app:pw@db.example.test/x?sslmode=require " })).toBe("postgres://app:pw@db.example.test/x?sslmode=require");
   });
   it("refuses to start hosted without a DATABASE_URL, instead of falling back to PGlite", () => {
     expect(() => databaseUrl({ VERCEL: "1" })).toThrow(HostedConfigError);
-    expect(() => databaseUrl({ LEDGERFILE_HOSTED: "1" })).toThrow(/DATABASE_URL is not set/);
+    expect(() => databaseUrl({ LEDGERFILE_HOSTED: "1" })).toThrow(/no runtime database connection/);
   });
 });
 

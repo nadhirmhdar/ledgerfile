@@ -1,5 +1,7 @@
 # Deploying LedgerFile on Vercel with Supabase
 
+> **Alternative.** The main hosting guide is now [deploy-vercel.md](deploy-vercel.md) (Vercel, Neon and Blob). This note is the Supabase alternative, which still works: set `DATABASE_URL` by hand to the `ledgerfile_app` pooler URL and `FILE_STORE=supabase`.
+
 This note is for the owner. **No cloud resource has been created for it**: no Supabase project, no Vercel project, no keys. Everything
 below is what to do, in order, when you create them. Every value in angle brackets is a placeholder.
 

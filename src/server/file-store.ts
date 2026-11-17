@@ -2,6 +2,7 @@ import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { HostedConfigError, isHosted } from "./config";
 import { supabaseFileStore } from "./supabase-file-store";
+import { vercelBlobFileStore } from "./blob-file-store";
 
 /**
  * Where working paper files are kept. Development uses a folder on disk; production
@@ -51,19 +52,26 @@ let store: FileStore | undefined;
 type Env = Record<string, string | undefined>;
 
 /** Which store the environment asks for. Pure, so the choice is tested without building a store. */
-export function fileStoreKind(env: Env = process.env): "local" | "supabase" {
+export function fileStoreKind(env: Env = process.env): "local" | "supabase" | "vercel-blob" {
   const v = env.FILE_STORE?.trim().toLowerCase();
   if (v === "supabase") return "supabase";
+  if (v === "vercel-blob") return "vercel-blob";
   if (v === "local") return "local";
   // Hosted with nothing chosen fails closed: a serverless disk is read-only or thrown away, so "local" would lose files.
-  if (isHosted(env)) throw new HostedConfigError("This deployment is hosted but FILE_STORE is not set. Set FILE_STORE=supabase (or FILE_STORE=local on a server with a persistent disk).");
+  if (isHosted(env)) throw new HostedConfigError("This deployment is hosted but FILE_STORE is not set. Set FILE_STORE=vercel-blob or supabase (or FILE_STORE=local on a server with a persistent disk).");
   return "local";
 }
 
-/** The file store for the running application: Supabase Storage when FILE_STORE=supabase, otherwise a folder beside the development database. */
+/** The file store for the running application: Vercel Blob when FILE_STORE=vercel-blob, Supabase Storage when FILE_STORE=supabase, otherwise a folder beside the development database. */
 export function getFileStore(): FileStore {
   if (store) return store;
-  if (fileStoreKind() === "supabase") {
+  const kind = fileStoreKind();
+  if (kind === "vercel-blob") {
+    // Credentials: a read-write token, or the store id with Vercel's OIDC token. The SDK reads them; here they only have to exist.
+    if (!process.env.BLOB_READ_WRITE_TOKEN && !process.env.BLOB_STORE_ID) throw new HostedConfigError("FILE_STORE=vercel-blob needs a Blob store connected to the project (BLOB_READ_WRITE_TOKEN or BLOB_STORE_ID).");
+    return (store = vercelBlobFileStore());
+  }
+  if (kind === "supabase") {
     const { SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, SUPABASE_STORAGE_BUCKET } = process.env;
     if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY || !SUPABASE_STORAGE_BUCKET) {
       throw new HostedConfigError("FILE_STORE=supabase needs SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY and SUPABASE_STORAGE_BUCKET.");

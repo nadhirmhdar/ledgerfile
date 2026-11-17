@@ -3,11 +3,11 @@
 // Connect with DATABASE_URL_MIGRATIONS (a direct or session-pooler connection, as an owner-level role), or DATABASE_URL if that is unset.
 import { createPostgresDb } from "../src/server/pg-adapter";
 import { applyMigrations, upsertGroups } from "../src/server/migrations";
-import { redact } from "../src/server/config";
+import { migrationUrl, redact } from "../src/server/config";
 
-const url = process.env.DATABASE_URL_MIGRATIONS?.trim() || process.env.DATABASE_URL?.trim();
+const url = migrationUrl();
 if (!url) {
-  console.error("Set DATABASE_URL_MIGRATIONS (or DATABASE_URL) to the database to migrate.");
+  console.error("Set DATABASE_URL_MIGRATIONS (or the integration's DATABASE_URL_UNPOOLED) to the database to migrate.");
   process.exit(1);
 }
 const db = createPostgresDb(url, { max: 1 });

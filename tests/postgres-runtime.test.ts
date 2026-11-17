@@ -2,6 +2,7 @@ import { randomBytes } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import * as auth from "../src/server/auth";
 import { withFirm, type Db } from "../src/server/db";
+import { databaseUrl } from "../src/server/config";
 import { assertSchemaCurrent } from "../src/server/migrations";
 import { createPostgresDb } from "../src/server/pg-adapter";
 import { describeValue, EXPECTED, typeRoundTrip } from "./pg-roundtrip";
@@ -11,7 +12,9 @@ import { describeValue, EXPECTED, typeRoundTrip } from "./pg-roundtrip";
  * that owns nothing and is a member of app_user and app_auth, to a database that `db:migrate` and docs/hosted-roles.sql have already
  * prepared. Nothing here is a real credential: the role and its password exist only inside the throwaway CI service container.
  */
-const URL = process.env.TEST_RUNTIME_DATABASE_URL;
+// Either an explicit URL, or the runtime URL the app itself would build from the Neon-style variables (PGHOST, PGDATABASE, LEDGERFILE_APP_PASSWORD),
+// which tests the name mapping.
+const URL = process.env.TEST_RUNTIME_DATABASE_URL || (process.env.PGHOST && process.env.LEDGERFILE_APP_PASSWORD ? databaseUrl(process.env) ?? undefined : undefined);
 const PASSWORD = "invented-runtime-passphrase";
 const suffix = randomBytes(4).toString("hex");
 
@@ -38,6 +41,12 @@ describe.skipIf(!URL)("the Postgres adapter as the runtime role", () => {
 
   it("returns the same JavaScript values as PGlite for every column type", async () => {
     expect(describeValue(await typeRoundTrip(db))).toEqual(EXPECTED);
+  });
+
+  it("connects as ledgerfile_app, never as the owner role the integration injected", async () => {
+    const me = await db.query<{ u: string }>("select session_user as u");
+    expect(me.rows[0].u).toBe("ledgerfile_app");
+    if (process.env.PGUSER) expect(me.rows[0].u).not.toBe(process.env.PGUSER);
   });
 
   it("connects as a role that owns nothing and cannot bypass row-level security", async () => {
