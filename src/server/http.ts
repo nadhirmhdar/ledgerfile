@@ -28,3 +28,12 @@ export function docxResponse(buffer: Buffer, fileName: string): Response {
     headers: { "Content-Type": DOCX_TYPE, "Content-Disposition": `attachment; filename="${fileName}"`, "Cache-Control": "no-store" },
   });
 }
+
+export const PDF_TYPE = "application/pdf";
+
+/** A PDF as a download. Never cached. */
+export function pdfResponse(buffer: Buffer, fileName: string): Response {
+  return new Response(new Uint8Array(buffer), {
+    headers: { "Content-Type": PDF_TYPE, "Content-Disposition": `attachment; filename="${fileName}"`, "Cache-Control": "no-store" },
+  });
+}

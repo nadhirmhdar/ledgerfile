@@ -72,7 +72,7 @@ describe("downloading the auditor's report", () => {
     await as(rev, (tx) => generateReport(tx, rev, engagement, { partner: "Bea Partner" }));
     const log = await downloads();
     expect(log.map((l) => l.user_id)).toEqual([prep.userId, rev.userId]);
-    expect(log[0].detail).toEqual({ opinion: "unmodified" });
+    expect(log[0].detail).toEqual({ opinion: "unmodified", format: "docx" });
   });
 
   it("states a modified opinion with its basis and the going-concern section only when recorded", async () => {

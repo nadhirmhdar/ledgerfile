@@ -1,16 +1,19 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { ASSEMBLY_DAYS, ASSEMBLY_NOTICE, archiveBlocker, archiveConfirmationMatches, assemblyDeadline, daysBetween, deadlineState, deadlineWords, type ArchiveFacts } from "../src/domain/archiving";
+import { ASSEMBLY_DAYS, ASSEMBLY_RULE, archiveBlocker, archiveConfirmationMatches, assemblyDeadline, daysBetween, deadlineState, deadlineWords, type ArchiveFacts } from "../src/domain/archiving";
 import { archiveSection, ARCHIVE_IRREVERSIBLE, ARCHIVE_PREVENTS, ARCHIVE_STAYS, deadlineView } from "../src/ui/archive-view";
 import { readinessView } from "../src/ui/review-view";
 
 describe("the file assembly deadline", () => {
-  it("is the report date and 60 days, a constant labelled as a default to confirm and citing the standards by number", () => {
+  it("is the report date and 60 days, one constant, stated plainly and no longer as draft guidance", () => {
     expect(ASSEMBLY_DAYS).toBe(60);
-    expect(ASSEMBLY_NOTICE).toMatch(/default for the firm to confirm/);
-    expect(ASSEMBLY_NOTICE).toMatch(/ISA 230/);
-    expect(ASSEMBLY_NOTICE).toMatch(/ISQM 1/);
+    expect(ASSEMBLY_RULE).toBe("The file is due to be assembled within 60 days of the date of the auditor's report.");
+    expect(ASSEMBLY_RULE).not.toMatch(/draft|default|confirm/i);
     expect(assemblyDeadline("2026-01-01")).toBe("2026-03-02");
+    // The word "draft guidance" is gone from the archiving code, page and tests.
+    for (const file of ["src/domain/archiving.ts", "src/app/(app)/engagements/[id]/review/page.tsx", "src/ui/archive-view.ts", "src/server/archiving.ts"]) {
+      expect(readFileSync(file, "utf8"), file).not.toMatch(/draft guidance|default for the firm to confirm|DEFAULT TO CONFIRM/i);
+    }
   });
   it("follows the calendar across month ends", () => {
     expect(assemblyDeadline("2025-12-31")).toBe("2026-03-01");

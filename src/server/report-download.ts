@@ -56,22 +56,24 @@ export function assembleReportInput(facts: ReportFacts, opinion: AuditOpinion | 
 }
 
 /** The download's file name: plain characters only. */
-export const reportFileName = (clientName: string, periodEnd: string): string => `Auditors-report-${plainName(clientName)}-${periodEnd}-draft.docx`;
+export type ReportFormat = "docx" | "pdf";
+export const reportFileName = (clientName: string, periodEnd: string, format: ReportFormat = "docx"): string => `Auditors-report-${plainName(clientName)}-${periodEnd}-draft.${format}`;
 
-export type GeneratedReport = { kind: "ok"; title: string; fileName: string; blocks: Block[] } | { kind: "not_found" } | { kind: "refused"; message: string };
+export type GeneratedReport = { kind: "ok"; title: string; /** The client and period, for the page header of the PDF. */ header: string; fileName: string; blocks: Block[] } | { kind: "not_found" } | { kind: "refused"; message: string };
 
 /** Build the report for an engagement and record the download. Not found for another firm's engagement or one that is not being audited. */
-export async function generateReport(tx: Tx, s: repo.Session, engagementId: string, form: ReportForm): Promise<GeneratedReport> {
+export async function generateReport(tx: Tx, s: repo.Session, engagementId: string, form: ReportForm, format: ReportFormat = "docx"): Promise<GeneratedReport> {
   const context = await getLetterContext(tx, engagementId);
   if (!context) return { kind: "not_found" };
   const opinion = await getOpinion(tx, engagementId);
   const assembled = assembleReportInput(context, opinion, form);
   if (!assembled.ok) return { kind: "refused", message: assembled.message };
-  await repo.audit(tx, s, "download_report", "engagement", engagementId, { opinion: assembled.input.opinion });
+  await repo.audit(tx, s, "download_report", "engagement", engagementId, { opinion: assembled.input.opinion, format });
   return {
     kind: "ok",
     title: `${context.clientName} auditor's report ${context.periodEnd} (draft)`,
-    fileName: reportFileName(context.clientName, context.periodEnd),
+    header: `${context.clientName}, independent auditor's report, period ended ${context.periodEnd}`,
+    fileName: reportFileName(context.clientName, context.periodEnd, format),
     blocks: buildReport(assembled.input),
   };
 }

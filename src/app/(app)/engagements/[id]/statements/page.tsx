@@ -193,6 +193,9 @@ export default async function StatementsPage({ params, searchParams }: { params:
                 Auditor&apos;s report
               </a>
             )}
+            <a href={`${base}/statements/pdf${query}`} className={buttonClass("secondary")}>
+              Download as PDF
+            </a>
             <a href={`${base}/statements/export${query}`} className={buttonClass("primary")}>
               Download as Word
             </a>

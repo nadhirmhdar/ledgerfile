@@ -87,4 +87,4 @@ export function noticeBody(notice: string): string {
 }
 
 export const DOWNLOAD_BEFORE = "The report can be downloaded once the partner records the opinion.";
-export const DOWNLOAD_NOTE = "The report is generated from the decision above. It is an unreviewed draft to check and complete in Word.";
+export const DOWNLOAD_NOTE = "The report is generated from the decision above. It is an unreviewed draft to check and complete in Word, or to read as a PDF.";
