@@ -29,38 +29,33 @@ You have asked us to audit the financial statements of {Client legal name} ("the
 
 **1. What we will do**
 
-We will audit the Company's financial statements, which consist of the statement of financial position at {period end}, the statements of comprehensive income, changes in equity and cash flows for the year, and the notes, including the accounting policies. The purpose of the audit is for us to give an opinion on whether those statements are prepared, in all material respects, in accordance with {framework}.
+The financial statements we will audit are the Company's statement of financial position at {period end}, its statements of comprehensive income, changes in equity and cash flows for the year, and the notes with the accounting policies. We will report whether, in all material respects, those statements are prepared in accordance with {framework}.
 
 **2. How we will do it**
 
-We will carry out the audit under International Standards on Auditing. Those standards require us to comply with ethical requirements, including independence, and to plan and perform our work so as to obtain reasonable assurance that the statements as a whole are free from material misstatement, whether caused by fraud or error.
+We will carry out the audit under International Standards on Auditing. We will keep to the ethical rules that apply, including those on independence, and we will plan and perform the work so that we can obtain reasonable assurance that the statements as a whole contain no material misstatement, whether from fraud or error.
 
-Reasonable assurance is a high level of assurance but not a guarantee. An audit works by testing and by judgement, and internal control has inherent limits, so there is an unavoidable risk that a material misstatement goes undetected even though the audit is properly planned and performed. That risk is higher for fraud than for error, because fraud may involve collusion, forgery or deliberate concealment.
+Reasonable assurance is a high degree of comfort, not a promise. We test and we use judgement, and every system of internal control has limits, so a material misstatement can stay undetected even in an audit that is properly planned and carried out. The risk is greater for fraud than for error, since fraud can involve collusion, forgery or deliberate concealment.
 
-As part of the audit we will:
-- assess the risks of material misstatement and design our work in response;
-- obtain an understanding of the Company's internal control as it relates to the audit, in order to design suitable procedures, but not to give an opinion on how effective that control is;
-- evaluate the accounting policies used, the reasonableness of estimates, and the overall presentation of the statements;
-- conclude on whether it is appropriate for the statements to be prepared on a going-concern basis.
+In doing the audit we will:
+- identify and assess where the statements could be materially misstated, and design our procedures in response;
+- learn enough about the Company's internal control to choose suitable procedures. We will not be examining that control in order to give an opinion on it;
+- consider the accounting policies, whether the estimates are reasonable, and how the statements are presented as a whole;
+- decide whether it is appropriate for the statements to be prepared on the going concern basis.
 
-We will tell you in writing about any significant weaknesses in internal control that we identify during the audit.
+If we find significant weaknesses in internal control during the audit, we will tell you about them in writing.
 
 **3. What you are responsible for**
 
-Our audit is carried out on the basis that management and, where applicable, those charged with governance acknowledge and understand that they are responsible for:
+Signing this letter confirms that management and, where applicable, those charged with governance accept the following.
 
-(a) preparing financial statements that are fairly presented in accordance with {framework};
+- Management prepares the financial statements, and they must present fairly, in all material respects, under {framework}.
+- Management keeps the internal control it judges necessary so that the statements contain no material misstatement from fraud or error.
+- Management judges whether the Company can continue as a going concern, and makes the disclosures that requires.
 
-(b) the internal control that management considers necessary for the statements to be free from material misstatement, whether from fraud or error;
+Management also gives us what the audit needs: free access to the people in the Company, the records and documents that bear on the statements, and anything else we ask for.
 
-(c) assessing the Company's ability to continue as a going concern and making the related disclosures;
-
-(d) giving us:
-- access to all information relevant to the statements, such as records, documents and other matters;
-- any further information we ask for;
-- unrestricted access to people in the Company from whom we need to obtain evidence.
-
-We will ask you to confirm in writing, at the end of the audit, the representations made to us during it.
+At the end of the audit we will ask you to confirm in writing the statements you have made to us during it.
 
 **[If the firm also provides accounting or tax services]**
 **4. Other services**
@@ -69,7 +64,7 @@ We also provide {description of other services} to the Company. Those services a
 
 **5. Our report**
 
-We expect to issue a report giving our opinion on the financial statements. The form and content of the report may need to change in the light of what we find. If so, we will discuss the reasons with you before issuing it.
+We expect to issue a report that gives our opinion on the financial statements. What we find may change the form or content of that report. If it does, we will talk to you about the reasons before the report is issued.
 
 **6. Timing and information**
 
@@ -111,51 +106,51 @@ To: {Firm name}
 
 **Financial statements for the year ended {period end}**
 
-We give you this letter in connection with your audit of the financial statements of {Client legal name} for the year ended {period end}. We confirm the following, to the best of our knowledge and belief, having made the inquiries we considered necessary to inform ourselves properly.
+This letter goes with your audit of the financial statements of {Client legal name} for the year ended {period end}. We confirm the statements below. They are true to the best of our knowledge and belief, and we made the enquiries we thought necessary to be sure of them.
 
 **Financial statements**
 
-1. We have met our responsibilities, as set out in the engagement letter dated {engagement letter date}, for preparing financial statements that are fairly presented in accordance with {framework}.
-2. The methods, data and significant assumptions we used in making accounting estimates, and the related disclosures, are appropriate and reasonable under {framework}.
-3. Related-party relationships and transactions have been properly accounted for and disclosed.
-4. All events since {period end} that require adjustment or disclosure have been adjusted or disclosed.
-5. The uncorrected misstatements listed in the attachment are, in our view, immaterial to the financial statements as a whole, both individually and together. **[If there are none: "There are no uncorrected misstatements."]**
-6. The accounting policies have been applied consistently, and are appropriate to the Company's circumstances.
+1. As the engagement letter dated {engagement letter date} sets out, the financial statements are our responsibility, and we have prepared them so that they are fairly presented in accordance with {framework}.
+2. The methods, data and significant assumptions behind our accounting estimates, and the disclosures about them, are reasonable and fit {framework}.
+3. We have accounted for and disclosed all related-party relationships and transactions properly.
+4. Events that have happened since {period end} and call for adjustment or disclosure have been adjusted or disclosed in the statements.
+5. In our view the uncorrected misstatements listed in the attachment are immaterial to the financial statements as a whole, taken one by one and taken together. **[If there are none: "There are no uncorrected misstatements."]**
+6. We have applied the accounting policies consistently, and they suit the Company's circumstances.
 
 **Information provided**
 
-7. We have given you access to all information we know to be relevant to the financial statements, the further information you asked for, and unrestricted access to people in the Company.
-8. All transactions have been recorded in the accounting records and are reflected in the financial statements.
-9. We have told you the results of our assessment of the risk that the financial statements may be materially misstated because of fraud.
-10. We have told you everything we know about any fraud or suspected fraud affecting the Company that involves management, employees with significant roles in internal control, or others where the fraud could materially affect the financial statements.
-11. We have told you everything we know about any allegations of fraud, or suspected fraud, affecting the financial statements, made by employees, former employees, regulators or others.
-12. We have told you about all known or suspected instances of non-compliance with laws and regulations whose effects should be considered in preparing the financial statements.
-13. We have told you the identity of all the Company's related parties and all the related-party relationships and transactions we know of.
-14. We have told you about all known actual or possible litigation and claims whose effects should be considered in preparing the financial statements, and they have been accounted for and disclosed in accordance with {framework}.
+7. You have had access to everything we know to be relevant to the financial statements, everything further you asked for, and free access to the people in the Company.
+8. Every transaction is in the accounting records and shows in the financial statements.
+9. We have given you our own assessment of the risk that fraud has caused a material misstatement in the financial statements.
+10. We have told you all we know about fraud, or suspected fraud, at the Company that involves management, employees with significant roles in internal control, or anyone else where the fraud could have a material effect on the statements.
+11. We have told you of every allegation of fraud, or suspected fraud, affecting the financial statements that employees, former employees, regulators or others have made to us.
+12. We have told you about every instance of non-compliance with laws and regulations, known or suspected, whose effects should be taken into account in preparing the financial statements.
+13. We have given you the names of all the Company's related parties and told you of every related-party relationship and transaction we know about.
+14. We have told you about all litigation and claims, actual or possible, that should be taken into account in the financial statements, and we have accounted for and disclosed them in accordance with {framework}.
 
 **Assets, liabilities and commitments**
 
-15. The Company has good title to its assets. There are no charges or other security over them except as disclosed.
-16. All liabilities, actual and contingent, have been recorded or disclosed. We have disclosed all guarantees given to third parties.
-17. We have no plans or intentions that would materially change the carrying amount or classification of assets and liabilities.
+15. The Company owns its assets outright. Nothing is charged or pledged against them except what has been disclosed.
+16. Every liability, actual or contingent, is recorded or disclosed, and so is every guarantee we have given to others.
+17. We have no plans that would materially change what assets and liabilities are carried at, or how they are classified.
 
 **Going concern**
 
-18. We have assessed the Company's ability to continue as a going concern for at least twelve months from {period end}. We consider the going-concern basis appropriate, and we have disclosed to you all relevant information, including our future plans.
+18. We have looked at whether the Company can continue as a going concern for at least twelve months from {period end}. In our view the going concern basis is appropriate, and we have given you all relevant information, including our plans for the future.
 
 **[If the Company depends on owner or related-party support]**
-19. {Supporter name} has confirmed that it will provide the financial support the Company needs for at least twelve months from the date of approval of the financial statements, and we are satisfied that it is able to do so.
+19. {Supporter name} has confirmed that it will provide the financial support the Company needs for at least twelve months from the date the financial statements are approved, and we are satisfied that it can do so.
 
 **Specific matters**
 
 **[If inventory is material]**
-20. Inventories are stated at the lower of cost and {the framework's measure}. Adequate allowance has been made for slow-moving, damaged and obsolete items. Goods held on behalf of others are excluded.
+20. Inventories are carried at the lower of cost and {the framework's measure}, with adequate allowance for slow-moving, damaged and obsolete items. Goods held for others are left out.
 
 **[If receivables are material]**
-21. The allowance for doubtful debts is adequate. Receivables represent valid claims against customers for sales or services made on or before {period end}.
+21. The allowance for doubtful debts is adequate. Receivables are valid claims against customers for goods or services supplied on or before {period end}.
 
 **[If tax is material]**
-22. We have filed all tax returns due, disclosed to you all correspondence with the tax authority, and made adequate provision for all tax liabilities, including any penalties.
+22. We have filed every tax return that was due, shown you all our correspondence with the tax authority, and made adequate provision for all tax liabilities, including penalties.
 
 **[Engagement-specific representations]**
 23. {Free text added by the auditor for matters specific to this audit.}
