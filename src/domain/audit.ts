@@ -38,6 +38,8 @@ export interface ProcedureTemplate {
   reference: string;
   /** Set when this wording is the firm's own change to the library's, not the library's. */
   firmWording?: boolean;
+  /** Set when this is a procedure the firm wrote itself, not one of the library's. */
+  firmOwn?: boolean;
 }
 export interface Area {
   code: string;

@@ -5,7 +5,7 @@ import { getSession } from "@/server/session";
 import * as repo from "@/server/repo";
 import * as audit from "@/server/audit";
 import { AREA_BY_CODE, CHECKLIST_BY_CODE, LIBRARY_STATUS } from "@/domain/audit";
-import { DRAFT_REST_NOTE, FIRM_WORDING_LABEL, FIRM_WORDING_NOTE } from "@/ui/methodology-view";
+import { ADDED_LABEL, ADDED_NOTE, DRAFT_REST_NOTE, FIRM_WORDING_LABEL, FIRM_WORDING_NOTE } from "@/ui/methodology-view";
 import { ActionForm } from "@/app/action-form";
 import { reviewAreaAction, reviewProcedureAction, updateProcedureAction } from "@/app/audit-actions";
 import { removeWorkingPaperAction } from "@/app/papers-actions";
@@ -110,7 +110,7 @@ export default async function ProgrammePage({ params, searchParams }: { params: 
           </div>
         )}
         <Callout variant="draft" title={`Methodology content: ${LIBRARY_STATUS}`}>
-          {procedures.some((p) => p.firmWording) ? DRAFT_REST_NOTE : undefined}
+          {procedures.some((p) => p.firmWording || p.firmAdded) ? DRAFT_REST_NOTE : undefined}
         </Callout>
         {!auditOn && (
           <Callout variant="info" title="The audit is off for this engagement">
@@ -287,6 +287,11 @@ export default async function ProgrammePage({ params, searchParams }: { params: 
                             <div>
                               <h3 className="font-semibold">
                                 {p.templateId}
+                                {p.firmAdded && (
+                                  <Badge tone="info" className="ml-2 align-middle">
+                                    {ADDED_LABEL}
+                                  </Badge>
+                                )}
                                 {p.firmWording && (
                                   <Badge tone="info" className="ml-2 align-middle">
                                     {FIRM_WORDING_LABEL}
@@ -312,8 +317,8 @@ export default async function ProgrammePage({ params, searchParams }: { params: 
                               Done by {p.performedByName} on {p.performedAt}
                             </p>
                           )}
-                          {p.firmWording && <p className="mt-3 text-sm font-medium text-ink-muted">{FIRM_WORDING_NOTE}</p>}
-                          <p className={p.firmWording ? "mt-1 text-base" : "mt-3 text-base"}>{p.body}</p>
+                          {(p.firmWording || p.firmAdded) && <p className="mt-3 text-sm font-medium text-ink-muted">{p.firmAdded ? ADDED_NOTE : FIRM_WORDING_NOTE}</p>}
+                          <p className={p.firmWording || p.firmAdded ? "mt-1 text-base" : "mt-3 text-base"}>{p.body}</p>
                           <p className="mt-1 text-sm text-ink-muted">
                             Evidence expected: {p.evidence} · Reference: {p.reference}
                           </p>

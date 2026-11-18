@@ -17,7 +17,7 @@ export const CHANGES_APPLY = "Changes apply to procedures loaded from now on. An
 export const FIRM_WORDING_LABEL = "Your firm's wording";
 export const FIRM_WORDING_NOTE = "Your firm's wording, not the library draft.";
 /** Added to the draft notice when some procedures on the page are the firm's own: the notice still holds for the others. */
-export const DRAFT_REST_NOTE = "Procedures marked \"Your firm's wording\" were reworded by your firm. This notice still applies to the rest.";
+export const DRAFT_REST_NOTE = "Procedures marked \"Your firm's wording\" or \"Added by your firm\" are your firm's own. This notice still applies to the rest.";
 
 export const STATE_BADGE: Record<ProcedureState, { tone: Tone; label: string }> = {
   library: { tone: "neutral", label: "Library draft" },
@@ -34,3 +34,8 @@ export function areaSummary(states: ProcedureState[]): string {
   if (edited === 0 && hidden === 0) return "No changes";
   return [edited > 0 ? `${edited} edited` : "", hidden > 0 ? `${hidden} hidden` : ""].filter(Boolean).join(", ");
 }
+
+/** The mark on a procedure the firm wrote itself, wherever its text is shown. Distinct from "Your firm's wording". */
+export const ADDED_LABEL = "Added by your firm";
+export const ADDED_NOTE = "Added by your firm, not part of the library draft.";
+export const TIER_WORDS = { core: "Core", extended: "Extended", significant: "Significant risk" } as const;

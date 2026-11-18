@@ -1,7 +1,7 @@
 import type { Tx } from "./db";
 import { audit as log, type Session } from "./repo";
-import { AREAS, type Area, type ProcedureTemplate } from "../domain/audit";
-import { applyFirmChanges, changesWording, checkWording, isProtected, stateOf, type FirmChange, type ProcedureState, type WordingInput } from "../domain/firm-methodology";
+import { AREAS, AREA_BY_CODE, assertionsOf, type Area, type Assertion, type ProcedureTemplate, type Tier } from "../domain/audit";
+import { applyFirmChanges, changesWording, checkOwnProcedure, checkWording, isProtected, MAX_OWN_PER_AREA, nextOwnSeq, ownId, stateOf, type FirmChange, type FirmOwnProcedure, type OwnInput, type ProcedureState, type WordingInput } from "../domain/firm-methodology";
 import { canLock } from "../domain/signoff";
 
 /**
@@ -33,9 +33,28 @@ export async function loadFirmChanges(tx: Tx): Promise<FirmChange[]> {
   return (await rows(tx)).map((r) => ({ templateId: r.templateId, body: r.body, evidence: r.evidence, reference: r.reference, hidden: r.hidden }));
 }
 
-/** The areas as this firm has them: the library with its changes applied. What new programmes are loaded from. */
+interface OwnRow {
+  areaCode: string;
+  seq: number;
+  tier: Tier;
+  assertions: string[];
+  body: string;
+  evidence: string;
+  reference: string;
+  retired: boolean;
+}
+
+const OWN_COLUMNS = 'area_code as "areaCode", seq, tier, assertions, body, evidence, reference, retired';
+
+/** The firm's own procedures, retired ones too, for the signed-in firm (row-level security). */
+export async function loadOwnProcedures(tx: Tx): Promise<FirmOwnProcedure[]> {
+  const { rows } = await tx.query<OwnRow>(`select ${OWN_COLUMNS} from firm_own_procedures order by area_code, seq`);
+  return rows.map((r) => ({ ...r, assertions: r.assertions as Assertion[] }));
+}
+
+/** The areas as this firm has them: the library with its changes applied and its own procedures added. What new programmes are loaded from. */
 export async function getFirmAreas(tx: Tx): Promise<Area[]> {
-  return applyFirmChanges(AREAS, await loadFirmChanges(tx));
+  return applyFirmChanges(AREAS, await loadFirmChanges(tx), await loadOwnProcedures(tx));
 }
 
 export interface MethodologyProcedure {
@@ -48,18 +67,38 @@ export interface MethodologyProcedure {
   /** A core procedure of an area with a fixed risk: its wording can be edited but it cannot be hidden. */
   protected: boolean;
 }
+export interface OwnProcedureView {
+  id: string;
+  seq: number;
+  tier: Tier;
+  assertions: string[];
+  body: string;
+  evidence: string;
+  reference: string;
+  retired: boolean;
+}
 export interface MethodologyArea {
   code: string;
   title: string;
   procedures: MethodologyProcedure[];
+  /** The assertions the library's area covers: the only ones an own procedure may address. */
+  assertionChoices: string[];
+  /** The firm's own procedures for the area, retired ones too. */
+  own: OwnProcedureView[];
+  /** Whether another can be added (retired ones count toward the limit). */
+  canAdd: boolean;
 }
 
 /** Every area and procedure with the library's wording, the firm's current wording and the state, for the methodology page. */
 export async function listFirmMethodology(tx: Tx): Promise<MethodologyArea[]> {
   const changes = new Map((await loadFirmChanges(tx)).map((c) => [c.templateId, c]));
+  const own = await loadOwnProcedures(tx);
   return AREAS.map((a) => ({
     code: a.code,
     title: a.title,
+    assertionChoices: assertionsOf(a),
+    own: own.filter((o) => o.areaCode === a.code).map((o) => ({ id: ownId(o.areaCode, o.seq), seq: o.seq, tier: o.tier, assertions: o.assertions, body: o.body, evidence: o.evidence, reference: o.reference, retired: o.retired })),
+    canAdd: nextOwnSeq(own.filter((o) => o.areaCode === a.code).map((o) => o.seq)) !== null,
     procedures: a.procedures.map((p) => {
       const c = changes.get(p.id);
       return {
@@ -156,3 +195,95 @@ export async function resetProcedure(tx: Tx, s: Session, templateId: string): Pr
   if (!before) throw new Error("This procedure already has the library wording.");
   await save(tx, s, templateId, "reset", before, null);
 }
+
+// --- The firm's own procedures ------------------------------------------------------------------------------------------------------------
+// Added to an area after the library's, loaded into programmes from now on like any other. Retired, never deleted: retiring leaves a procedure out of
+// programmes loaded from now on, and the wording already on engagements stays. Partner-level only, like the rest, with the role read from the database.
+
+const ownSnapshot = (r: OwnRow | undefined) => (r ? { tier: r.tier, assertions: r.assertions, body: r.body, evidence: r.evidence, reference: r.reference, retired: r.retired } : null);
+
+async function ownRows(tx: Tx, areaCode: string): Promise<OwnRow[]> {
+  return (await tx.query<OwnRow>(`select ${OWN_COLUMNS} from firm_own_procedures where area_code = $1 order by seq`, [areaCode])).rows;
+}
+
+async function recordOwn(tx: Tx, s: Session, templateId: string, action: "add" | "edit" | "retire" | "restore", before: OwnRow | undefined, after: OwnRow): Promise<void> {
+  await tx.query("insert into firm_own_procedure_history (firm_id, template_id, action, before_values, after_values, changed_by) values ($1, $2, $3, $4, $5, $6)", [
+    s.firmId,
+    templateId,
+    action,
+    JSON.stringify(ownSnapshot(before)),
+    JSON.stringify(ownSnapshot(after)),
+    s.userId,
+  ]);
+  await log(tx, s, `${action}_own_procedure`, "methodology", null, { templateId, before: ownSnapshot(before), after: ownSnapshot(after) });
+}
+
+/** The id of an own procedure, split into its area and sequence number. Anything else is refused. */
+function parseOwnId(templateId: string): { areaCode: string; seq: number } {
+  const m = /^(C[0-9]{1,2})\.F([0-9]{2})$/.exec(templateId);
+  const seq = m ? Number(m[2]) : 0;
+  if (!m || !AREA_BY_CODE.has(m[1]) || seq < 1 || seq > MAX_OWN_PER_AREA) throw new Error("That procedure was not added by your firm.");
+  return { areaCode: m[1], seq };
+}
+
+/** Write a new procedure for an area. Returns its id, for example C1.F01. */
+export async function addProcedure(tx: Tx, s: Session, areaCode: string, input: OwnInput): Promise<string> {
+  await requirePartner(tx, s);
+  const area = AREA_BY_CODE.get(areaCode);
+  if (!area) throw new Error("Unknown audit area.");
+  // Only the assertions the LIBRARY's area covers, so the area's risk assessment still asks for exactly the same ones.
+  const checked = checkOwnProcedure(input, assertionsOf(area));
+  if (!checked.ok) throw new Error(checked.message);
+  const seq = nextOwnSeq((await ownRows(tx, areaCode)).map((r) => r.seq));
+  if (seq === null) throw new Error(`An area can have at most ${MAX_OWN_PER_AREA} procedures added by your firm, retired ones included.`);
+  const v = checked.value;
+  await tx.query(
+    "insert into firm_own_procedures (firm_id, area_code, seq, tier, assertions, body, evidence, reference, created_by, updated_by) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $9)",
+    [s.firmId, areaCode, seq, v.tier, v.assertions, v.body, v.evidence, v.reference, s.userId],
+  );
+  const id = ownId(areaCode, seq);
+  await recordOwn(tx, s, id, "add", undefined, { areaCode, seq, ...v, retired: false });
+  return id;
+}
+
+async function currentOwn(tx: Tx, templateId: string): Promise<{ row: OwnRow; areaCode: string; seq: number }> {
+  const { areaCode, seq } = parseOwnId(templateId);
+  const row = (await ownRows(tx, areaCode)).find((r) => r.seq === seq);
+  if (!row) throw new Error("That procedure was not added by your firm.");
+  return { row, areaCode, seq };
+}
+
+/** Change an own procedure's wording, tier and assertions. A retired one has to be restored first. */
+export async function editOwnProcedure(tx: Tx, s: Session, templateId: string, input: OwnInput): Promise<void> {
+  await requirePartner(tx, s);
+  const { row, areaCode, seq } = await currentOwn(tx, templateId);
+  if (row.retired) throw new Error("This procedure is retired. Restore it before changing it.");
+  const checked = checkOwnProcedure(input, assertionsOf(AREA_BY_CODE.get(areaCode)!));
+  if (!checked.ok) throw new Error(checked.message);
+  const v = checked.value;
+  await tx.query("update firm_own_procedures set tier = $4, assertions = $5, body = $6, evidence = $7, reference = $8, updated_by = $9, updated_at = clock_timestamp() where firm_id = $1 and area_code = $2 and seq = $3", [
+    s.firmId,
+    areaCode,
+    seq,
+    v.tier,
+    v.assertions,
+    v.body,
+    v.evidence,
+    v.reference,
+    s.userId,
+  ]);
+  await recordOwn(tx, s, templateId, "edit", row, { areaCode, seq, ...v, retired: false });
+}
+
+async function setRetired(tx: Tx, s: Session, templateId: string, retired: boolean): Promise<void> {
+  await requirePartner(tx, s);
+  const { row, areaCode, seq } = await currentOwn(tx, templateId);
+  if (row.retired === retired) throw new Error(retired ? "This procedure is already retired." : "This procedure is not retired.");
+  await tx.query("update firm_own_procedures set retired = $4, updated_by = $5, updated_at = clock_timestamp() where firm_id = $1 and area_code = $2 and seq = $3", [s.firmId, areaCode, seq, retired, s.userId]);
+  await recordOwn(tx, s, templateId, retired ? "retire" : "restore", row, { ...row, retired });
+}
+
+/** Leave an own procedure out of programmes loaded from now on. It is kept, and can be restored. */
+export const retireOwnProcedure = (tx: Tx, s: Session, templateId: string) => setRetired(tx, s, templateId, true);
+/** Load a retired own procedure into programmes again. */
+export const restoreOwnProcedure = (tx: Tx, s: Session, templateId: string) => setRetired(tx, s, templateId, false);

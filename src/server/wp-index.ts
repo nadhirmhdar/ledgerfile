@@ -203,7 +203,7 @@ export async function buildWorkingPaperIndex(tx: Tx, engagementId: string): Prom
 
     // Procedures and checklist steps, rolled up per area or checklist.
     const rollup = await tx.query<{
-      code: string; total: number; open: number; na: number; done: number; unreviewed: number; reviewedN: number; selfN: number; firmN: number;
+      code: string; total: number; open: number; na: number; done: number; unreviewed: number; reviewedN: number; selfN: number; firmN: number; addedN: number;
       performers: string[] | null; performedOn: string | null; reviewers: string[] | null; reviewedOn: string | null;
     }>(
       `select p.area_code as code, count(*)::int as total, count(*) filter (where p.status = 'open')::int as open, count(*) filter (where p.status = 'na')::int as na,
@@ -211,7 +211,7 @@ export async function buildWorkingPaperIndex(tx: Tx, engagementId: string): Prom
               count(*) filter (where p.status <> 'open' and p.reviewed_by is null and p.evidence !~* '^Partner sign-off')::int as unreviewed,
               count(*) filter (where p.reviewed_by is not null)::int as "reviewedN",
               count(*) filter (where p.reviewed_by is not null and p.reviewed_by = p.performed_by)::int as "selfN",
-              count(*) filter (where p.firm_wording)::int as "firmN",
+              count(*) filter (where p.firm_wording)::int as "firmN", count(*) filter (where p.firm_added)::int as "addedN",
               array_agg(distinct pu.name) filter (where pu.name is not null) as performers, to_char(max(p.performed_at), 'YYYY-MM-DD') as "performedOn",
               array_agg(distinct ru.name) filter (where ru.name is not null) as reviewers, to_char(max(p.reviewed_at), 'YYYY-MM-DD') as "reviewedOn"
        from audit_procedures p left join users pu on pu.id = p.performed_by left join users ru on ru.id = p.reviewed_by
@@ -230,7 +230,7 @@ export async function buildWorkingPaperIndex(tx: Tx, engagementId: string): Prom
         preparedOn: r?.performedOn ?? null,
         reviewedBy: status === "reviewed" || status === "not_applicable" ? peopleLabel(r?.reviewers ?? []) : null,
         reviewedOn: status === "reviewed" || status === "not_applicable" ? (r?.reviewedOn ?? null) : null,
-        note: !r || r.total === 0 ? "Programme not loaded." : `${r.done} of ${r.total} steps finished, ${r.reviewedN} reviewed${r.na > 0 ? `, ${r.na} not applicable` : ""}.${r.selfN > 0 ? ` ${r.selfN} self-reviewed.` : ""}${r.firmN > 0 ? ` ${r.firmN} with your firm's wording.` : ""}`,
+        note: !r || r.total === 0 ? "Programme not loaded." : `${r.done} of ${r.total} steps finished, ${r.reviewedN} reviewed${r.na > 0 ? `, ${r.na} not applicable` : ""}.${r.selfN > 0 ? ` ${r.selfN} self-reviewed.` : ""}${r.firmN > 0 ? ` ${r.firmN} with your firm's wording.` : ""}${r.addedN > 0 ? ` ${r.addedN} added by your firm.` : ""}`,
       });
     };
     for (const c of CHECKLISTS) {
