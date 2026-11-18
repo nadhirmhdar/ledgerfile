@@ -4,6 +4,7 @@ import { audit as log, getEngagement, listAccounts, type Session } from "./repo"
 import { getOverview, type LeadSheetReview } from "./review";
 import { PERCENT, setAmount, setText } from "./schedule-xlsx";
 import { plainName } from "./http";
+import { STATEMENT_NAME } from "../domain/groups";
 import { buildLeadSheets, variancePct, type LeadSheetSet, type MappedAccount } from "../domain/leadsheet";
 
 /**
@@ -76,7 +77,7 @@ function heading(sheet: ExcelJS.Worksheet, row: number, labels: string[], numeri
 }
 
 /** The account rows of one sheet, with the total, from the lead sheet itself. Returns the next free row. */
-function writeAccounts(sheet: ExcelJS.Worksheet, accounts: MappedAccount[], totals: { closingMinor: number; priorMinor: number } | null, hasAdjustments: boolean, start: number): number {
+function writeAccounts(sheet: ExcelJS.Worksheet, accounts: MappedAccount[], totals: { closingMinor: number; priorMinor: number; adjustmentMinor: number } | null, hasAdjustments: boolean, start: number): number {
   let r = start;
   const adj = hasAdjustments ? 2 : 0;
   for (const a of accounts) {
@@ -96,6 +97,11 @@ function writeAccounts(sheet: ExcelJS.Worksheet, accounts: MappedAccount[], tota
     const row = sheet.getRow(r++);
     setText(row.getCell(1), "Total");
     row.getCell(1).font = BOLD;
+    // Every amount column adds up: per trial balance plus adjustments is the adjusted total.
+    if (hasAdjustments) {
+      setAmount(row.getCell(3), totals.closingMinor - totals.adjustmentMinor);
+      setAmount(row.getCell(4), totals.adjustmentMinor);
+    }
     setAmount(row.getCell(3 + adj), totals.closingMinor);
     setAmount(row.getCell(4 + adj), totals.priorMinor);
     setAmount(row.getCell(5 + adj), totals.closingMinor - totals.priorMinor);
@@ -146,7 +152,7 @@ export async function buildLeadSheetWorkbook(set: LeadSheetSet, ctx: LeadSheetEx
     const row = summary.getRow(r++);
     const sign = ctx.signOffs?.get(s.groupCode);
     setText(row.getCell(1), s.groupName);
-    setText(row.getCell(2), s.statement);
+    setText(row.getCell(2), STATEMENT_NAME[s.statement as keyof typeof STATEMENT_NAME] ?? s.statement);
     setText(row.getCell(3), s.section);
     setAmount(row.getCell(4), s.closingMinor);
     setAmount(row.getCell(5), s.priorMinor);
@@ -192,10 +198,10 @@ export async function buildLeadSheetWorkbook(set: LeadSheetSet, ctx: LeadSheetEx
   for (const s of set.sheets) {
     const sheet = wb.addWorksheet(sheetNames.get(s.groupCode)!);
     sheet.columns = accountWidths(adj).map((width) => ({ width }));
-    const head = titleBlock(sheet, ctx, s.groupName, `${s.statement}, ${s.section}`);
+    const head = titleBlock(sheet, ctx, s.groupName, `${STATEMENT_NAME[s.statement as keyof typeof STATEMENT_NAME] ?? s.statement}, ${s.section}`);
     heading(sheet, head, accountColumns(adj), 3);
     sheet.views = [{ state: "frozen", ySplit: head }];
-    writeAccounts(sheet, s.accounts, { closingMinor: s.closingMinor, priorMinor: s.priorMinor }, adj, head + 1);
+    writeAccounts(sheet, s.accounts, { closingMinor: s.closingMinor, priorMinor: s.priorMinor, adjustmentMinor: s.accounts.reduce((n, a) => n + (a.adjustmentMinor ?? 0), 0) }, adj, head + 1);
     fitToWidth(sheet);
   }
 

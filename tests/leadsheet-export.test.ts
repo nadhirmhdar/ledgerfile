@@ -91,6 +91,12 @@ describe("the workbook", () => {
     const head = rows.find((r) => r[0] === "Lead sheet")!;
     expect(head).toContain("Adjusted");
     expect(head).toContain("Open review points");
+    // The statement is in words, never the code, on the Summary and under each sheet's title.
+    for (const sh of set.sheets) {
+      const r = rows.find((x) => x[0] === sh.groupName)!;
+      expect(r[1]).toBe(sh.statement === "SFP" ? "Statement of financial position" : "Statement of comprehensive income");
+    }
+    expect(JSON.stringify(rows)).not.toMatch(/"SFP"|"SCI"/);
     const cash = rows.find((r) => r[0] === set.sheets.find((s) => s.groupCode === "CASH")!.groupName)!;
     const cashSheet = set.sheets.find((s) => s.groupCode === "CASH")!;
     expect(minor(cash[3])).toBe(cashSheet.closingMinor);
@@ -116,6 +122,7 @@ describe("the workbook", () => {
     for (const s of set.sheets) {
       const sheet = wb.getWorksheet(s.groupName)!;
       const rows = rowsOf(sheet);
+      expect(String(rows[1][0])).toMatch(/^Statement of (financial position|comprehensive income), /);
       const head = rows.findIndex((r) => r[0] === "Code");
       expect(rows[head]).toEqual(["Code", "Account", "Per trial balance", "Adjustments", "Adjusted", "Prior year", "Movement", "Movement %"]);
       const body = rows.slice(head + 1, -1);
@@ -133,6 +140,10 @@ describe("the workbook", () => {
       // The total row is a plain number, the lead sheet's own total, never a formula.
       const total = rows.at(-1)!;
       expect(total[0]).toBe("Total");
+      // Every amount column adds up: per trial balance plus adjustments is the adjusted total, on the total row as on every account row.
+      expect(minor(total[2]) + minor(total[3])).toBe(minor(total[4]));
+      expect(minor(total[2])).toBe(s.accounts.reduce((n, x) => n + x.closingMinor - (x.adjustmentMinor ?? 0), 0));
+      expect(minor(total[3])).toBe(s.accounts.reduce((n, x) => n + (x.adjustmentMinor ?? 0), 0));
       expect(minor(total[4])).toBe(s.closingMinor);
       expect(minor(total[5])).toBe(s.priorMinor);
       expect(minor(total[6])).toBe(s.varianceMinor);
