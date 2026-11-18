@@ -1,4 +1,5 @@
 import type { Tx } from "./db";
+import { getFirmAreas } from "./firm-methodology";
 import { audit as log, canSelfReviewAudit, getEngagement, listAccounts, type Session } from "./repo";
 import { canLock, canReview } from "../domain/signoff";
 import { buildStatements } from "../domain/statements";
@@ -140,6 +141,8 @@ export interface ProcedureRow {
   selfReviewed: boolean;
   /** The partner's own sign-off step: it needs no further review. */
   partnerStep: boolean;
+  /** Loaded from wording the firm had changed, as recorded on the row when it was loaded (not looked up again). */
+  firmWording: boolean;
   /** The person asking did the work, so the server will not let them review it unless the firm may self-review. False when no viewer was given. */
   viewerWorkedOnIt: boolean;
 }
@@ -193,7 +196,8 @@ export async function setAuditEnabled(tx: Tx, s: Session, engagementId: string, 
 async function scope(tx: Tx, engagementId: string) {
   const accounts = (await listAccounts(tx, engagementId)).map((a) => ({ ...a, closingMinor: a.closingMinor + a.adjustmentMinor }));
   const used = new Set(accounts.filter((a) => a.groupCode && (a.closingMinor !== 0 || (a.priorMinor ?? 0) !== 0)).map((a) => a.groupCode as string));
-  return { accounts, areas: accounts.length === 0 ? [] : areasInScope(used) };
+  // The firm's own areas: the library with the firm's edits and hidden procedures applied. With no edits, exactly the library.
+  return { accounts, areas: accounts.length === 0 ? [] : areasInScope(used, await getFirmAreas(tx)) };
 }
 
 /** Codes of the areas in scope for the engagement, from its trial balance. */
@@ -418,8 +422,8 @@ async function syncProgramme(tx: Tx, s: Session, engagementId: string, area: Are
   for (const p of wanted) {
     if (have.has(p.id)) continue;
     await tx.query(
-      "insert into audit_procedures (firm_id, engagement_id, area_code, template_id, tier, assertions, body, evidence, reference) values ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
-      [s.firmId, engagementId, area.code, p.id, p.tier, p.assertions.join(", "), p.text, p.evidence, p.reference],
+      "insert into audit_procedures (firm_id, engagement_id, area_code, template_id, tier, assertions, body, evidence, reference, firm_wording) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)",
+      [s.firmId, engagementId, area.code, p.id, p.tier, p.assertions.join(", "), p.text, p.evidence, p.reference, p.firmWording === true],
     );
     added++;
   }
@@ -523,7 +527,7 @@ export async function listProcedures(tx: Tx, engagementId: string, areaCode: str
   const { rows } = await tx.query<ProcedureRow>(
     `select p.id, p.template_id as "templateId", p.tier, p.assertions, p.body, p.evidence, p.reference, p.status,
             p.work_done as "workDone", p.conclusion, u.name as "performedByName", to_char(p.performed_at, 'YYYY-MM-DD') as "performedAt",
-            r.name as "reviewedByName", to_char(p.reviewed_at, 'YYYY-MM-DD') as "reviewedAt", p.reviewed_by is not null and p.reviewed_by = p.performed_by as "selfReviewed", p.evidence ~* ${PARTNER_STEP} as "partnerStep",
+            r.name as "reviewedByName", to_char(p.reviewed_at, 'YYYY-MM-DD') as "reviewedAt", p.reviewed_by is not null and p.reviewed_by = p.performed_by as "selfReviewed", p.evidence ~* ${PARTNER_STEP} as "partnerStep", p.firm_wording as "firmWording",
             -- The same test assertMayReview makes on review: the viewer is the person who did the work.
             coalesce(p.performed_by = $3::uuid, false) as "viewerWorkedOnIt"
      from audit_procedures p left join users u on u.id = p.performed_by left join users r on r.id = p.reviewed_by

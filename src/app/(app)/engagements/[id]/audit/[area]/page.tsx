@@ -5,6 +5,7 @@ import { getSession } from "@/server/session";
 import * as repo from "@/server/repo";
 import * as audit from "@/server/audit";
 import { AREA_BY_CODE, CHECKLIST_BY_CODE, LIBRARY_STATUS } from "@/domain/audit";
+import { DRAFT_REST_NOTE, FIRM_WORDING_LABEL, FIRM_WORDING_NOTE } from "@/ui/methodology-view";
 import { ActionForm } from "@/app/action-form";
 import { reviewAreaAction, reviewProcedureAction, updateProcedureAction } from "@/app/audit-actions";
 import { removeWorkingPaperAction } from "@/app/papers-actions";
@@ -108,7 +109,9 @@ export default async function ProgrammePage({ params, searchParams }: { params: 
             <ProgressBar value={completed} max={procedures.length} label={`${completed} of ${procedures.length} ${noun} completed`} />
           </div>
         )}
-        <Callout variant="draft" title={`Methodology content: ${LIBRARY_STATUS}`} />
+        <Callout variant="draft" title={`Methodology content: ${LIBRARY_STATUS}`}>
+          {procedures.some((p) => p.firmWording) ? DRAFT_REST_NOTE : undefined}
+        </Callout>
         {!auditOn && (
           <Callout variant="info" title="The audit is off for this engagement">
             The programme is shown as a record only. Turn the audit on, on the audit planning page, to change it.
@@ -282,7 +285,14 @@ export default async function ProgrammePage({ params, searchParams }: { params: 
                         <Card>
                           <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
                             <div>
-                              <h3 className="font-semibold">{p.templateId}</h3>
+                              <h3 className="font-semibold">
+                                {p.templateId}
+                                {p.firmWording && (
+                                  <Badge tone="info" className="ml-2 align-middle">
+                                    {FIRM_WORDING_LABEL}
+                                  </Badge>
+                                )}
+                              </h3>
                               {p.assertions && (
                                 <p className="text-sm text-ink-muted">
                                   <Badge tone="neutral" className="mr-2">
@@ -302,7 +312,8 @@ export default async function ProgrammePage({ params, searchParams }: { params: 
                               Done by {p.performedByName} on {p.performedAt}
                             </p>
                           )}
-                          <p className="mt-3 text-base">{p.body}</p>
+                          {p.firmWording && <p className="mt-3 text-sm font-medium text-ink-muted">{FIRM_WORDING_NOTE}</p>}
+                          <p className={p.firmWording ? "mt-1 text-base" : "mt-3 text-base"}>{p.body}</p>
                           <p className="mt-1 text-sm text-ink-muted">
                             Evidence expected: {p.evidence} · Reference: {p.reference}
                           </p>
