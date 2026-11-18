@@ -143,6 +143,7 @@ export interface ProcedureRow {
   partnerStep: boolean;
   /** Loaded from wording the firm had changed, as recorded on the row when it was loaded (not looked up again). */
   firmWording: boolean;
+  firmAdded: boolean;
   /** The person asking did the work, so the server will not let them review it unless the firm may self-review. False when no viewer was given. */
   viewerWorkedOnIt: boolean;
 }
@@ -422,8 +423,8 @@ async function syncProgramme(tx: Tx, s: Session, engagementId: string, area: Are
   for (const p of wanted) {
     if (have.has(p.id)) continue;
     await tx.query(
-      "insert into audit_procedures (firm_id, engagement_id, area_code, template_id, tier, assertions, body, evidence, reference, firm_wording) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)",
-      [s.firmId, engagementId, area.code, p.id, p.tier, p.assertions.join(", "), p.text, p.evidence, p.reference, p.firmWording === true],
+      "insert into audit_procedures (firm_id, engagement_id, area_code, template_id, tier, assertions, body, evidence, reference, firm_wording, firm_added) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)",
+      [s.firmId, engagementId, area.code, p.id, p.tier, p.assertions.join(", "), p.text, p.evidence, p.reference, p.firmWording === true, p.firmOwn === true],
     );
     added++;
   }
@@ -527,7 +528,7 @@ export async function listProcedures(tx: Tx, engagementId: string, areaCode: str
   const { rows } = await tx.query<ProcedureRow>(
     `select p.id, p.template_id as "templateId", p.tier, p.assertions, p.body, p.evidence, p.reference, p.status,
             p.work_done as "workDone", p.conclusion, u.name as "performedByName", to_char(p.performed_at, 'YYYY-MM-DD') as "performedAt",
-            r.name as "reviewedByName", to_char(p.reviewed_at, 'YYYY-MM-DD') as "reviewedAt", p.reviewed_by is not null and p.reviewed_by = p.performed_by as "selfReviewed", p.evidence ~* ${PARTNER_STEP} as "partnerStep", p.firm_wording as "firmWording",
+            r.name as "reviewedByName", to_char(p.reviewed_at, 'YYYY-MM-DD') as "reviewedAt", p.reviewed_by is not null and p.reviewed_by = p.performed_by as "selfReviewed", p.evidence ~* ${PARTNER_STEP} as "partnerStep", p.firm_wording as "firmWording", p.firm_added as "firmAdded",
             -- The same test assertMayReview makes on review: the viewer is the person who did the work.
             coalesce(p.performed_by = $3::uuid, false) as "viewerWorkedOnIt"
      from audit_procedures p left join users u on u.id = p.performed_by left join users r on r.id = p.reviewed_by

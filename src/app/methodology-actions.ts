@@ -39,3 +39,23 @@ export async function showProcedureAction(_prev: FormState, form: FormData): Pro
 export async function resetProcedureAction(_prev: FormState, form: FormData): Promise<FormState> {
   return run(form, "Back to the library wording.", (tx, s, id) => methodology.resetProcedure(tx, s, id));
 }
+
+/** The fields of the add and edit forms for the firm's own procedures. */
+const ownInput = (form: FormData) => ({ tier: field(form, "tier"), assertions: form.getAll("assertion").map(String), body: field(form, "body"), evidence: field(form, "evidence"), reference: field(form, "reference") });
+
+export async function addProcedureAction(_prev: FormState, form: FormData): Promise<FormState> {
+  const areaCode = field(form, "areaCode");
+  return run(form, "Added. Programmes loaded from now on include it.", (tx, s) => methodology.addProcedure(tx, s, areaCode, ownInput(form)).then(() => undefined));
+}
+
+export async function editOwnProcedureAction(_prev: FormState, form: FormData): Promise<FormState> {
+  return run(form, "Saved. Programmes loaded from now on use this wording.", (tx, s, id) => methodology.editOwnProcedure(tx, s, id, ownInput(form)));
+}
+
+export async function retireOwnProcedureAction(_prev: FormState, form: FormData): Promise<FormState> {
+  return run(form, "Retired. Programmes loaded from now on leave it out.", (tx, s, id) => methodology.retireOwnProcedure(tx, s, id));
+}
+
+export async function restoreOwnProcedureAction(_prev: FormState, form: FormData): Promise<FormState> {
+  return run(form, "Restored.", (tx, s, id) => methodology.restoreOwnProcedure(tx, s, id));
+}
