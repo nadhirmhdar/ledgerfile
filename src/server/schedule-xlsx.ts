@@ -10,8 +10,8 @@ export interface ExportContext {
   periodEnd: string;
 }
 
-const AMOUNT = "#,##0.00;(#,##0.00);0.00";
-const PERCENT = "0.0%";
+export const AMOUNT = "#,##0.00;(#,##0.00);0.00";
+export const PERCENT = "0.0%";
 const BOLD = { bold: true } as const;
 
 /**
@@ -25,7 +25,7 @@ export function setText(cell: ExcelJS.Cell, value: string | null | undefined) {
   cell.numFmt = "@";
 }
 
-function setAmount(cell: ExcelJS.Cell, minor: number | null) {
+export function setAmount(cell: ExcelJS.Cell, minor: number | null) {
   if (minor === null) return;
   cell.value = minor / 100;
   cell.numFmt = AMOUNT;

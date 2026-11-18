@@ -5,6 +5,9 @@
  */
 export type Statement = "SFP" | "SCI";
 
+/** The statements in words, as the statements page names them. The one map, for anything that shows a statement's code to a reader. */
+export const STATEMENT_NAME: Record<Statement, string> = { SFP: "Statement of financial position", SCI: "Statement of comprehensive income" };
+
 export interface Group {
   code: string;
   name: string;
