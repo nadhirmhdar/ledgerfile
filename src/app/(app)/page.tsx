@@ -28,6 +28,7 @@ export default async function Home() {
         subtitle={engagements.length === 0 ? "No engagements yet." : `${count(engagements.length, "engagement")}, ${open} open.`}
         engagementForm={mayCreateEngagement ? clients.length === 0 ? <p className="text-sm text-ink-muted">Add a client first.</p> : <NewEngagementForm clients={clients} /> : undefined}
         clientForm={mayCreateClient ? <NewClientForm /> : undefined}
+        importHref={mayCreateClient ? "/clients/import" : undefined}
       />
 
       <section aria-label="Engagement list" className="mt-6">
