@@ -145,6 +145,23 @@ describe("what is refused", () => {
   });
 });
 
+describe("rewording never changes a control", () => {
+  it("refuses evidence that would make a step a partner sign-off, and a procedure loaded after an allowed edit still needs review", async () => {
+    const o = libraryOf("C6.03");
+    await expect(as(partner, (tx) => methodology.editProcedure(tx, partner, "C6.03", { body: o.text, evidence: "Partner sign-off on the file.", reference: o.reference }))).rejects.toThrow(/Partner sign-off/);
+    expect((await state("C6.03")).state).toBe("library");
+    await as(partner, (tx) => methodology.editProcedure(tx, partner, "C6.03", { body: "Invented firm wording.", evidence: "Invented evidence line.", reference: o.reference }));
+    try {
+      const engagement = await newEngagement(["2020-01-01", "2020-12-31"]);
+      await as(rev, (tx) => audit.setAreaRisks(tx, rev, engagement, "C6", rate("C6", "low")));
+      const row = (await loaded(engagement, "C6")).find((p) => p.templateId === "C6.03");
+      expect(row).toMatchObject({ firmWording: true, evidence: "Invented evidence line.", partnerStep: false });
+    } finally {
+      await as(partner, (tx) => methodology.resetProcedure(tx, partner, "C6.03"));
+    }
+  });
+});
+
 describe("management override is protected", () => {
   it("cannot be hidden, but its wording can be edited and reset", async () => {
     const id = AREA_BY_CODE.get("C16")!.procedures[0].id;

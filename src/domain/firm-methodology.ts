@@ -1,4 +1,4 @@
-import type { Area, ProcedureTemplate } from "./audit";
+import { needsPartner, type Area, type ProcedureTemplate } from "./audit";
 
 /**
  * A firm's changes to the methodology library's procedures: its own wording in place of the library's, and procedures it leaves out. Pure.
@@ -67,6 +67,10 @@ export function checkWording(input: WordingInput, library: { text: string; evide
   if (!body.ok) return body;
   const evidence = field("evidence", input.evidence, MAX_EVIDENCE, library.evidence);
   if (!evidence.ok) return evidence;
+  // Evidence that starts "Partner sign-off" makes a step the partner's own sign-off, which skips review. Rewording must never change that control, either way.
+  if (needsPartner(input.evidence.trim()) !== needsPartner(library.evidence.trim())) {
+    return { ok: false, message: "The evidence cannot start with \"Partner sign-off\" unless the library's does: that wording makes a step the partner's own sign-off, which is not reviewed. Reword it another way." };
+  }
   const reference = field("reference", input.reference, MAX_REFERENCE, library.reference);
   if (!reference.ok) return reference;
   return { ok: true, value: { body: body.value, evidence: evidence.value, reference: reference.value } };

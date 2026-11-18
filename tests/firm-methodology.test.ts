@@ -129,6 +129,18 @@ describe("checkWording", () => {
     expect(checkWording(input({ reference: "" }), { ...original, reference: "" })).toEqual({ ok: true, value: { body: null, evidence: null, reference: null } });
   });
 
+  it("refuses evidence that starts \"Partner sign-off\" (any case) when the library's does not, and removing it when the library's does", () => {
+    for (const typed of ["Partner sign-off on the file.", "  partner SIGN-OFF recorded", "PARTNER SIGN-OFF"]) {
+      const checked = checkWording(input({ evidence: typed }), original);
+      expect(checked.ok, typed).toBe(false);
+      expect(checked.ok ? "" : checked.message).toMatch(/Partner sign-off/);
+    }
+    expect(checkWording(input({ evidence: "Reviewed by the partner; Partner sign-off follows." }), original).ok).toBe(true);
+    const partnerStep = { ...original, evidence: "Partner sign-off recorded." };
+    expect(checkWording({ ...input(), evidence: "Partner sign-off noted on the file." }, partnerStep).ok).toBe(true);
+    expect(checkWording({ ...input(), evidence: "Signed by the partner." }, partnerStep).ok).toBe(false);
+  });
+
   it("limits the body to 2,000 characters and the evidence and reference to 300", () => {
     expect(MAX_BODY).toBe(2000);
     expect(MAX_EVIDENCE).toBe(300);
