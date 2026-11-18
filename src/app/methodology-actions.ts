@@ -1,0 +1,41 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { getDb, withFirm, type Tx } from "@/server/db";
+import { getSession } from "@/server/session";
+import type { Session } from "@/server/repo";
+import * as methodology from "@/server/firm-methodology";
+import type { FormState } from "./actions";
+
+const field = (form: FormData, name: string) => String(form.get(name) ?? "");
+
+/** Run one change as the signed-in user and report it to the form. Messages from the methodology rules are written for users; others are not shown. */
+async function run(form: FormData, done: string, work: (tx: Tx, s: Session, templateId: string) => Promise<void>): Promise<FormState> {
+  const session = await getSession();
+  const templateId = field(form, "templateId");
+  try {
+    await withFirm(await getDb(), session.firmId, (tx) => work(tx, session, templateId));
+  } catch (e) {
+    const known = e instanceof Error && !("code" in e);
+    if (!known) console.error("methodology action failed:", e instanceof Error ? e.message : "unknown error");
+    return { ok: false, message: known ? e.message : "The change was not saved." };
+  }
+  revalidatePath("/firm/methodology");
+  return { ok: true, message: done };
+}
+
+export async function editProcedureAction(_prev: FormState, form: FormData): Promise<FormState> {
+  return run(form, "Saved. Programmes loaded from now on use this wording.", (tx, s, id) => methodology.editProcedure(tx, s, id, { body: field(form, "body"), evidence: field(form, "evidence"), reference: field(form, "reference") }));
+}
+
+export async function hideProcedureAction(_prev: FormState, form: FormData): Promise<FormState> {
+  return run(form, "Hidden. Programmes loaded from now on leave it out.", (tx, s, id) => methodology.hideProcedure(tx, s, id));
+}
+
+export async function showProcedureAction(_prev: FormState, form: FormData): Promise<FormState> {
+  return run(form, "Shown again.", (tx, s, id) => methodology.showProcedure(tx, s, id));
+}
+
+export async function resetProcedureAction(_prev: FormState, form: FormData): Promise<FormState> {
+  return run(form, "Back to the library wording.", (tx, s, id) => methodology.resetProcedure(tx, s, id));
+}

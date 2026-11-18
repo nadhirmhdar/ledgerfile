@@ -6,6 +6,7 @@ import { ChevronDownIcon, UserIcon } from "@/ui/icons";
 import { roleLabel } from "@/ui/team-view";
 import { TopNav } from "@/ui/top-nav";
 import { canManageFirm } from "@/ui/branding-view";
+import { canEditMethodology } from "@/ui/methodology-view";
 
 export const dynamic = "force-dynamic";
 
@@ -43,6 +44,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
                 <Link href="/account" className="inline-flex min-h-10 items-center rounded-md px-2 text-sm font-medium text-ink hover:bg-surface-muted">
                   Account
                 </Link>
+                {canEditMethodology(session.role) && (
+                  <Link href="/firm/methodology" className="inline-flex min-h-10 items-center rounded-md px-2 text-sm font-medium text-ink hover:bg-surface-muted">
+                    Methodology
+                  </Link>
+                )}
                 {canManageFirm(session.role) && (
                   <Link href="/firm" className="inline-flex min-h-10 items-center rounded-md px-2 text-sm font-medium text-ink hover:bg-surface-muted">
                     Firm

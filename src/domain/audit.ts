@@ -36,6 +36,8 @@ export interface ProcedureTemplate {
   text: string;
   evidence: string;
   reference: string;
+  /** Set when this wording is the firm's own change to the library's, not the library's. */
+  firmWording?: boolean;
 }
 export interface Area {
   code: string;
@@ -115,8 +117,8 @@ export const needsPartner = (evidence: string) => /^Partner sign-off/i.test(evid
 export const CHECKLIST_BY_CODE = new Map(CHECKLISTS.map((c) => [c.code, c]));
 
 /** The areas an engagement must cover, given which groups have a balance in either year. */
-export function areasInScope(usedGroups: Set<string>): Area[] {
-  return AREAS.filter((a) => a.always || a.groups.some((g) => usedGroups.has(g)));
+export function areasInScope(usedGroups: Set<string>, areas: Area[] = AREAS): Area[] {
+  return areas.filter((a) => a.always || a.groups.some((g) => usedGroups.has(g)));
 }
 
 /** The assertions an area's procedures address, in the standard order. */
