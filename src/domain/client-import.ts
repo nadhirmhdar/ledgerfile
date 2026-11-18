@@ -77,6 +77,23 @@ export function classifyNames(rows: { line: number; raw: unknown }[], existingNa
   return { rows: out, counts };
 }
 
+/** A cell as typed: a name wrapped in double quotes (as a spreadsheet writes one that holds a quote) is read without them, with doubled quotes as one. */
+const unquote = (cell: string): string => {
+  const t = cell.trim();
+  return t.length >= 2 && t.startsWith("\"") && t.endsWith("\"") ? t.slice(1, -1).replace(/""/g, "\"") : cell;
+};
+
+/**
+ * Pasted text as a grid of cells, for names. Pasted from Excel it has tabs: split on them. With no tab, every line is ONE name, whole: a comma is part
+ * of a name ("Falcon Trading, LLC"), never a column break. A name wrapped in double quotes is read without the quotes. (The schedule listing import
+ * reads pasted text another way, as it expects columns.)
+ */
+export function gridFromPastedNames(pasted: string): string[][] {
+  const lines = pasted.replace(/\r\n?/g, "\n").split("\n");
+  const tabbed = lines.some((l) => l.includes("\t"));
+  return lines.map((l) => (tabbed ? l.split("\t").map(unquote) : [unquote(l)]));
+}
+
 export interface ImportPreview {
   /** The rows that were not blank, in file order. */
   rows: ImportRow[];

@@ -5,8 +5,7 @@ import { getDb, withFirm } from "@/server/db";
 import { getSession } from "@/server/session";
 import { readGrid } from "@/server/excel";
 import { importClients, previewClientImport } from "@/server/client-import";
-import { MAX_IMPORT_ROWS, type ImportPreview } from "@/domain/client-import";
-import { gridFromText } from "@/domain/listing-parse";
+import { gridFromPastedNames, MAX_IMPORT_ROWS, type ImportPreview } from "@/domain/client-import";
 import type { FormState } from "./actions";
 
 export interface PreviewResult {
@@ -33,7 +32,7 @@ export async function previewClientImportAction(form: FormData): Promise<Preview
     }
   } else if (pasted.trim() !== "") {
     if (pasted.length > 500_000) return fail("The pasted text is too long.");
-    grid = gridFromText(pasted);
+    grid = gridFromPastedNames(pasted);
   } else {
     return fail("Paste a list of names, or choose a file.");
   }

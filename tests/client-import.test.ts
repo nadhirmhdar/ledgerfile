@@ -7,7 +7,7 @@ import { readGrid } from "../src/server/excel";
 import { importClients, previewClientImport } from "../src/server/client-import";
 import { canCreateClient, CLIENT_REFUSAL } from "../src/domain/permissions";
 import { gridFromText } from "../src/domain/listing-parse";
-import { classifyNames, cleanName, confirmLabel, importSentence, MAX_IMPORT_ROWS, nameKey, previewFromGrid, rowsToShow, type ImportCounts } from "../src/domain/client-import";
+import { classifyNames, cleanName, confirmLabel, gridFromPastedNames, importSentence, MAX_IMPORT_ROWS, nameKey, previewFromGrid, rowsToShow, type ImportCounts } from "../src/domain/client-import";
 
 const col = (...names: string[]) => names.map((n) => [n]);
 
@@ -140,10 +140,30 @@ describe("reading a file and pasted text", () => {
     expect(p.counts.existing).toBe(1);
   });
   it("reads pasted text, one name per line, with or without a heading", () => {
-    expect(previewFromGrid(gridFromText("Client name\nFalcon Trading LLC\nAl Noor Contracting\n"), []).names).toEqual(["Falcon Trading LLC", "Al Noor Contracting"]);
-    const bare = previewFromGrid(gridFromText("Falcon Trading LLC\nAl Noor Contracting"), []);
+    expect(previewFromGrid(gridFromPastedNames("Client name\nFalcon Trading LLC\nAl Noor Contracting\n"), []).names).toEqual(["Falcon Trading LLC", "Al Noor Contracting"]);
+    const bare = previewFromGrid(gridFromPastedNames("Falcon Trading LLC\nAl Noor Contracting"), []);
     expect(bare.foundHeading).toBe(false);
     expect(bare.names).toEqual(["Falcon Trading LLC", "Al Noor Contracting"]);
+  });
+  it("keeps a comma inside a pasted name: with no tab, each whole line is one name", () => {
+    const p = previewFromGrid(gridFromPastedNames("Client name\nFalcon Trading, LLC\n=SUM(1,2) Invented Gamma (sample)\nAl Noor, Contracting & Sons, Ltd\n"), []);
+    expect(p.names).toEqual(["Falcon Trading, LLC", "=SUM(1,2) Invented Gamma (sample)", "Al Noor, Contracting & Sons, Ltd"]);
+    expect(previewFromGrid(gridFromPastedNames("Falcon Trading, LLC"), []).names).toEqual(["Falcon Trading, LLC"]);
+  });
+  it("reads a quoted pasted name without the quotes, with doubled quotes as one", () => {
+    const p = previewFromGrid(gridFromPastedNames('Client name\n"Falcon Trading, LLC"\n"The ""Gamma"" Group"\n"Unclosed name\nPlain Co'), []);
+    expect(p.names).toEqual(["Falcon Trading, LLC", 'The "Gamma" Group', '"Unclosed name', "Plain Co"]);
+  });
+  it("splits a paste from Excel on its tabs, and takes the column under the heading", () => {
+    const p = previewFromGrid(gridFromPastedNames("Ref\tClient name\tCity\n1\tFalcon Trading, LLC\tDubai\n2\tAl Noor Contracting\tSharjah"), []);
+    expect(p.foundHeading).toBe(true);
+    expect(p.names).toEqual(["Falcon Trading, LLC", "Al Noor Contracting"]);
+  });
+  it("reads Windows line endings", () => {
+    expect(previewFromGrid(gridFromPastedNames("Client name\r\nFalcon Trading, LLC\r\nAl Noor Contracting\r\n"), []).names).toEqual(["Falcon Trading, LLC", "Al Noor Contracting"]);
+  });
+  it("leaves the schedule listing's own reading of pasted text alone: it still splits on commas", () => {
+    expect(gridFromText("Falcon Trading, LLC")).toEqual([["Falcon Trading", " LLC"]]);
   });
   it("refuses a file that is not .xlsx or .csv", async () => {
     await expect(readGrid("clients.pdf", bytes("x"))).rejects.toThrow(/Excel \(\.xlsx\) or CSV/);
@@ -216,6 +236,23 @@ describe("importing clients", () => {
     expect(created.rows).toHaveLength(3); // Existing Co LLC (setup) and the two new ones
     const imp = (await db.query<{ user_id: string; detail: Record<string, number> }>("select user_id, detail from audit_log where firm_id = $1 and action = 'import' and entity = 'clients'", [FIRM])).rows;
     expect(imp).toEqual([{ user_id: partner.userId, detail: { added: 2, alreadyClients: 1, repeated: 1, tooLong: 0, tooShort: 0, blank: 0 } }]);
+  });
+
+  it("takes a per-firm lock, so two imports of the same list one after the other leave one copy of each name", async () => {
+    const list = ["Gamma Holdings, LLC", "Delta Works"];
+    const first = await as(partner, (tx) => importClients(tx, partner, list));
+    const second = await as(partner, (tx) => importClients(tx, partner, list));
+    expect([first.added, second.added]).toEqual([2, 0]);
+    expect((await clientNames(FIRM)).filter((n) => n === "Gamma Holdings, LLC" || n === "Delta Works")).toHaveLength(2);
+    // The lock is a transaction lock on this firm's key: it is there and released at commit, on PGlite and on PostgreSQL alike.
+    await as(partner, async (tx) => {
+      await tx.query("select pg_advisory_xact_lock(hashtext($1))", [`client-import:${FIRM}`]);
+    });
+    // Two concurrent imports of the same list leave one copy as well.
+    const both = await Promise.allSettled([as(partner, (tx) => importClients(tx, partner, ["Omega Ltd"])), as(partner, (tx) => importClients(tx, partner, ["Omega Ltd"]))]);
+    expect(both.every((r) => r.status === "fulfilled")).toBe(true);
+    expect((await clientNames(FIRM)).filter((n) => n === "Omega Ltd")).toHaveLength(1);
+    await db.query("delete from clients where firm_id = $1 and name in ('Gamma Holdings, LLC', 'Delta Works', 'Omega Ltd')", [FIRM]);
   });
 
   it("adds nothing the second time", async () => {
