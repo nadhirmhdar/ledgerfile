@@ -8,7 +8,7 @@ import { buildLeadSheets } from "@/domain/leadsheet";
 import { formatAmount } from "@/domain/money";
 import { Badge, StatusBadge } from "@/ui/badge";
 import { Callout, EmptyState } from "@/ui/feedback";
-import { LinkButton } from "@/ui/button";
+import { buttonClass, LinkButton } from "@/ui/button";
 import { openPointsLabel, signBadge, signOffSentence } from "@/ui/leadsheet-view";
 import { PageHeader, Section } from "@/ui/layout";
 import { OpenOnHash } from "@/ui/open-on-hash";
@@ -72,6 +72,13 @@ export default async function LeadSheetsPage({ params }: { params: Promise<{ id:
           </>
         }
         subtitle={sentence}
+        actions={
+          accounts.length > 0 ? (
+            <a href={`${base}/lead-sheets/export`} className={buttonClass("secondary")}>
+              Download as Excel
+            </a>
+          ) : undefined
+        }
       />
       <EngagementNav id={id} current="leadsheets" status={engagement.status} archived={engagement.archivedAt !== null} />
       <OpenOnHash />

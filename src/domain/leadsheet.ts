@@ -33,6 +33,9 @@ export interface LeadSheetSet {
   tiesToTrialBalance: boolean;
 }
 
+/** The movement on the prior year as a percentage of it; null when there was no prior balance. The one formula for sheets, accounts and the Excel export. */
+export const variancePct = (closingMinor: number, priorMinor: number): number | null => (priorMinor === 0 ? null : ((closingMinor - priorMinor) / Math.abs(priorMinor)) * 100);
+
 /** Build one lead sheet per group that has accounts, in statement order. */
 export function buildLeadSheets(accounts: MappedAccount[]): LeadSheetSet {
   const byGroup = new Map<string, MappedAccount[]>();
@@ -63,7 +66,7 @@ export function buildLeadSheets(accounts: MappedAccount[]): LeadSheetSet {
       closingMinor: closing,
       priorMinor: prior,
       varianceMinor: closing - prior,
-      variancePct: prior === 0 ? null : ((closing - prior) / Math.abs(prior)) * 100,
+      variancePct: variancePct(closing, prior),
     });
   }
   // Accounts pointing at a group code that no longer exists are treated as unmapped.
