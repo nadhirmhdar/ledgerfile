@@ -5,6 +5,7 @@ import { Button } from "@/ui/button";
 import { ChevronDownIcon, UserIcon } from "@/ui/icons";
 import { roleLabel } from "@/ui/team-view";
 import { TopNav } from "@/ui/top-nav";
+import { canManageFirm } from "@/ui/branding-view";
 
 export const dynamic = "force-dynamic";
 
@@ -25,7 +26,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             <Link href="/" className="py-3 text-lg font-bold tracking-tight text-accent">
               LedgerFile
             </Link>
-            <TopNav />
+            <TopNav admin={canManageFirm(session.role)} />
           </div>
           <details className="group relative">
             <summary aria-label={session.name} className="inline-flex min-h-10 min-w-10 shrink-0 cursor-pointer justify-center list-none items-center gap-2 rounded-md px-2 text-sm font-medium text-ink hover:bg-surface-muted [&::-webkit-details-marker]:hidden">
@@ -42,6 +43,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
                 <Link href="/account" className="inline-flex min-h-10 items-center rounded-md px-2 text-sm font-medium text-ink hover:bg-surface-muted">
                   Account
                 </Link>
+                {canManageFirm(session.role) && (
+                  <Link href="/firm" className="inline-flex min-h-10 items-center rounded-md px-2 text-sm font-medium text-ink hover:bg-surface-muted">
+                    Firm
+                  </Link>
+                )}
                 <form action={signOutAction}>
                   <Button variant="secondary" className="w-full">
                     Sign out

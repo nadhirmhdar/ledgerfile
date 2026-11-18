@@ -6,6 +6,7 @@ import * as repo from "../src/server/repo";
 import * as audit from "../src/server/audit";
 import { getOpinion, recordOpinion } from "../src/server/opinion";
 import { beginDirectUpload, finishDirectUpload, tokenOptionsFor, type BlobOps } from "../src/server/direct-upload";
+import { getBranding, updateBranding } from "../src/server/branding";
 import { databaseUrl } from "../src/server/config";
 import { assertSchemaCurrent } from "../src/server/migrations";
 import { createPostgresDb } from "../src/server/pg-adapter";
@@ -146,6 +147,16 @@ describe.skipIf(!URL)("the Postgres adapter as the runtime role", () => {
     await expect(withFirm(db, a.firmId, (tx) => tx.query("update engagements set archived_at = null where id = $1", [id]))).rejects.toThrow(/This file is archived/);
     await expect(withFirm(db, a.firmId, (tx) => tx.query("delete from engagements where id = $1", [id]))).rejects.toThrow(/cannot be deleted/);
     expect((await withFirm(db, a.firmId, async (tx) => (await tx.query("select status from engagements where id = $1", [id])).rows[0]))).toEqual({ status: "locked" });
+  });
+
+  it("saves firm branding as the runtime role: the administrator's own firm only, the branding columns only, never the name", async () => {
+    const admin = { firmId: a.firmId, userId: a.userId, name: "Ada Admin", email: `ada-${suffix}@alpha.test`, role: "admin", firmName: "Runtime Alpha" } as auth.AuthSession;
+    await updateBranding(db, admin, { address: "Office 1\nDubai", contactLine: "", registrationLine: "Licence 9" });
+    const mine = await withFirm(db, a.firmId, (tx) => getBranding(tx));
+    expect(mine).toMatchObject({ firmName: "Runtime Alpha", address: "Office 1\nDubai", contactLine: null, registrationLine: "Licence 9" });
+    expect((await withFirm(db, b.firmId, (tx) => getBranding(tx)))?.address).toBeNull();
+    await expect(withAuth(db, (q) => q.query("update firms set name = 'Renamed' where id = $1", [a.firmId]))).rejects.toThrow(/permission denied/);
+    await expect(withFirm(db, a.firmId, (tx) => tx.query("update firms set address = 'x'"))).rejects.toThrow(/permission denied/);
   });
 
   it("leaves nothing on the connection after a transaction, which is what makes a transaction pooler safe", async () => {

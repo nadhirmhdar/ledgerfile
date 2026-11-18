@@ -20,6 +20,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
   const letter = await withFirm(await getDb(), session.firmId, (tx) => generateLetter(tx, session, id, kind as LetterKind, form));
   if (!letter) return new Response("Not found", { status: 404 });
-  const buffer = await buildLetterDocx(letter.title, letter.blocks);
+  const buffer = await buildLetterDocx(letter.title, letter.blocks, { logo: letter.logo });
   return docxResponse(buffer, `${plainName(letter.context.clientName)}-${kind}-letter-${letter.context.periodEnd}.docx`);
 }

@@ -3,6 +3,9 @@ import type { Session } from "./repo";
 import * as repo from "./repo";
 import * as audit from "./audit";
 import { formatAmount } from "../domain/money";
+import { getFileStore, type FileStore } from "./file-store";
+import { loadBrandingForOutputs } from "./branding";
+import { hasBranding, letterheadLines, type LogoImage } from "../domain/branding";
 import {
   buildEngagementLetter,
   buildRepresentationLetter,
@@ -57,8 +60,18 @@ const MAX_SPECIFIC = 20;
 const clean = (v: string | undefined) => v?.replace(/\s+/g, " ").trim().slice(0, MAX_FIELD) || undefined;
 const date = (v: string | undefined) => (clean(v) ? longDate(clean(v)!) : undefined);
 
-/** Build a letter for an engagement, and record that it was produced. */
-export async function generateLetter(tx: Tx, s: Session, engagementId: string, kind: LetterKind, form: LetterForm): Promise<{ title: string; blocks: Block[]; context: LetterContext } | null> {
+/**
+ * Build a letter for an engagement, and record that it was produced. The engagement letter carries the firm's letterhead (its logo, address,
+ * contact and registration lines) when the firm has set them; the representation letter is on the client's letterhead and never does.
+ */
+export async function generateLetter(
+  tx: Tx,
+  s: Session,
+  engagementId: string,
+  kind: LetterKind,
+  form: LetterForm,
+  store: () => FileStore = getFileStore,
+): Promise<{ title: string; blocks: Block[]; context: LetterContext; logo: LogoImage | null } | null> {
   const context = await getLetterContext(tx, engagementId);
   if (!context) return null;
   const common = {
@@ -70,7 +83,10 @@ export async function generateLetter(tx: Tx, s: Session, engagementId: string, k
   };
 
   let blocks: Block[];
+  let logo: LogoImage | null = null;
   if (kind === "engagement") {
+    const branding = await loadBrandingForOutputs(tx, store);
+    if (hasBranding(branding)) logo = branding.logo;
     const other = clean(form.otherServices);
     blocks = buildEngagementLetter({
       values: {
@@ -87,6 +103,7 @@ export async function generateLetter(tx: Tx, s: Session, engagementId: string, k
       },
       otherServices: Boolean(other),
       aiFeatures: form.ai === "on",
+      letterhead: hasBranding(branding) ? letterheadLines(branding) : undefined,
     });
   } else {
     const supporter = clean(form.supporter);
@@ -115,5 +132,5 @@ export async function generateLetter(tx: Tx, s: Session, engagementId: string, k
   }
   await repo.audit(tx, s, "export", `${kind}_letter`, engagementId, kind === "representation" && context.exceedsMateriality ? { exceedsMateriality: true } : undefined);
   const title = `${context.clientName} ${kind === "engagement" ? "engagement letter" : "management representation letter"} ${context.periodEnd}`;
-  return { title, blocks, context };
+  return { title, blocks, context, logo };
 }

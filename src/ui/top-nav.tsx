@@ -8,12 +8,13 @@ const ITEMS = [
   { href: "/team", label: "Team", match: (p: string) => p.startsWith("/team") },
 ];
 
-/** The top bar's links. A client component only to know which page is current. */
-export function TopNav() {
+/** The top bar's links. A client component only to know which page is current. The Firm page is linked for administrators only. */
+export function TopNav({ admin = false }: { admin?: boolean }) {
   const pathname = usePathname();
+  const items = admin ? [...ITEMS, { href: "/firm", label: "Firm", match: (p: string) => p.startsWith("/firm") }] : ITEMS;
   return (
     <nav aria-label="Main" className="flex items-center sm:gap-1">
-      {ITEMS.map((item) => {
+      {items.map((item) => {
         const current = item.match(pathname);
         return (
           <Link

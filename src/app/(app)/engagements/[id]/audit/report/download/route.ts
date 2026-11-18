@@ -31,7 +31,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (format === "pdf") {
     // pdfkit is loaded only when a PDF is asked for. The notice is the first block, as in the Word file.
     const { renderPdf } = await import("@/server/pdf");
-    return pdfResponse(await renderPdf(report.blocks, { title: report.title, header: report.header }), report.fileName);
+    return pdfResponse(await renderPdf(report.blocks, { title: report.title, header: report.header, logo: report.logo }), report.fileName);
   }
-  return docxResponse(await buildLetterDocx(report.title, report.blocks), report.fileName);
+  return docxResponse(await buildLetterDocx(report.title, report.blocks, { logo: report.logo }), report.fileName);
 }

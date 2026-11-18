@@ -1,5 +1,6 @@
-import { AlignmentType, BorderStyle, Document, HeadingLevel, Packer, Paragraph, Table, TableCell, TableRow, TextRun, WidthType } from "docx";
+import { AlignmentType, BorderStyle, Document, HeadingLevel, ImageRun, Packer, Paragraph, Table, TableCell, TableRow, TextRun, WidthType } from "docx";
 import type { Block } from "../domain/letters";
+import { fitLogo, type LogoImage } from "../domain/branding";
 
 const SIZE = 21;
 const RULE = { style: BorderStyle.SINGLE, size: 4, color: "808080" };
@@ -52,13 +53,24 @@ function render(block: Block, notice: boolean): (Paragraph | Table)[] {
   }
 }
 
-/** Lay a letter out as a Word document. */
-export async function buildLetterDocx(title: string, blocks: Block[]): Promise<Buffer> {
+/** The firm's logo as a picture in a paragraph, at a sensible height with its own proportions (96 pixels to the inch). */
+export function logoParagraph(logo: LogoImage, maxWidthPx = 240, maxHeightPx = 64): Paragraph {
+  const size = fitLogo(logo, maxWidthPx, maxHeightPx);
+  return new Paragraph({
+    spacing: { after: 140 },
+    children: [new ImageRun({ type: logo.contentType === "image/png" ? "png" : "jpg", data: logo.data, transformation: { width: Math.round(size.width), height: Math.round(size.height) }, altText: { name: "Firm logo", description: "Firm logo", title: "Firm logo" } })],
+  });
+}
+
+/** Lay a letter out as a Word document. A logo, when the firm has one, goes right after the first paragraph (the draft notice). */
+export async function buildLetterDocx(title: string, blocks: Block[], options: { logo?: LogoImage | null } = {}): Promise<Buffer> {
+  const children = blocks.flatMap((b, i) => render(b, i < 2 && b.kind === "para" && b.text.startsWith("[") && b.text.endsWith("]")));
+  if (options.logo) children.splice(blocks.length > 0 ? render(blocks[0], false).length : 0, 0, logoParagraph(options.logo));
   const doc = new Document({
     creator: "LedgerFile",
     title,
     styles: { default: { document: { run: { font: "Calibri", size: SIZE } } } },
-    sections: [{ children: blocks.flatMap((b, i) => render(b, i < 2 && b.kind === "para" && b.text.startsWith("[") && b.text.endsWith("]"))) }],
+    sections: [{ children }],
   });
   return Packer.toBuffer(doc);
 }

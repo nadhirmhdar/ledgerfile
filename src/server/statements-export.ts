@@ -5,6 +5,9 @@ import { buildStatementPack } from "../domain/statement-pack";
 import { docxResponse, pdfResponse, plainName } from "./http";
 import { buildStatementsDocx } from "./statements-docx";
 import { statementsDocument } from "../domain/statements-document";
+import { getFileStore } from "./file-store";
+import { loadBrandingForOutputs } from "./branding";
+import { hasBranding } from "../domain/branding";
 
 export type StatementsFormat = "docx" | "pdf";
 
@@ -14,12 +17,12 @@ export type StatementsFormat = "docx" | "pdf";
  * in format. Not found when the engagement is another firm's, or has no accounts yet.
  */
 export async function statementsDownload(session: Session, id: string, requestUrl: string, format: StatementsFormat): Promise<Response> {
-  const { engagement, accounts } = await withFirm(await getDb(), session.firmId, async (tx) => {
+  const { engagement, accounts, branding } = await withFirm(await getDb(), session.firmId, async (tx) => {
     const engagement = await repo.getEngagement(tx, id);
     const accounts = engagement ? await repo.listAccounts(tx, id) : [];
     // The Word download's entry is unchanged; the PDF's says which format it was.
     if (engagement) await repo.audit(tx, session, "export", "financial_statements", id, format === "pdf" ? { format: "pdf" } : undefined);
-    return { engagement, accounts };
+    return { engagement, accounts, branding: engagement ? await loadBrandingForOutputs(tx, getFileStore) : null };
   });
   if (!engagement || accounts.length === 0) return new Response("Not found", { status: 404 });
 
@@ -35,13 +38,16 @@ export async function statementsDownload(session: Session, id: string, requestUr
     pack,
     draft: !pack.clean || engagement.status !== "locked",
   };
+  // The statements are the client's: the firm shows only as a discreet header (its logo and name), and only when it has set branding.
+  const brand = branding && hasBranding(branding) ? { firmName: branding.firmName, logo: branding.logo } : null;
   const base = `${plainName(engagement.clientName)}-financial-statements-${engagement.periodEnd}`;
-  if (format === "docx") return docxResponse(await buildStatementsDocx(input), `${base}.docx`);
+  if (format === "docx") return docxResponse(await buildStatementsDocx({ ...input, brand }), `${base}.docx`);
   // pdfkit is loaded only when a PDF is asked for.
   const { renderPdf } = await import("./pdf");
   const buffer = await renderPdf(statementsDocument(input), {
     title: `${engagement.clientName} financial statements ${engagement.periodEnd}`,
     header: `${engagement.clientName}, financial statements, period ${engagement.periodStart} to ${engagement.periodEnd}`,
+    brand,
   });
   return pdfResponse(buffer, `${base}.pdf`);
 }
