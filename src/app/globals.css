@@ -96,3 +96,144 @@ body {
     scroll-behavior: auto !important;
   }
 }
+
+/*
+ * Visual refresh PROPOSALS (not for merging). Three alternative token sets, picked by data-direction on <html>: a refined current look, b calmer and
+ * lighter, c bolder. Today's look is the @theme block above (no attribute). The attribute is set by the root layout from a cookie, in development
+ * only; nothing here changes in production. Only tokens differ, plus the few component rules at the end. Contrast of every pair is in
+ * ui-audit/refresh-options/README.md.
+ */
+html[data-direction="a"] {
+  --color-page: #f6f5f1;
+  --color-surface-muted: #ecebe5;
+  --color-border: #d8d4cb;
+  --color-border-strong: #6b727a;
+  --color-ink: #161b21;
+  --color-ink-muted: #434b55;
+  --color-ink-subtle: #586270;
+  --color-accent: #1a3568;
+  --color-accent-hover: #112649;
+  --color-accent-soft: #e2e8f4;
+  --color-success: #1f7a4a;
+  --color-success-soft: #e4f2e8;
+  --color-success-strong: #0c5230;
+  --color-warning: #8a5c14;
+  --color-warning-soft: #f4e8d0;
+  --color-warning-strong: #603f0b;
+  --color-danger: #b32d20;
+  --color-danger-soft: #fae6e3;
+  --color-danger-strong: #8c1616;
+  --color-info: #2560c0;
+  --color-info-soft: #e3ecfa;
+  --color-info-strong: #173a8c;
+  --color-neutral: #5f6b75;
+  --color-neutral-soft: #e9edef;
+  --color-neutral-strong: #2c3944;
+  --spacing: 0.2625rem;
+  --text-xs--line-height: 1.05rem;
+  --text-sm--line-height: 1.3rem;
+  --text-base--line-height: 1.55rem;
+  --text-lg--line-height: 1.7rem;
+  --text-xl--line-height: 1.7rem;
+  --text-2xl--line-height: 1.95rem;
+  --text-3xl--line-height: 2.3rem;
+}
+
+html[data-direction="b"] {
+  --color-page: #f8f9fb;
+  --color-surface-muted: #f0f2f6;
+  --color-border: #e6e9ef;
+  --color-border-strong: #858e9a;
+  --color-ink: #232c38;
+  --color-ink-muted: #525d6c;
+  --color-ink-subtle: #66717f;
+  --color-accent: #2f4d7c;
+  --color-accent-hover: #223a60;
+  --color-accent-soft: #edf2f9;
+  --color-success: #2e8556;
+  --color-success-soft: #eaf5ee;
+  --color-success-strong: #175f38;
+  --color-warning: #94691f;
+  --color-warning-soft: #f8f0df;
+  --color-warning-strong: #69470f;
+  --color-danger: #b9382c;
+  --color-danger-soft: #fbecea;
+  --color-danger-strong: #962222;
+  --color-info: #3a6fc4;
+  --color-info-soft: #e9f0fb;
+  --color-info-strong: #21469a;
+  --color-neutral: #697684;
+  --color-neutral-soft: #eef1f4;
+  --color-neutral-strong: #37444f;
+  --spacing: 0.28rem;
+  --text-xs--line-height: 1.1rem;
+  --text-sm--line-height: 1.4rem;
+  --text-base--line-height: 1.6rem;
+  --text-lg--line-height: 1.75rem;
+  --text-xl--line-height: 1.8rem;
+  --text-2xl: 1.5rem;
+  --text-2xl--line-height: 2rem;
+  --text-3xl: 1.75rem;
+  --text-3xl--line-height: 2.25rem;
+  --font-weight-medium: 480;
+  --font-weight-semibold: 560;
+  --font-weight-bold: 620;
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --shadow-card: 0 1px 2px rgb(35 44 56 / 0.04);
+  --font-sans: var(--font-inter), Arial, Helvetica, sans-serif;
+}
+
+html[data-direction="c"] {
+  --color-page: #f2f2ee;
+  --color-surface-muted: #e5e5df;
+  --color-border: #c9c9c0;
+  --color-border-strong: #4d555e;
+  --color-ink: #0b1016;
+  --color-ink-muted: #343c46;
+  --color-ink-subtle: #48515c;
+  --color-accent: #17389a;
+  --color-accent-hover: #0f2870;
+  --color-accent-soft: #d9e3fa;
+  --color-success: #16703f;
+  --color-success-soft: #dcf0e2;
+  --color-success-strong: #0a4a28;
+  --color-warning: #7d5208;
+  --color-warning-soft: #f2e3c3;
+  --color-warning-strong: #563505;
+  --color-danger: #a8261a;
+  --color-danger-soft: #f8dfdb;
+  --color-danger-strong: #7f1010;
+  --color-info: #1f58b8;
+  --color-info-soft: #dbe7f9;
+  --color-info-strong: #12337f;
+  --color-neutral: #566570;
+  --color-neutral-soft: #e1e6e9;
+  --color-neutral-strong: #232f39;
+  --text-lg: 1.1875rem;
+  --text-xl: 1.375rem;
+  --text-xl--line-height: 1.85rem;
+  --text-2xl: 1.75rem;
+  --text-2xl--line-height: 2.1rem;
+  --text-3xl: 2.25rem;
+  --text-3xl--line-height: 2.5rem;
+  --font-weight-medium: 600;
+  --font-weight-semibold: 700;
+  --font-weight-bold: 800;
+  --radius-sm: 0.125rem;
+  --radius-md: 0.1875rem;
+  --radius-lg: 0.25rem;
+  --shadow-card: 0 1px 0 rgb(11 16 22 / 0.14), 0 2px 6px rgb(11 16 22 / 0.07);
+  --font-sans: var(--font-plex), Arial, Helvetica, sans-serif;
+}
+
+/* The few component rules that tokens alone do not reach. */
+html[data-direction="a"] thead { border-bottom-color: var(--color-border-strong); }
+html[data-direction="b"] thead { background-color: var(--color-page); }
+html[data-direction="b"] [aria-current="page"] { font-weight: 600; }
+html[data-direction="c"] :focus-visible { outline-width: 3px; }
+html[data-direction="c"] thead { background-color: var(--color-surface-muted); border-bottom: 2px solid var(--color-ink); color: var(--color-ink); }
+html[data-direction="c"] h1, html[data-direction="c"] h2 { letter-spacing: -0.015em; }
+html[data-direction="c"] nav [aria-current="page"] { border-left-width: 4px; }
+html[data-direction="c"] header { border-bottom: 2px solid var(--color-ink); }
