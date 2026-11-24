@@ -1,0 +1,20 @@
+"Shape source: from vendor documentation (describes the report's columns in prose; the exact heading strings are not shown there, so they are UNVERIFIED): https://help.tallysolutions.com/tally-prime/accounting-financial-reports/trial-balance-tally/"
+Invented Trading LLC (sample)
+Trial Balance
+1-Apr-2025 to 31-Mar-2026
+
+Particulars,Closing Balance,
+,Debit,Credit
+Current Assets,"17,000.00",
+   Cash-in-Hand,"5,000.00",
+   Sundry Debtors,"12,000.00",
+Current Liabilities,,"7,000.00"
+   Sundry Creditors,,"7,000.00"
+Capital Account,,"10,000.00"
+   Proprietor's Capital,,"10,000.00"
+Sales Accounts,,"20,000.00"
+   Sales - Local,,"20,000.00"
+Indirect Expenses,"20,000.00",
+   Office Rent,"8,000.00",
+   Salaries,"12,000.00",
+Grand Total,"37,000.00","37,000.00"

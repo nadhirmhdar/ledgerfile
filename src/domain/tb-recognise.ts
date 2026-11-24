@@ -46,18 +46,20 @@ export interface Sheet {
 
 /** One table of header words. Compared after the text is lower-cased, punctuation and currency marks are gone, and the qualifier is taken out. */
 const WORDS: Record<Exclude<ColumnRole, "ignore">, string[]> = {
-  code: ["code", "account code", "a c code", "a c no", "a c number", "ac code", "acc code", "acc no", "account no", "account number", "number", "no", "gl code", "gl account", "gl no", "ledger code", "رقم الحساب", "كود الحساب", "رمز الحساب", "الرمز", "كود"],
-  name: ["name", "account name", "account", "description", "account description", "account title", "title", "particulars", "ledger", "ledger name", "ledger head", "اسم الحساب", "الحساب", "البيان", "اسم"],
+  code: ["code", "account code", "a c", "a c code", "a c no", "a c number", "ac", "ac code", "n c", "nominal", "nominal code", "account id", "account ref", "main account", "acc code", "acc no", "account no", "account number", "number", "no", "gl code", "gl account", "gl no", "ledger code", "رقم الحساب", "كود الحساب", "رمز الحساب", "الرمز", "كود"],
+  name: ["name", "account name", "account", "description", "account description", "account title", "name of account", "name of ledger", "title", "particulars", "ledger", "ledger name", "ledger head", "اسم الحساب", "الحساب", "البيان", "اسم"],
   codename: ["account", "accounts", "ledger", "ledger account", "chart of accounts"],
-  debit: ["debit", "debits", "dr", "debit balance", "debit amount", "مدين", "المدين"],
-  credit: ["credit", "credits", "cr", "credit balance", "credit amount", "دائن", "الدائن"],
+  debit: ["debit", "debits", "dr", "debit balance", "debit amount", "debit amt", "dr amt", "مدين", "المدين"],
+  credit: ["credit", "credits", "cr", "credit balance", "credit amount", "credit amt", "cr amt", "دائن", "الدائن"],
   balance: ["balance", "net balance", "amount", "net", "closing balance", "current year", "cy", "this year", "ytd", "الرصيد", "رصيد", "الرصيد الختامي"],
   prior: ["prior year", "previous year", "last year", "py", "comparative", "prior period", "previous period", "prior", "السنة السابقة"],
   drcr: ["dr cr", "dr/cr", "debit credit", "debit/credit", "type", "side", "d c", "مدين دائن"],
 };
-const OPENING = /\b(opening|open|b f|brought forward|beginning)\b|افتتاح|الافتتاحي|رصيد أول المدة/;
-const MOVEMENT = /\b(movement|movements|activity|period|transactions|turnover|during)\b|حركة|الحركة/;
-const CLOSING = /\b(closing|ending|end|c f|carried forward|final)\b|ختامي|الختامي|رصيد آخر المدة/;
+const OPENING = /\b(opening|open|o b|b f|brought forward|beginning|initial)\b|افتتاح|الافتتاحي|رصيد أول المدة/;
+const MOVEMENT = /\b(movement|movements|net change|activity|period|transactions|turnover|during|accu|accumulated)\b|حركة|الحركة/;
+const ADJUSTING = /\b(adj|adjusted|adjusting|adjustment|adjustments)\b/;
+const ADJUSTING_REASON = "The sheet has adjusting columns beside the balances, so it is not clear which balance is wanted.";
+const CLOSING = /\b(closing|ending|end|c f|carried forward|final|ytd|year to date)\b|ختامي|الختامي|رصيد آخر المدة/;
 const CURRENCY = /\b(aed|sar|usd|eur|gbp|qar|kwd|bhd|omr|inr|dhs?)\b|[$€£]|د\.إ/gi;
 const TOTAL = /^(grand\s+)?totals?\b|^sub\s*-?\s*totals?\b|^net$|^total\b|^الإجمالي|^الاجمالي|^المجموع|^إجمالي/i;
 
@@ -73,19 +75,22 @@ const clean = (value: unknown): string => squash(value).replace(/ \/ /g, " ").tr
 
 interface Label {
   roles: ColumnRole[];
-  set: "opening" | "movement" | "closing" | null;
+  set: "opening" | "movement" | "closing" | "adjusting" | null;
 }
 
 /** What a heading says about its column: a role (or two it could be) and which set (opening, movement, closing) it belongs to. */
 function readLabel(text: string): Label | null {
   const raw = squash(text);
   if (raw === "") return null;
-  const set = OPENING.test(raw) ? "opening" : MOVEMENT.test(raw) ? "movement" : CLOSING.test(raw) ? "closing" : null;
+  const set = ADJUSTING.test(raw) ? "adjusting" : OPENING.test(raw) ? "opening" : MOVEMENT.test(raw) ? "movement" : CLOSING.test(raw) ? "closing" : null;
   let base = raw;
-  for (const q of [OPENING, MOVEMENT, CLOSING]) base = base.replace(new RegExp(q.source, "g"), " ");
+  for (const q of [ADJUSTING, OPENING, MOVEMENT, CLOSING]) base = base.replace(new RegExp(q.source, "g"), " ");
   base = base.replace(/\s+/g, " ").replace(/ \/ /g, " ").trim();
   const slashed = raw.replace(/\b(closing|opening)\b/g, "").replace(/\s+/g, " ").trim();
-  const roles = (Object.keys(WORDS) as (keyof typeof WORDS)[]).filter((role) => WORDS[role].some((w) => clean(w) === base || (w.includes("/") && squash(w) === slashed)));
+  const find = (b: string) => (Object.keys(WORDS) as (keyof typeof WORDS)[]).filter((role) => WORDS[role].some((w) => clean(w) === b || (w.includes("/") && squash(w) === slashed)));
+  let roles = find(base);
+  // "Balance Debit" and "Debit Balance" are a debit column.
+  if (roles.length === 0) roles = find(base.replace(/^(net )?balance /, "")).filter((r) => r === "debit" || r === "credit");
   if (roles.length === 0 && set !== null && base === "") roles.push("balance");
   return roles.length > 0 ? { roles, set } : null;
 }
@@ -160,6 +165,8 @@ interface HeaderFound {
   start: number;
   end: number;
   labels: (Label | null)[];
+  /** The account column had no heading and was found from its cells. */
+  blankName: boolean;
 }
 
 /** Labels for a heading made of one row, or of two (the upper heading carried across the blank cells to its right). */
@@ -188,18 +195,49 @@ const usable = (labels: (Label | null)[]): boolean => {
   return (has("code") || has("name") || has("codename")) && (has("balance") || (has("debit") && has("credit")));
 };
 
+/** A heading row with no word over the account column (some systems leave it blank): the first blank column left of the amounts whose cells are text is the account. */
+function fillBlankName(labels: (Label | null)[], rows: Cell[][], end: number): (Label | null)[] | null {
+  const has = (role: ColumnRole) => labels.some((l) => l?.roles.includes(role));
+  if (has("code") || has("name") || has("codename") || !(has("balance") || (has("debit") && has("credit")))) return null;
+  const firstAmount = labels.findIndex((l) => l?.roles.some((r) => r === "debit" || r === "credit" || r === "balance"));
+  for (let c = 0; c < firstAmount; c++) {
+    if (labels[c]) continue;
+    const cells = rows.slice(end + 1, end + 11).map((r) => text(r[c])).filter((v) => v !== "");
+    if (cells.length >= 2 && cells.filter((v) => !/^[\d\s,.()$€£-]+$/.test(v)).length / cells.length >= 0.8) {
+      const next = [...labels];
+      next[c] = { roles: ["codename"], set: null };
+      return next;
+    }
+  }
+  return null;
+}
+
 function findHeader(rows: Cell[][]): HeaderFound | null {
   const width = Math.min(MAX_COLUMNS, Math.max(0, ...rows.slice(0, SEARCH_ROWS + 1).map((r) => r.length)));
+  const consider = (labels: (Label | null)[], start: number, end: number): HeaderFound | null => {
+    if (usable(labels)) return { start, end, labels, blankName: false };
+    const filled = fillBlankName(labels, rows, end);
+    return filled && usable(filled) ? { start, end, labels: filled, blankName: true } : null;
+  };
   for (let i = 0; i < Math.min(rows.length, SEARCH_ROWS); i++) {
     if (!rows[i].some((c) => text(c) !== "")) continue;
     const one = labelsOf(rows, i, i, width);
     const two = i + 1 < rows.length ? labelsOf(rows, i, i + 1, width) : null;
-    // When the next row holds amount words of its own (Debit and Credit under a heading that runs across them), the heading spans both rows.
+    // The heading spans both rows when the next row holds Debit and Credit words of its own AND the row above is a heading too: it has a word of its own, or
+    // it stands over an amount column (a date over Debit and Credit). A title or company line above the heading is not part of it.
     const lower = i + 1 < rows.length ? labelsOf(rows, i + 1, i + 1, width) : [];
     const lowerAmounts = lower.some((l) => l?.roles.some((r) => r === "debit" || r === "credit"));
-    if (two && lowerAmounts && usable(two)) return { start: i, end: i + 1, labels: two };
-    if (usable(one)) return { start: i, end: i, labels: one };
-    if (two && usable(two)) return { start: i, end: i + 1, labels: two };
+    const upperIsHeading = rows[i].some((cell, c) => text(cell) !== "" && (readLabel(text(cell)) !== null || lower[c]?.roles.some((r) => r === "debit" || r === "credit" || r === "balance")));
+    const spans = two && lowerAmounts && upperIsHeading ? consider(two, i, i + 1) : null;
+    if (spans) return spans;
+    const single = consider(one, i, i);
+    if (single) return single;
+  }
+  // Only when no single row works: a heading over two rows whose upper row is not obviously one (a last resort, never a title line taken for a heading).
+  for (let i = 0; i < Math.min(rows.length - 1, SEARCH_ROWS); i++) {
+    if (!rows[i].some((c) => text(c) !== "")) continue;
+    const fallback = consider(labelsOf(rows, i, i + 1, width), i, i + 1);
+    if (fallback) return fallback;
   }
   return null;
 }
@@ -215,7 +253,7 @@ interface Row {
   indent: number;
 }
 
-const COMBINED = [/^(\d[\w./-]*)\s*[-–:]\s*(.+)$/, /^(.+?)\s*\(\s*(\d[\w./-]*)\s*\)$/, /^(\d{3,}[\w./-]*)\s+(.+)$/];
+const COMBINED = [/^(\d[\w./-]*)\s*[-–:·•]\s*(.+)$/, /^(.+?)\s*\(\s*(\d[\w./-]*)\s*\)$/, /^(\d{3,}[\w./-]*)\s+(.+)$/];
 function splitCombined(value: string): { code: string; name: string } | null {
   const a = COMBINED[0].exec(value) ?? COMBINED[2].exec(value);
   if (a) return { code: a[1], name: a[2].trim() };
@@ -233,15 +271,32 @@ function recogniseSheet(rows: Cell[][], index: number, name: string, sheetsSeen:
 
   // Each column's role: the closing set when sets are given, the first of two equal sets when not (and that is a guess).
   const wantSet = header.labels.some((l) => l?.set === "closing") ? "closing" : null;
+  const isAmount = (l: Label) => l.roles.some((r) => r === "debit" || r === "credit" || r === "balance");
+  const hasOpening = header.labels.some((l) => l?.set === "opening");
+  const plainBalance = header.labels.some((l) => l && l.set === null && l.roles.includes("balance"));
   const taken = new Map<ColumnRole, number>();
   const order: ColumnRole[] = ["codename", "code", "name", "debit", "credit", "balance", "prior", "drcr"];
-  header.labels.forEach((label, col) => {
-    if (!label) return;
+  // Columns marked as the closing set are placed first, so a plain "Debit" beside "Debit YTD" does not take the role.
+  const columns = header.labels.map((_, c) => c).sort((a, b) => (header.labels[a]?.set === "closing" ? 0 : 1) - (header.labels[b]?.set === "closing" ? 0 : 1) || a - b);
+  for (const col of columns) {
+    const label = header.labels[col];
+    if (!label) continue;
+    if (label.set === "adjusting" && isAmount(label)) {
+      ignoredColumns.push({ column: col, reason: "Adjusting entries (not used)" });
+      guessed = true;
+      if (!reasons.includes(ADJUSTING_REASON)) reasons.push(ADJUSTING_REASON);
+      continue;
+    }
     if (label.set === "opening" || label.set === "movement") {
       ignoredColumns.push({ column: col, reason: label.set === "opening" ? "Opening balance (not used as the prior year)" : "Movement for the period" });
-      return;
+      continue;
     }
-    if (wantSet && label.set !== wantSet && label.set !== null && label.roles.some((r) => r === "debit" || r === "credit" || r === "balance")) return;
+    // Beside a closing set, or beside an opening balance and a balance column, plain Debit and Credit columns are the period's movement.
+    if (isAmount(label) && label.set === null && !label.roles.includes("balance") && (wantSet || (hasOpening && plainBalance))) {
+      ignoredColumns.push({ column: col, reason: "Movement for the period" });
+      continue;
+    }
+    if (wantSet && label.set !== wantSet && label.set !== null && isAmount(label)) continue;
     // A heading that fits two roles ("Account" can be a name or a combined code and name) takes the first role in order that is still free.
     const role = order.find((r) => label.roles.includes(r) && !taken.has(r));
     if (!role) {
@@ -250,11 +305,12 @@ function recogniseSheet(rows: Cell[][], index: number, name: string, sheetsSeen:
         ignoredColumns.push({ column: col, reason: "A second column with the same heading (the first was used)" });
         reasons.push("Two columns have the same heading, so the first was used.");
       }
-      return;
+      continue;
     }
     taken.set(role, col);
     roles[col] = role;
-  });
+  }
+  ignoredColumns.sort((a, b) => a.column - b.column);
   // "Account" alone is a name; it is a combined code and name only when most of its cells look like one.
   const dataStart = header.end + 1;
   const body = rows.slice(dataStart);
@@ -406,6 +462,7 @@ function recogniseSheet(rows: Cell[][], index: number, name: string, sheetsSeen:
   if (has("balance") && has("debit") && has("credit")) reasons.push("Both a Balance and Debit and Credit columns were found; Debit and Credit were used.");
   const medium: string[] = [...(guessed ? [] : reasons)];
   if (header.end > header.start) medium.push("The heading spans two rows.");
+  if (header.blankName) medium.push("The account column has no heading, so it was found from its cells.");
   if (sawSuffix || has("drcr")) medium.push("Debit and credit are shown with Dr and Cr markers.");
   if (sawCombinedSplit && !medium.some((m) => m.includes("one column"))) medium.push("The account code and name are in one column and were split.");
   if (skipped.some((s) => s.reason.startsWith("A subtotal") || s.reason.startsWith("A parent"))) medium.push("Subtotal or parent lines were left out so nothing is counted twice.");
@@ -415,7 +472,11 @@ function recogniseSheet(rows: Cell[][], index: number, name: string, sheetsSeen:
   const level: Confidence = low.length > 0 ? "low" : medium.length > 0 ? "medium" : "high";
 
   const prefillColumns: Partial<Record<Role, number>> = {};
-  for (const [c, role] of Object.entries(roles)) if (["code", "name", "debit", "credit", "balance", "prior"].includes(role)) prefillColumns[role as Role] = Number(c);
+  // The chooser has no "code and name in one column" role: that column is shown as the name.
+  for (const [c, role] of Object.entries(roles)) {
+    if (["code", "name", "debit", "credit", "balance", "prior"].includes(role)) prefillColumns[role as Role] = Number(c);
+    else if (role === "codename") prefillColumns.name = Number(c);
+  }
   return {
     sheetIndex: index,
     sheetName: name,
@@ -447,4 +508,19 @@ export function recogniseWorkbook(sheets: Sheet[]): Recognition | null {
   if (found.length === 0) return null;
   found.sort((a, b) => rank(b.r, b.name) - rank(a.r, a.name) || a.r.sheetIndex - b.r.sheetIndex);
   return found[0].r;
+}
+
+const closings = (accounts: TbAccount[]): number[] => accounts.map((a) => a.closingMinor).sort((a, b) => a - b);
+
+/**
+ * Whether plain detection and the recogniser both read a sheet into balanced accounts but with different closing balances. Plain detection takes the first
+ * Debit and Credit columns it finds, so an export with opening, movement and closing sets (or a year-to-date pair) can be read from the period's movement,
+ * which balances too. Two balanced readings that disagree mean we do not know which columns are the closing balance, so neither is imported: the caller
+ * asks. A file both read the same way is not a disagreement.
+ */
+export function readsDiffer(plain: TbAccount[], found: Recognition | null): found is Recognition {
+  if (!found || !found.balanced) return false;
+  const a = closings(plain);
+  const b = closings(found.accounts);
+  return a.length !== b.length || a.some((x, i) => x !== b[i]);
 }

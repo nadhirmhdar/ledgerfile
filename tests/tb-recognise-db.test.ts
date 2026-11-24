@@ -35,6 +35,9 @@ const upload = (engagementId: string, f: File, extra: Record<string, string> = {
   for (const [k, v] of Object.entries(extra)) form.set(k, v);
   return uploadTrialBalanceAction({ ok: true, message: "" }, form);
 };
+async function engagementFor(client: string, period: [string, string]): Promise<string> {
+  return withFirm(db, X, (tx) => repo.createEngagement(tx, partner, client, period[0], period[1]));
+}
 let n = 0;
 async function engagement(): Promise<{ id: string; client: string }> {
   n++;
@@ -197,5 +200,49 @@ describe("indentation kept as an Excel indent", () => {
     expect(state.ok).toBe(true);
     expect((await accounts(e.id)).map((a) => a.code)).toEqual(["Bank", "Cash", "Owner capital"]);
     expect(state.details).toEqual(expect.arrayContaining(["Row 3 was left out: a group line (it equals the lines indented below it).", "Row 6 was left out: a group line (it equals the lines indented below it)."]));
+  });
+});
+
+describe("an export that can be read two ways with different closing balances", () => {
+  const read = async () => {
+    const fs = await import("node:fs");
+    const path = await import("node:path");
+    return fs.readFileSync(path.join(__dirname, "fixtures", "tb-shapes", "erpnext.csv"), "utf8");
+  };
+
+  it("is not imported: it asks, with the recogniser's columns filled in; confirming imports them and remembers them for the client", async () => {
+    const erpnext = await read();
+    const e = await engagement();
+    const asked = await upload(e.id, file("tb.csv", erpnext));
+    expect(asked.ok).toBe(false);
+    expect(asked.message).toBe("This file can be read two ways that give different closing balances (for example, the movement columns and the closing columns). Check which columns are the closing balance.");
+    expect(asked.preview).toMatchObject({ headerRow: 4, sheet: 0, selected: { 0: "name", 5: "debit", 6: "credit" } });
+    expect(await accounts(e.id)).toHaveLength(0);
+    expect(await remembered(e.client)).toBeNull();
+
+    // The person confirms the columns the chooser showed (the account column is a name; the closing pair is the balance).
+    const done = await upload(e.id, file("tb.csv", erpnext), { headerRow: "4", sheet: "0", role_0: "name", role_5: "debit", role_6: "credit" });
+    expect(done.ok).toBe(true);
+    expect(done.message).toContain("Columns you chose");
+    const rows = await accounts(e.id);
+    expect(rows).toHaveLength(7);
+    expect(rows.find((a) => a.code.startsWith("1000"))!.closing_minor).toBe("500000");
+    expect(rows.find((a) => a.code.startsWith("4000"))!.closing_minor).toBe("-2000000");
+    expect(await remembered(e.client)).not.toBeNull();
+
+    // Next year's file for the same client uses the remembered columns and does not ask again.
+    const next = await engagementFor(e.client, ["2026-01-01", "2026-12-31"]);
+    const again = await upload(next, file("tb.csv", erpnext));
+    expect(again.ok).toBe(true);
+    expect(again.preview).toBeUndefined();
+    expect(again.message).toContain("Columns as remembered for this client");
+    expect((await accounts(next)).find((a) => a.code.startsWith("1000"))!.closing_minor).toBe("500000");
+  });
+
+  it("leaves a file both readings agree on, and anything a person chose, untouched", async () => {
+    const e = await engagement();
+    const state = await upload(e.id, file("tb.csv", STANDARD));
+    expect(state.ok).toBe(true);
+    expect(state.message).toContain("Columns detected.");
   });
 });

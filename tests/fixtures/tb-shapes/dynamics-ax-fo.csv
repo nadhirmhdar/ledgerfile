@@ -1,0 +1,12 @@
+"Shape source: from memory, UNVERIFIED. Invented accounts and figures in the shape the system is remembered to export."
+Invented Co (sample)
+Trial balance
+Fiscal year 2025
+Main account,Name,Opening balance,Debit,Credit,Balance
+110100,Bank,"4,000.00","3,000.00","2,000.00","5,000.00"
+130100,Customers,"9,000.00","6,000.00","3,000.00","12,000.00"
+200100,Vendors,"-6,000.00","1,000.00","2,000.00","-7,000.00"
+300100,Capital,"-10,000.00",0.00,0.00,"-10,000.00"
+400100,Sales,"-18,000.00",0.00,"2,000.00","-20,000.00"
+600100,Rent,"7,000.00","1,000.00",0.00,"8,000.00"
+600200,Salaries,"14,000.00",0.00,"2,000.00","12,000.00"

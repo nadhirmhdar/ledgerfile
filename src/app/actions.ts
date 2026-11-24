@@ -7,7 +7,7 @@ import { getSession } from "@/server/session";
 import * as repo from "@/server/repo";
 import * as assistant from "@/server/mapping-assistant";
 import { readSheets } from "@/server/excel";
-import { recogniseWorkbook } from "@/domain/tb-recognise";
+import { readsDiffer, recogniseWorkbook } from "@/domain/tb-recognise";
 import { buildPreview, chosenFromEntries, type Preview as TbPreview, readTrialBalance, ROLE_LABEL, savedFrom, SOURCE_SENTENCE, type Layout } from "@/domain/tb-layout";
 import * as tbLayout from "@/server/tb-layout";
 import { formatAmount, parseAmount } from "@/domain/money";
@@ -69,6 +69,8 @@ export async function createEngagementAction(_prev: FormState, form: FormData): 
   }
   redirect(`/engagements/${id}`);
 }
+
+const DISAGREE = "This file can be read two ways that give different closing balances (for example, the movement columns and the closing columns). Check which columns are the closing balance.";
 
 export async function uploadTrialBalanceAction(_prev: FormState, form: FormData): Promise<FormState> {
   const session = await getSession();
@@ -135,6 +137,16 @@ export async function uploadTrialBalanceAction(_prev: FormState, form: FormData)
   }
 
   const { result: parsed, source, layout } = reading;
+  // Plain detection read the sheet and it balances, but the recogniser reads it into balanced accounts with different closing balances (an export with
+  // opening, movement and closing columns balances in its movement columns too). We do not know which columns are the closing balance, so nothing is
+  // imported: the chooser opens on that sheet, filled in with the recogniser's columns. What a person confirms is remembered for the client as usual.
+  if (mayRecognise && parsed.errors.length === 0 && parsed.balanced) {
+    const found = recogniseWorkbook(sheets);
+    if (readsDiffer(parsed.accounts, found)) {
+      const pre = { ...buildPreview(sheets[found.sheetIndex].rows), headerRow: found.prefill.headerRow, fileName: file.name, sheet: found.sheetIndex, selected: selectedOf(found.prefill) };
+      return { ok: false, message: DISAGREE, preview: pre };
+    }
+  }
   if (mayRecognise && (parsed.errors.length > 0 || !parsed.balanced)) {
     const state = await recognise();
     // A reading that is not sure leaves today's message in place rather than replacing it.

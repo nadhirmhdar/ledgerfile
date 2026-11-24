@@ -1,0 +1,12 @@
+"Shape source: from memory, UNVERIFIED. Invented accounts and figures in the shape the system is remembered to export."
+Invented Co (sample)
+General Ledger Trial Balance
+"Fiscal Year 2025, Period 12"
+Account Number,Account Description,Beginning Balance,Debits,Credits,Ending Balance
+1010,Cash in Bank,"4,000.00","3,000.00","2,000.00","5,000.00"
+1200,Trade Receivables,"9,000.00","6,000.00","3,000.00","12,000.00"
+2100,Trade Payables,"(6,000.00)","1,000.00","2,000.00","(7,000.00)"
+3000,Share Capital,"(10,000.00)",0.00,0.00,"(10,000.00)"
+4000,Sales,"(18,000.00)",0.00,"2,000.00","(20,000.00)"
+6100,Rent,"7,000.00","1,000.00",0.00,"8,000.00"
+6200,Wages,"14,000.00",0.00,"2,000.00","12,000.00"
