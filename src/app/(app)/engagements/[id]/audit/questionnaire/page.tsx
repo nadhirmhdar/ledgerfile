@@ -15,7 +15,7 @@ import { Button } from "@/ui/button";
 import { Disclosure } from "@/ui/controls";
 import { Callout } from "@/ui/feedback";
 import { Field, Select, Textarea } from "@/ui/form";
-import { PageHeader, Section, Stat } from "@/ui/layout";
+import { PageHeader, Section, Stat, EngagementFacts } from "@/ui/layout";
 import { count } from "@/ui/text";
 import { EngagementNav } from "../../nav";
 
@@ -142,18 +142,11 @@ export default async function QuestionnairePage({ params }: { params: Promise<{ 
       <PageHeader
         breadcrumb={[{ label: "All engagements", href: "/" }]}
         title="Planning questionnaire"
-        meta={
-          <>
-            <span>{engagement.clientName}</span>
-            <span aria-hidden="true">·</span>
-            <span>
-              {engagement.periodStart} to {engagement.periodEnd}
-            </span>
-            <span aria-hidden="true">·</span>
-            <Link href={base} className="text-accent hover:underline">
-              Back to audit planning
-            </Link>
-          </>
+        meta={<EngagementFacts client={engagement.clientName} periodStart={engagement.periodStart} periodEnd={engagement.periodEnd} />}
+        note={
+          <Link href={base} className="text-accent hover:underline">
+            Back to audit planning
+          </Link>
         }
         subtitle={q.mandatoryOpen > 0 ? `${count(q.mandatoryOpen, "mandatory question")} still to answer. This does not hold up the lock.` : "No mandatory question is waiting. This questionnaire does not hold up the lock."}
       />

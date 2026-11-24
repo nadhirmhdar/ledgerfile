@@ -16,7 +16,7 @@ import { AREAS, CHECKLISTS } from "@/domain/audit";
 import { Button, buttonClass } from "@/ui/button";
 import { ctl, Disclosure, fieldLabel } from "@/ui/controls";
 import { EmptyState } from "@/ui/feedback";
-import { PageHeader, Section } from "@/ui/layout";
+import { PageHeader, Section, EngagementFacts } from "@/ui/layout";
 import { fileSize, filingText, filterPapers, paperControls, paperCounts, paperResults, papersSentence, parsePapersSearch, parsePapersShow, type PapersShow } from "@/ui/papers-view";
 import { TwoLineRow } from "@/ui/two-line-row";
 import { EngagementNav } from "../nav";
@@ -64,15 +64,7 @@ export default async function PapersPage({ params, searchParams }: { params: Pro
       <PageHeader
         breadcrumb={[{ label: "All engagements", href: "/" }]}
         title="Working papers"
-        meta={
-          <>
-            <span>{engagement.clientName}</span>
-            <span aria-hidden="true">·</span>
-            <span>
-              {engagement.periodStart} to {engagement.periodEnd}
-            </span>
-          </>
-        }
+        meta={<EngagementFacts client={engagement.clientName} periodStart={engagement.periodStart} periodEnd={engagement.periodEnd} />}
         subtitle={papersSentence(list)}
       />
       <EngagementNav id={id} current="papers" status={engagement.status} archived={engagement.archivedAt !== null} />

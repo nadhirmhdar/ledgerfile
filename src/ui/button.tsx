@@ -9,7 +9,7 @@ const BASE =
 // Primary is the one solid fill. Secondary is white with a soft edge that firms up on hover. Ghost is a text button for low-weight actions.
 const VARIANT: Record<ButtonVariant, string> = {
   primary: "border-accent bg-accent text-surface shadow-card hover:bg-accent-hover hover:border-accent-hover",
-  secondary: "border-border-input bg-surface text-ink hover:border-border-strong hover:bg-surface-muted hover:text-accent",
+  secondary: "border-border-control bg-surface text-ink hover:border-border-strong hover:bg-surface-muted hover:text-accent",
   ghost: "border-transparent bg-transparent text-accent hover:bg-accent-soft",
   danger: "border-danger bg-surface text-danger-strong hover:bg-danger-soft",
 };

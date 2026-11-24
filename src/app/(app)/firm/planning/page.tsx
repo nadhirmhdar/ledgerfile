@@ -77,7 +77,7 @@ export default async function PlanningSettingsPage() {
       <PageHeader
         breadcrumb={[{ label: "All engagements", href: "/" }]}
         title="Planning settings"
-        meta={
+        note={
           <Link href="/firm" className="text-accent hover:underline">
             Back to the firm
           </Link>

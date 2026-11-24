@@ -4,10 +4,10 @@ import type { HTMLAttributes, ReactNode, TdHTMLAttributes } from "react";
  * A real table, for figures and for lists of records with several columns. One style: a light heading (13 px, muted, one hairline under it), row
  * hairlines, 12 px above and below each cell, a hover tint on a row, and every figure in tabular numerals, right-aligned.
  */
-export function Table({ caption, sticky = false, children, className = "" }: { caption?: string; sticky?: boolean; children: ReactNode; className?: string }) {
+export function Table({ caption, sticky = false, fixed = false, children, className = "" }: { caption?: string; sticky?: boolean; /** Column widths from the first row (and any <col>), so a table with wide controls fits its box. */ fixed?: boolean; children: ReactNode; className?: string }) {
   return (
     <div className={`relative overflow-x-auto rounded-lg border border-border bg-surface shadow-card ${sticky ? "max-h-[70vh] overflow-y-auto" : ""} ${className}`}>
-      <table className="w-full text-left text-sm">
+      <table className={`w-full text-left text-sm ${fixed ? "table-fixed" : ""}`}>
         {caption && <caption className="sr-only">{caption}</caption>}
         {children}
       </table>

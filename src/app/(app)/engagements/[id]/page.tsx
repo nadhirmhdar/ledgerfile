@@ -12,7 +12,7 @@ import { Badge, StatusBadge } from "@/ui/badge";
 import { LinkButton } from "@/ui/button";
 import { buildHomeModel, paths, seeAllLabel, type HomeInput } from "@/ui/engagement-home";
 import { Callout, EmptyState, StepList } from "@/ui/feedback";
-import { Card, PageHeader, Section, Stat } from "@/ui/layout";
+import { Card, Fact, PageHeader, Section, Stat } from "@/ui/layout";
 import { ToDoRows } from "@/ui/todo-rows";
 import { count } from "@/ui/text";
 import { EngagementNav } from "./nav";
@@ -88,11 +88,15 @@ export default async function EngagementHome({ params }: { params: Promise<{ id:
         breadcrumb={[{ label: "All engagements", href: "/" }]}
         meta={
           <>
-            <span>
+            <Fact label="Period">
               {engagement.periodStart} to {engagement.periodEnd}
-            </span>
-            <StatusBadge status={model.locked ? "locked" : "in_progress"} label={model.locked ? "Locked" : "Open"} />
-            <Badge tone={audit.enabled ? "info" : "muted"}>{audit.enabled ? "Audit on" : "Audit off"}</Badge>
+            </Fact>
+            <Fact label="Status">
+              <StatusBadge status={model.locked ? "locked" : "in_progress"} label={model.locked ? "Locked" : "Open"} />
+            </Fact>
+            <Fact label="Audit">
+              <Badge tone={audit.enabled ? "info" : "muted"}>{audit.enabled ? "Audit on" : "Audit off"}</Badge>
+            </Fact>
           </>
         }
         title={engagement.clientName}

@@ -24,7 +24,7 @@ export function Card({
   raised?: boolean;
 }) {
   return (
-    <div className={`rounded-lg border bg-surface ${raised ? "border-accent-edge shadow-raised" : "border-border shadow-card"} ${className}`}>
+    <div className={`rounded-lg border bg-surface ${raised ? "border-border shadow-raised" : "border-border shadow-card"} ${className}`}>
       {(title || actions) && (
         <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border px-4 py-3 sm:px-6 sm:py-4">
           <div>
@@ -40,10 +40,36 @@ export function Card({
   );
 }
 
+/** One labelled fact in a page header: a small muted label over its value. */
+export function Fact({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="min-w-0">
+      <dt className="text-small text-ink-subtle">{label}</dt>
+      <dd className="mt-0.5 text-sm font-medium whitespace-nowrap text-ink">{children}</dd>
+    </div>
+  );
+}
+
+/** The client and the period of an engagement, as two labelled facts (the period on one line). */
+export function EngagementFacts({ client, periodStart, periodEnd }: { client: string; periodStart: string; periodEnd: string }) {
+  return (
+    <>
+      <div className="min-w-0">
+        <dt className="text-small text-ink-subtle">Client</dt>
+        <dd className="mt-0.5 text-sm font-medium text-ink">{client}</dd>
+      </div>
+      <Fact label="Period">
+        {periodStart} to {periodEnd}
+      </Fact>
+    </>
+  );
+}
+
 /**
- * The top of a page, and the one bold element on it: a back link with a chevron, the title, the page's facts in a row (the client, the period and
- * status chips), one status sentence, and the page's actions at the right of the title (under it on a narrow screen). A hairline closes it, so the
- * content below starts clearly apart. A dot between two facts is dropped: the gap is the separator.
+ * The top of a page, and the one bold element on it: a band across the content column holding a back link with a chevron, the 30/600 title with the
+ * page's actions on its baseline (under it when narrow), the page's facts as labelled fields (Client, Period, Status), an optional secondary note,
+ * and the one status sentence. `facts` is a set of <Fact> items (a <dl>); `note` is for what is not a fact. A dot between two inline items passed as
+ * `meta` is dropped: the gap is the separator.
  */
 export function PageHeader({
   meta,
@@ -51,18 +77,21 @@ export function PageHeader({
   subtitle,
   actions,
   breadcrumb,
+  note,
 }: {
   meta?: ReactNode;
   title: ReactNode;
   subtitle?: ReactNode;
   actions?: ReactNode;
+  /** A secondary line for what is not a fact (for example how the columns were read). */
+  note?: ReactNode;
   /** Earlier crumbs are links; one with no href is the page the reader is on, shown as text. */
   breadcrumb?: { label: string; href?: string }[];
 }) {
   const parents = (breadcrumb ?? []).filter((b) => b.href);
   const here = (breadcrumb ?? []).filter((b) => !b.href);
   return (
-    <header className="border-b border-border pb-6">
+    <header className="rounded-lg border border-border bg-surface px-4 py-5 shadow-card sm:px-6 sm:py-6">
       {breadcrumb && breadcrumb.length > 0 && (
         <nav aria-label="Breadcrumb" className="mb-3">
           <ol className="flex flex-wrap items-center gap-x-1 gap-y-1 text-sm text-ink-muted">
@@ -86,14 +115,13 @@ export function PageHeader({
           </ol>
         </nav>
       )}
-      <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
-        <div className="min-w-0">
-          <h1 className="text-2xl font-semibold text-ink">{title}</h1>
-          {meta && <div className="mt-2 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-ink-muted [&>[aria-hidden=true]]:hidden">{meta}</div>}
-        </div>
+      <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-3">
+        <h1 className="min-w-0 text-2xl font-semibold text-ink">{title}</h1>
         {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
       </div>
-      {subtitle && <p className="mt-3 text-base text-ink">{subtitle}</p>}
+      {meta && <dl className="mt-4 flex flex-wrap items-end gap-x-10 gap-y-3 border-t border-border pt-4 text-sm text-ink-muted [&>[aria-hidden=true]]:hidden">{meta}</dl>}
+      {note && <p className="mt-3 text-sm text-ink-muted">{note}</p>}
+      {subtitle && <p className={`${meta || note ? "mt-3" : "mt-4"} text-base text-ink`}>{subtitle}</p>}
     </header>
   );
 }
@@ -166,7 +194,7 @@ export function Stat({ label, value, hint, href, attention }: { label: string; v
   const body = (
     <>
       <div className="text-sm text-ink-muted">{label}</div>
-      <div className="mt-1 text-stat font-semibold text-ink tabular-nums">{value}</div>
+      <div className="mt-1 text-[1.75rem] leading-8 font-semibold text-ink tabular-nums">{value}</div>
       {hint && <div className="mt-1 text-small text-ink-muted">{hint}</div>}
     </>
   );

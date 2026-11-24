@@ -9,13 +9,13 @@ type CalloutVariant = "info" | "success" | "warning" | "danger" | "draft" | "loc
 // One callout, four tones (info, success, warning, danger) and two that borrow one: a soft tint, a 3 px bar at the left in the tone colour, and an icon
 // in that colour. No full saturated fill and no full border.
 const CALLOUT: Record<CalloutVariant, { box: string; icon: ReactNode; iconColour: string }> = {
-  info: { box: "border-l-info bg-info-soft text-info-strong", icon: <InfoIcon />, iconColour: "text-info" },
-  success: { box: "border-l-success bg-success-soft text-success-strong", icon: <CheckIcon />, iconColour: "text-success" },
-  warning: { box: "border-l-warning bg-warning-soft text-warning-strong", icon: <AlertIcon />, iconColour: "text-warning" },
-  danger: { box: "border-l-danger bg-danger-soft text-danger-strong", icon: <AlertIcon />, iconColour: "text-danger" },
+  info: { box: "border-l-info bg-info-tint text-info-strong", icon: <InfoIcon />, iconColour: "text-info" },
+  success: { box: "border-l-success bg-success-tint text-success-strong", icon: <CheckIcon />, iconColour: "text-success" },
+  warning: { box: "border-l-warning bg-warning-tint text-warning-strong", icon: <AlertIcon />, iconColour: "text-warning" },
+  danger: { box: "border-l-danger bg-danger-tint text-danger-strong", icon: <AlertIcon />, iconColour: "text-danger" },
   // Machine-written text that no person has checked yet: it must stay clearly visible wherever it is shown (the words "unreviewed draft" stay in it).
-  draft: { box: "border-l-warning bg-warning-soft text-warning-strong", icon: <SparkIcon />, iconColour: "text-warning" },
-  locked: { box: "border-l-neutral bg-neutral-soft text-neutral-strong", icon: <LockIcon />, iconColour: "text-neutral" },
+  draft: { box: "border-l-warning bg-warning-tint text-warning-strong", icon: <SparkIcon />, iconColour: "text-warning" },
+  locked: { box: "border-l-neutral bg-neutral-tint text-neutral-strong", icon: <LockIcon />, iconColour: "text-neutral" },
 };
 
 /** A short message that is not part of the flow. The draft variant is for "AI draft: not reviewed" labels. */

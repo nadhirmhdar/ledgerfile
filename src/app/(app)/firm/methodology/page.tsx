@@ -70,7 +70,7 @@ export default async function FirmMethodologyPage() {
       <PageHeader
         breadcrumb={[{ label: "All engagements", href: "/" }]}
         title="Methodology"
-        meta={
+        note={
           <Link href="/firm" className="text-accent hover:underline">
             Back to the firm
           </Link>

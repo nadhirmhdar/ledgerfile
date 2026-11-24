@@ -7,7 +7,7 @@ import { removeLogoAction, saveBrandingAction, uploadLogoAction } from "@/app/br
 import { Button } from "@/ui/button";
 import { Callout } from "@/ui/feedback";
 import { Field, Input, Textarea } from "@/ui/form";
-import { Card, PageHeader } from "@/ui/layout";
+import { Card, Fact, PageHeader } from "@/ui/layout";
 import { BRANDING_SHOWN_ON, LOGO_HINT } from "@/ui/branding-view";
 import { notFound } from "next/navigation";
 
@@ -21,7 +21,7 @@ export default async function FirmPage() {
 
   return (
     <div className="py-8 text-ink">
-      <PageHeader title="Firm" meta={<span>{view.firmName}</span>} subtitle={BRANDING_SHOWN_ON} />
+      <PageHeader title="Firm" meta={<Fact label="Firm">{view.firmName}</Fact>} subtitle={BRANDING_SHOWN_ON} />
       <div className="mt-6 max-w-3xl space-y-8">
         <Callout variant="info" title="Planning settings">
           The guide ranges and thresholds behind materiality and the planning assistant are on the{" "}

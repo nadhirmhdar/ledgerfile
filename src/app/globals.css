@@ -11,9 +11,12 @@
  *   ink on page 17.3, on surface 19.1        ink-muted on page 6.6, on surface 7.3, on surface-muted 6.3
  *   ink-subtle on surface 5.7, on page 5.2, on surface-muted 4.9 (placeholders, hints and the table heading)
  *   surface on accent 10.2, on accent-hover 13.5   accent on surface 10.2, on accent-soft 8.5, on page 9.2, on surface-muted 8.7
- *   border-input (the edge of a field) on surface 3.4, border-strong (hover edge of a field, secondary button hover) on surface 7.6
+ *   border-input (the edge of a field) on surface 3.4, border-strong (hover edge of a field and of a secondary button) on surface 7.6
+ *   border-control (the resting edge of a secondary button, which has its words as well) on surface 2.0
  *   success-strong on success-soft 9.1       warning-strong on warning-soft 9.5      danger-strong on danger-soft 9.0
  *   info-strong on info-soft 9.9             neutral-strong on neutral-soft 11.4     ink-muted on neutral-soft 6.1
+ *   callout tints (a near-white wash behind the callout text): success-strong on success-tint 9.7, warning-strong on warning-tint 10.4,
+ *   danger-strong on danger-tint 9.7, info-strong on info-tint 10.8, neutral-strong on neutral-tint 12.6
  *   status dots, callout bars and icons on surface (UI parts, 3:1 needed): success 6.1, warning 6.8, danger 7.1, info 6.7, neutral 6.0
  * `border` and `accent-edge` are decorative dividers and card edges (1.7:1 to 1.3:1) and never the only sign of a control: a field's edge is
  * `border-input`, a button has a fill or the words, and a status never relies on its tint.
@@ -24,6 +27,7 @@
   --color-surface-muted: #efeee9;
   --color-track: #d6d5cd;
   --color-border: #e3e2db;
+  --color-border-control: #b9b8af;
   --color-border-input: #858b92;
   --color-border-strong: #4d555e;
   --color-ink: #0b1016;
@@ -37,18 +41,23 @@
 
   --color-success: #16703f;
   --color-success-soft: #e6f4ea;
+  --color-success-tint: #f2f9f5;
   --color-success-strong: #0a4a28;
   --color-warning: #7d5208;
   --color-warning-soft: #f7eed6;
+  --color-warning-tint: #fcf8ec;
   --color-warning-strong: #563505;
   --color-danger: #a8261a;
   --color-danger-soft: #fbe8e5;
+  --color-danger-tint: #fdf3f1;
   --color-danger-strong: #7f1010;
   --color-info: #1f58b8;
   --color-info-soft: #e5eefb;
+  --color-info-tint: #f2f7fd;
   --color-info-strong: #12337f;
   --color-neutral: #566570;
   --color-neutral-soft: #e8ebed;
+  --color-neutral-tint: #f4f6f7;
   --color-neutral-strong: #232f39;
 
   /*
@@ -86,7 +95,7 @@
   --radius-lg: 0.5rem;
 
   --shadow-card: 0 1px 2px rgb(11 16 22 / 0.05);
-  --shadow-raised: 0 1px 2px rgb(23 56 154 / 0.08), 0 10px 28px -12px rgb(23 56 154 / 0.28);
+  --shadow-raised: 0 2px 4px rgb(11 16 22 / 0.06), 0 14px 32px -10px rgb(11 16 22 / 0.2);
   --shadow-pop: 0 8px 24px rgb(11 16 22 / 0.16);
 
   /* One duration and one easing, for hover, focus, open and close, and a status coming in. Nothing animates on page load. */

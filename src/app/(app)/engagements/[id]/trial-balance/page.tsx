@@ -18,7 +18,7 @@ import { Badge } from "@/ui/badge";
 import { Button, LinkButton, buttonClass } from "@/ui/button";
 import { Callout, EmptyState } from "@/ui/feedback";
 import { SearchField } from "@/ui/form";
-import { Card, PageHeader, Section, Stat } from "@/ui/layout";
+import { Card, PageHeader, Section, Stat, EngagementFacts } from "@/ui/layout";
 import { countMappings, isBalanced, mappingControls, mappingSentence, mappingState, parseQuery, parseShow, resultsText, viewMappings, type MappingShow } from "@/ui/mapping-view";
 import { Table, TCell, THead, TRow } from "@/ui/table";
 import { count } from "@/ui/text";
@@ -98,7 +98,7 @@ export default async function TrialBalancePage({ params, searchParams }: { param
         {state !== "to_map" && basisText && <span className="text-small text-ink-muted">{basisText}</span>}
         {/* One line under the chip; the whole reason is still in the page for a screen reader and shows in full on hover. */}
         {assistant && a.reason && (
-          <span className="block w-full max-w-60 truncate text-small text-ink-muted" title={a.reason}>
+          <span className="block w-full truncate text-small text-ink-muted" title={a.reason}>
             {a.reason}
           </span>
         )}
@@ -119,7 +119,7 @@ export default async function TrialBalancePage({ params, searchParams }: { param
   const groupCell = (a: (typeof accounts)[number]) =>
     controls.selects ? (
       <div className="flex items-center gap-2">
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 flex-1 [&_select]:w-full!">
           <MappingSelect key={`${a.id}:${a.groupCode}`} engagementId={id} accountId={a.id} value={a.groupCode} groups={groups} label={`Group for ${a.code} ${a.name}`} />
         </div>
         {acceptForm(a)}
@@ -150,23 +150,8 @@ export default async function TrialBalancePage({ params, searchParams }: { param
       <PageHeader
         breadcrumb={[{ label: "All engagements", href: "/" }]}
         title="Trial balance and mapping"
-        meta={
-          <>
-            <span>{engagement.clientName}</span>
-            <span aria-hidden="true">·</span>
-            <span>
-              {engagement.periodStart} to {engagement.periodEnd}
-            </span>
-            <span aria-hidden="true">·</span>
-            <span>{engagement.priorEngagementId ? "Mappings carry forward from the prior year" : "No prior-year engagement linked"}</span>
-            {usedSource && (
-              <>
-                <span aria-hidden="true">·</span>
-                <span>{SOURCE_SENTENCE[usedSource]}</span>
-              </>
-            )}
-          </>
-        }
+        meta={<EngagementFacts client={engagement.clientName} periodStart={engagement.periodStart} periodEnd={engagement.periodEnd} />}
+        note={`${[engagement.priorEngagementId ? "Mappings carry forward from the prior year" : "No prior-year engagement linked", usedSource ? SOURCE_SENTENCE[usedSource] : null].filter(Boolean).join(". ")}.`}
         subtitle={mappingSentence(counts)}
       />
       <EngagementNav id={id} current="tb" status={engagement.status} archived={engagement.archivedAt !== null} />
@@ -297,7 +282,14 @@ export default async function TrialBalancePage({ params, searchParams }: { param
               ) : (
                 <>
                   <div className="mt-3 hidden sm:block">
-                    <Table caption="Accounts and their lead sheet groups">
+                    <Table caption="Accounts and their lead sheet groups" fixed>
+                      <colgroup>
+                        <col className="w-[20%]" />
+                        <col className="w-32" />
+                        <col className="w-32" />
+                        <col className="w-[19%]" />
+                        <col />
+                      </colgroup>
                       <THead>
                         <TRow>
                           <TCell header="col">Account</TCell>

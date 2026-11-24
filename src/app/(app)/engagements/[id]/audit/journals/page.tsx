@@ -16,7 +16,7 @@ import { Button } from "@/ui/button";
 import { Disclosure } from "@/ui/controls";
 import { Callout } from "@/ui/feedback";
 import { Field, Textarea } from "@/ui/form";
-import { PageHeader, Section, Stat } from "@/ui/layout";
+import { PageHeader, Section, Stat, EngagementFacts } from "@/ui/layout";
 import { completenessSentence, entryPill, journalHref, journalSentence, matchingSentence } from "@/ui/journal-view";
 import { SummaryChevron } from "@/ui/summary-cue";
 import { Table, TCell, THead, TRow } from "@/ui/table";
@@ -59,18 +59,13 @@ export default async function JournalTestingPage({ params, searchParams }: { par
       <PageHeader
         breadcrumb={[{ label: "All engagements", href: "/" }]}
         title="Journal entry testing"
-        meta={
+        meta={<EngagementFacts client={engagement.clientName} periodStart={engagement.periodStart} periodEnd={engagement.periodEnd} />}
+        note={
           <>
-            <span>{engagement.clientName}</span>
-            <span aria-hidden="true">·</span>
-            <span>
-              {engagement.periodStart} to {engagement.periodEnd}
-            </span>
-            <span aria-hidden="true">·</span>
             <Link href={`/engagements/${id}/audit`} className="text-accent hover:underline">
               Audit planning
             </Link>
-            <span aria-hidden="true">·</span>
+            <span aria-hidden="true"> and </span>
             <Link href={`/engagements/${id}/audit/C16`} className="text-accent hover:underline">
               C16 programme
             </Link>

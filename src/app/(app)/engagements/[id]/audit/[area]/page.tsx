@@ -25,7 +25,7 @@ import { Badge } from "@/ui/badge";
 import { Button, LinkButton } from "@/ui/button";
 import { ctl, Disclosure, fieldLabel } from "@/ui/controls";
 import { Callout, EmptyState, ProgressBar } from "@/ui/feedback";
-import { Card, ListRow, ListRows, PageHeader, Section } from "@/ui/layout";
+import { Card, ListRow, ListRows, PageHeader, Section, EngagementFacts } from "@/ui/layout";
 import { count } from "@/ui/text";
 import { coveredInQuestionnaire } from "@/domain/planning-questions";
 import { filterProcedures, parseProcedureShow, procedureControls, procedureResults, reviewPill, workPill, type ProcedureShow } from "@/ui/procedure-view";
@@ -91,15 +91,7 @@ export default async function ProgrammePage({ params, searchParams }: { params: 
       <PageHeader
         breadcrumb={areaCrumbs(id, area)}
         title={`${area.code} ${area.title}`}
-        meta={
-          <>
-            <span>{engagement.clientName}</span>
-            <span aria-hidden="true">·</span>
-            <span>
-              {engagement.periodStart} to {engagement.periodEnd}
-            </span>
-          </>
-        }
+        meta={<EngagementFacts client={engagement.clientName} periodStart={engagement.periodStart} periodEnd={engagement.periodEnd} />}
         subtitle={sentence}
       />
       <EngagementNav id={id} current="audit" status={engagement.status} archived={engagement.archivedAt !== null} />

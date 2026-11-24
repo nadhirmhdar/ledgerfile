@@ -25,7 +25,7 @@ import { Badge } from "@/ui/badge";
 import { Button, LinkButton } from "@/ui/button";
 import { ctl, Disclosure, fieldLabel } from "@/ui/controls";
 import { Callout, EmptyState } from "@/ui/feedback";
-import { Card, PageHeader, Section, Stat } from "@/ui/layout";
+import { Card, PageHeader, Section, Stat, EngagementFacts } from "@/ui/layout";
 import { filterRequests, parseAreaFilter, parseSearch, parseStatus, requestMeta, requestResults, requestsHeading, rowControls, statusCounts, STATUS_PILL, type StatusFilter } from "@/ui/request-view";
 import { count } from "@/ui/text";
 import { TwoLineRow } from "@/ui/two-line-row";
@@ -82,15 +82,7 @@ export default async function RequestsPage({ params, searchParams }: { params: P
       <PageHeader
         breadcrumb={[{ label: "All engagements", href: "/" }]}
         title="Client requests"
-        meta={
-          <>
-            <span>{engagement.clientName}</span>
-            <span aria-hidden="true">·</span>
-            <span>
-              {engagement.periodStart} to {engagement.periodEnd}
-            </span>
-          </>
-        }
+        meta={<EngagementFacts client={engagement.clientName} periodStart={engagement.periodStart} periodEnd={engagement.periodEnd} />}
         subtitle={heading.subtitle}
         actions={
           <a href={`${base}/export`} className="inline-flex min-h-10 items-center justify-center rounded-md border border-border-input bg-surface px-4 text-sm font-medium whitespace-nowrap text-ink hover:bg-surface-muted">

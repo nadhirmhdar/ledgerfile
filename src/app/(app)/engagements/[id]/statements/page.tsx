@@ -16,7 +16,7 @@ import { Button, buttonClass, LinkButton } from "@/ui/button";
 import { ctl, Disclosure, fieldLabel } from "@/ui/controls";
 import { Callout, EmptyState } from "@/ui/feedback";
 import { CheckIcon } from "@/ui/icons";
-import { PageHeader } from "@/ui/layout";
+import { PageHeader, EngagementFacts } from "@/ui/layout";
 import { OpenOnHash } from "@/ui/open-on-hash";
 import { BORROWINGS_ANCHOR, checkDetail, checkFix, checksSentence, draftNoteNumbers, draftNoteSentence, orderChecks, placeholderCount, splitBrackets } from "@/ui/statements-view";
 import { SummaryChevron, summaryRow } from "@/ui/summary-cue";
@@ -94,15 +94,7 @@ export default async function StatementsPage({ params, searchParams }: { params:
   const draftLine = draftNoteSentence(draftNumbers);
   const borrowingsFailed = pack.checks.some((c) => !c.passed && c.label === "Current portion of borrowings is within total borrowings");
 
-  const meta = (
-    <>
-      <span>{engagement.clientName}</span>
-      <span aria-hidden="true">·</span>
-      <span>
-        {engagement.periodStart} to {engagement.periodEnd}
-      </span>
-    </>
-  );
+  const meta = <EngagementFacts client={engagement.clientName} periodStart={engagement.periodStart} periodEnd={engagement.periodEnd} />;
 
   if (accounts.length === 0) {
     return (

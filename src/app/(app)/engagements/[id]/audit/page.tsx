@@ -21,7 +21,7 @@ import { Badge } from "@/ui/badge";
 import { Button, LinkButton, buttonClass } from "@/ui/button";
 import { ctl, ctlWarn, Disclosure, fieldLabel } from "@/ui/controls";
 import { Callout, EmptyState, ProgressBar } from "@/ui/feedback";
-import { Card, ListRow, ListRows, PageHeader, Section, Stat } from "@/ui/layout";
+import { Card, ListRow, ListRows, PageHeader, Section, Stat, EngagementFacts } from "@/ui/layout";
 import { Table, TCell, THead, TRow } from "@/ui/table";
 import { approvalView, checklistPill, mayDo, planningSentence, planningSteps, programmeProgress, riskSummary, stepTone, waitingFor } from "@/ui/audit-view";
 import { ExpandRow } from "@/ui/area-row";
@@ -80,15 +80,7 @@ export default async function AuditPage({ params }: { params: Promise<{ id: stri
       <PageHeader
         breadcrumb={[{ label: "All engagements", href: "/" }]}
         title="Audit planning"
-        meta={
-          <>
-            <span>{engagement.clientName}</span>
-            <span aria-hidden="true">·</span>
-            <span>
-              {engagement.periodStart} to {engagement.periodEnd}
-            </span>
-          </>
-        }
+        meta={<EngagementFacts client={engagement.clientName} periodStart={engagement.periodStart} periodEnd={engagement.periodEnd} />}
         subtitle={planningSentence({ enabled: overview.enabled, materialitySet: m !== null, materialityStale: overview.materialityStale, areasAssessed, areasTotal: overview.areas.length, approval: approval.state })}
       />
       <EngagementNav id={id} current="audit" status={engagement.status} archived={engagement.archivedAt !== null} />
