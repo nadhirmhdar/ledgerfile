@@ -27,6 +27,7 @@ import { ctl, Disclosure, fieldLabel } from "@/ui/controls";
 import { Callout, EmptyState, ProgressBar } from "@/ui/feedback";
 import { Card, ListRow, ListRows, PageHeader, Section } from "@/ui/layout";
 import { count } from "@/ui/text";
+import { coveredInQuestionnaire } from "@/domain/planning-questions";
 import { filterProcedures, parseProcedureShow, procedureControls, procedureResults, reviewPill, workPill, type ProcedureShow } from "@/ui/procedure-view";
 import { areaCrumbs } from "@/ui/engagement-nav";
 import { EngagementNav } from "../../nav";
@@ -319,6 +320,14 @@ export default async function ProgrammePage({ params, searchParams }: { params: 
                           )}
                           {(p.firmWording || p.firmAdded) && <p className="mt-3 text-sm font-medium text-ink-muted">{p.firmAdded ? ADDED_NOTE : FIRM_WORDING_NOTE}</p>}
                           <p className={p.firmWording || p.firmAdded ? "mt-1 text-base" : "mt-3 text-base"}>{p.body}</p>
+                          {checklist && coveredInQuestionnaire(p.templateId) && (
+                            <p className="mt-1 text-sm">
+                              <Link href={`/engagements/${id}/audit/questionnaire#${coveredInQuestionnaire(p.templateId)!.anchor}`} className="font-medium text-accent underline-offset-2 hover:underline">
+                                Covered in {coveredInQuestionnaire(p.templateId)!.label}
+                              </Link>{" "}
+                              <span className="text-ink-muted">(an unreviewed draft). The questionnaire does not complete this step: record the work and complete it here.</span>
+                            </p>
+                          )}
                           <p className="mt-1 text-sm text-ink-muted">
                             Evidence expected: {p.evidence} · Reference: {p.reference}
                           </p>

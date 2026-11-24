@@ -7,6 +7,8 @@ import * as audit from "@/server/audit";
 import { ASSERTIONS, BENCHMARKS, computeMateriality, STAGES, LIBRARY_STATUS, RISK_LEVELS, type Benchmark } from "@/domain/audit";
 import { guideRangesOf } from "@/domain/planning-settings";
 import { getPlanningDerivation } from "@/server/planning";
+import { getRevenuePresumption } from "@/server/planning-answers";
+import { REVENUE_FLAG_TEXT, revenueRatingFlag } from "@/domain/planning-questions";
 import { PlanningAssistant } from "@/ui/planning-assistant";
 import { canEditPlanningSettings } from "@/ui/planning-view";
 import { formatAmount } from "@/domain/money";
@@ -31,10 +33,11 @@ export default async function AuditPage({ params }: { params: Promise<{ id: stri
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
 
   const session = await getSession();
-  const { engagement, overview, planned } = await withFirm(await getDb(), session.firmId, async (tx) => ({
+  const { engagement, overview, planned, revenue } = await withFirm(await getDb(), session.firmId, async (tx) => ({
     engagement: await repo.getEngagement(tx, id),
     overview: await audit.getAuditOverview(tx, id),
     planned: await getPlanningDerivation(tx, id),
+    revenue: await getRevenuePresumption(tx, id),
   }));
   if (!engagement || !overview) notFound();
 
@@ -204,7 +207,7 @@ export default async function AuditPage({ params }: { params: Promise<{ id: stri
             </Section>
 
             <Section title="Planning assistant" description="What the trial balance suggests for materiality, significant areas and indicators. It saves nothing." id="planning-assistant">
-              <PlanningAssistant derivation={planned!.derivation} engagementId={id} customised={planned!.settings.customised} settingsHref={canEditPlanningSettings(session.role) ? "/firm/planning" : null} />
+              <PlanningAssistant derivation={planned!.derivation} engagementId={id} questionnaireHref={`${base}/audit/questionnaire`} customised={planned!.settings.customised} settingsHref={canEditPlanningSettings(session.role) ? "/firm/planning" : null} />
             </Section>
 
             <Section
@@ -243,6 +246,13 @@ export default async function AuditPage({ params }: { params: Promise<{ id: stri
                   );
                   return (
                     <ExpandRow key={area.code} head={head} label={label}>
+                      {revenueRatingFlag(area.code, area.risks, revenue.rebutted).length > 0 && (
+                        <div className="mb-3">
+                          <Callout variant="warning" title="Below the presumed risk">
+                            {REVENUE_FLAG_TEXT(revenueRatingFlag(area.code, area.risks, revenue.rebutted))}
+                          </Callout>
+                        </div>
+                      )}
                       {area.fixedRisk ? (
                         <div className="text-sm">
                           <p>
