@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { getDb, withFirm } from "@/server/db";
 import { getSession } from "@/server/session";
 import * as repo from "@/server/repo";
+import * as assistant from "@/server/mapping-assistant";
 import { readGrid } from "@/server/excel";
 import { parseTrialBalance } from "@/domain/tb-parse";
 import { formatAmount, parseAmount } from "@/domain/money";
@@ -128,6 +129,37 @@ export async function approveAllAction(form: FormData): Promise<void> {
   if (!UUID.test(engagementId)) return;
   const session = await getSession();
   await withFirm(await getDb(), session.firmId, (tx) => repo.approveAllMappings(tx, session, engagementId)).catch(refused);
+  revalidatePath(`/engagements/${engagementId}`);
+}
+
+/** Ask the mapping assistant to suggest again for the accounts that are unmapped or not yet accepted. Never changes an accepted mapping. */
+export async function suggestAgainAction(_prev: FormState, form: FormData): Promise<FormState> {
+  const engagementId = String(form.get("engagementId") ?? "");
+  if (!UUID.test(engagementId)) return { ok: false, message: "Engagement not found." };
+  const session = await getSession();
+  try {
+    const r = await withFirm(await getDb(), session.firmId, (tx) => assistant.suggestAgain(tx, session, engagementId));
+    revalidatePath(`/engagements/${engagementId}`);
+    return { ok: true, message: r.placed === 0 && r.declined === 0 ? "Nothing to suggest: every account is accepted." : `Suggested ${r.placed}, could not place ${r.declined}.` };
+  } catch (e) {
+    return { ok: false, message: e instanceof Error && !("code" in e) ? e.message : "The suggestions were not saved." };
+  }
+}
+
+export async function acceptMappingAction(form: FormData): Promise<void> {
+  const engagementId = String(form.get("engagementId") ?? "");
+  const accountId = String(form.get("accountId") ?? "");
+  if (!UUID.test(engagementId) || !UUID.test(accountId)) return;
+  const session = await getSession();
+  await withFirm(await getDb(), session.firmId, (tx) => assistant.acceptMapping(tx, session, accountId)).catch(refused);
+  revalidatePath(`/engagements/${engagementId}`);
+}
+
+export async function acceptHighConfidenceAction(form: FormData): Promise<void> {
+  const engagementId = String(form.get("engagementId") ?? "");
+  if (!UUID.test(engagementId)) return;
+  const session = await getSession();
+  await withFirm(await getDb(), session.firmId, (tx) => assistant.acceptHighConfidence(tx, session, engagementId)).catch(refused);
   revalidatePath(`/engagements/${engagementId}`);
 }
 

@@ -1,6 +1,6 @@
 import { GROUPS } from "./groups";
 
-export type MappingSource = "prior_year" | "rule" | "ai" | "manual";
+export type MappingSource = "prior_year" | "rule" | "ai" | "manual" | "assistant";
 
 export interface MappingSuggestion {
   accountCode: string;

@@ -43,6 +43,8 @@ export interface AccountRow extends MappedAccount {
   source: MappingSource | null;
   confidence: number | null;
   approved: boolean;
+  /** The assistant's reason, when it made the suggestion. */
+  reason: string | null;
 }
 
 export async function audit(tx: Tx, s: Session, action: string, entity: string, entityId: string | null, detail?: unknown) {
@@ -139,8 +141,8 @@ export async function createEngagement(tx: Tx, s: Session, clientId: string, per
 }
 
 async function mappingsByCode(tx: Tx, engagementId: string, approvedOnly = false) {
-  const { rows } = await tx.query<{ code: string; groupCode: string; source: MappingSource; confidence: string; approved: boolean }>(
-    `select a.code, m.group_code as "groupCode", m.source, m.confidence, m.approved
+  const { rows } = await tx.query<{ code: string; groupCode: string; source: MappingSource; confidence: string; approved: boolean; reason: string | null; approvedBy: string | null; approvedAt: string | null }>(
+    `select a.code, m.group_code as "groupCode", m.source, m.confidence, m.approved, m.reason, m.approved_by as "approvedBy", m.approved_at as "approvedAt"
      from mappings m join accounts a on a.id = m.account_id where a.engagement_id = $1 and (m.approved or not $2::boolean)`,
     [engagementId, approvedOnly],
   );
@@ -195,21 +197,24 @@ export async function importTrialBalance(
     new Map([...priorYear].map(([code, m]) => [code, m.groupCode])),
   );
 
-  const insert = (accountId: string, groupCode: string, source: string, confidence: number, approved: boolean) =>
-    tx.query("insert into mappings (firm_id, account_id, group_code, source, confidence, approved) values ($1, $2, $3, $4, $5, $6)", [
+  const insert = (accountId: string, groupCode: string, source: string, confidence: number, approved: boolean, kept?: { reason: string | null; approvedBy: string | null; approvedAt: string | null }) =>
+    tx.query("insert into mappings (firm_id, account_id, group_code, source, confidence, approved, reason, approved_by, approved_at) values ($1, $2, $3, $4, $5, $6, $7, $8, $9)", [
       s.firmId,
       accountId,
       groupCode,
       source,
       confidence,
       approved,
+      kept?.reason ?? null,
+      kept?.approvedBy ?? null,
+      kept?.approvedAt ?? null,
     ]);
 
   let kept = 0;
   for (const a of accounts) {
     const m = existing.get(a.code);
     if (m && GROUP_BY_CODE.has(m.groupCode)) {
-      await insert(idByCode.get(a.code)!, m.groupCode, m.source, Number(m.confidence), m.approved);
+      await insert(idByCode.get(a.code)!, m.groupCode, m.source, Number(m.confidence), m.approved, m);
       kept++;
     }
   }
@@ -242,10 +247,11 @@ export async function listAccounts(tx: Tx, engagementId: string): Promise<Accoun
     source: MappingSource | null;
     confidence: string | null;
     approved: boolean | null;
+    reason: string | null;
     adjustment: string;
   }>(
     `select a.id, a.code, a.name, a.closing_minor::text as closing, a.prior_minor::text as prior,
-            m.group_code as "groupCode", m.source, m.confidence::text as confidence, m.approved,
+            m.group_code as "groupCode", m.source, m.confidence::text as confidence, m.approved, m.reason,
             coalesce((select sum(l.amount_minor) from journal_lines l where l.account_id = a.id), 0)::text as adjustment
      from accounts a left join mappings m on m.account_id = a.id
      where a.engagement_id = $1 order by a.code`,
@@ -261,6 +267,7 @@ export async function listAccounts(tx: Tx, engagementId: string): Promise<Accoun
     source: r.source,
     confidence: r.confidence === null ? null : Number(r.confidence),
     approved: r.approved ?? false,
+    reason: r.reason,
     adjustmentMinor: Number(r.adjustment),
   }));
 }
@@ -294,9 +301,9 @@ export async function setMapping(tx: Tx, s: Session, accountId: string, groupCod
   } else {
     if (!GROUP_BY_CODE.has(groupCode)) throw new Error("Unknown group.");
     await tx.query(
-      `insert into mappings (firm_id, account_id, group_code, source, confidence, approved) values ($1, $2, $3, 'manual', 1, true)
-       on conflict (account_id) do update set group_code = excluded.group_code, source = 'manual', confidence = 1, approved = true`,
-      [s.firmId, accountId, groupCode],
+      `insert into mappings (firm_id, account_id, group_code, source, confidence, approved, approved_by, approved_at) values ($1, $2, $3, 'manual', 1, true, $4, now())
+       on conflict (account_id) do update set group_code = excluded.group_code, source = 'manual', confidence = 1, approved = true, reason = null, approved_by = excluded.approved_by, approved_at = excluded.approved_at`,
+      [s.firmId, accountId, groupCode, s.userId],
     );
   }
   if (account.rows[0].oldGroup !== groupCode) {
@@ -311,9 +318,9 @@ export async function approveAllMappings(tx: Tx, s: Session, engagementId: strin
   if (!engagement) throw new Error("Engagement not found.");
   if (engagement.status !== "open") throw new Error("This engagement is locked.");
   const { rows } = await tx.query(
-    `update mappings set approved = true
+    `update mappings set approved = true, approved_by = $2, approved_at = now()
      where approved = false and account_id in (select id from accounts where engagement_id = $1) returning id`,
-    [engagementId],
+    [engagementId, s.userId],
   );
   await audit(tx, s, "approve_all", "mapping", engagementId, { count: rows.length });
   return rows.length;
