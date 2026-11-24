@@ -142,6 +142,8 @@ export const RISK_APPROVAL_STEP = "B8.08";
 export interface AssessmentInput {
   materiality: { benchmark: string; benchmarkAmountMinor: number; overallMinor: number; performanceMinor: number; trivialMinor: number } | null;
   areas: { code: string; fixedRisk?: string; risks: AreaRisks }[];
+  /** The partner's reason for rebutting the presumed revenue risk, when it is rebutted. A rebuttal, or putting the presumption back, changes the snapshot. */
+  revenueRebuttal?: string | null;
 }
 
 /**
@@ -156,6 +158,8 @@ export function assessmentSnapshot(input: AssessmentInput): string {
     areas: [...input.areas]
       .sort((a, b) => (a.code < b.code ? -1 : a.code > b.code ? 1 : 0))
       .map((a) => [a.code, a.fixedRisk ? "fixed:" + a.fixedRisk : Object.keys(a.risks).sort().map((k) => k + ":" + a.risks[k as Assertion])]),
+    // Only when rebutted, so an approval given before this existed (or while the presumption stands) keeps the form it always had.
+    ...(input.revenueRebuttal ? { revenueRebuttal: input.revenueRebuttal } : {}),
   });
 }
 

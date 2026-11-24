@@ -4,8 +4,10 @@ import { getAuditOverview, requireAudit, setMateriality } from "./audit";
 import { getPlanningDerivation } from "./planning";
 import { canLock } from "../domain/signoff";
 import { INDICATOR_KEYS } from "../domain/planning-settings";
+import { AREA_BY_CODE } from "../domain/audit";
 import type { Derivation, PlanningAccount } from "../domain/planning";
 import {
+  areaSignificance,
   autoAnswers,
   buildRationale,
   buildSections,
@@ -13,6 +15,7 @@ import {
   mandatoryOpen,
   planningAnswersOf,
   REVENUE_PRESUMPTION_KEY,
+  significanceKey,
   STATIC_QUESTIONS,
   valuesInForce,
   type AutoAnswer,
@@ -78,7 +81,7 @@ export interface Questionnaire {
  * makes mandatory, and the suggested materiality from the answers. An engagement with materiality and ratings already on file shows them on the planning
  * page as before; reading this saves nothing.
  */
-export async function getQuestionnaire(tx: Tx, engagementId: string): Promise<Questionnaire | null> {
+async function loadState(tx: Tx, engagementId: string) {
   const engagement = await getEngagement(tx, engagementId);
   if (!engagement) return null;
   const accounts = toAccounts(await listAccounts(tx, engagementId));
@@ -86,6 +89,18 @@ export async function getQuestionnaire(tx: Tx, engagementId: string): Promise<Qu
   const { current, history } = await loadAnswers(tx, engagementId);
   const values = valuesInForce(current, auto);
   const planned = (await getPlanningDerivation(tx, engagementId, planningAnswersOf(values)))!;
+  return { auto, current, history, values, planned };
+}
+
+/** The planning derivation with the answers given so far taken into account (the planning page's suggestions use this, not the figures alone). */
+export async function getAnsweredDerivation(tx: Tx, engagementId: string) {
+  return (await loadState(tx, engagementId))?.planned ?? null;
+}
+
+export async function getQuestionnaire(tx: Tx, engagementId: string): Promise<Questionnaire | null> {
+  const state = await loadState(tx, engagementId);
+  if (!state) return null;
+  const { auto, current, history, values, planned } = state;
   const sections = buildSections(planned.derivation, current, history, auto);
   return {
     derivation: planned.derivation,
@@ -100,6 +115,7 @@ export async function getQuestionnaire(tx: Tx, engagementId: string): Promise<Qu
 function definitionOf(key: string): QuestionDef | null {
   const fixed = STATIC_QUESTIONS.find((q) => q.key === key);
   if (fixed) return fixed;
+  if (key.startsWith("sig_") && AREA_BY_CODE.has(key.slice(4))) return { key, section: 10, label: "", type: "yesno" };
   if (key.startsWith("ind_") && (INDICATOR_KEYS as string[]).includes(key.slice(4))) return { key, section: 10, label: "", type: "text" };
   return null;
 }
@@ -114,8 +130,12 @@ export async function savePlanningAnswer(tx: Tx, s: Session, engagementId: strin
   if (!def) throw new Error("That question is not in the questionnaire.");
   const checked = checkValue(def, rawValue);
   if (!checked.ok) throw new Error(checked.message);
-  const accounts = toAccounts(await listAccounts(tx, engagementId));
-  const auto: AutoAnswer | undefined = autoAnswers(accounts)[key];
+  let auto: AutoAnswer | undefined;
+  if (key.startsWith("sig_")) {
+    const area = AREA_BY_CODE.get(key.slice(4))!;
+    const sig = areaSignificance((await getAnsweredDerivation(tx, engagementId))!.derivation, area);
+    auto = sig.suggested ? { value: sig.suggested, source: sig.reason } : undefined;
+  } else auto = autoAnswers(toAccounts(await listAccounts(tx, engagementId)))[key];
   const reason = rawReason.trim();
   let source: "auto" | "person" = "person";
   let kept: string | null = null;
@@ -178,6 +198,27 @@ export async function confirmPlanningMateriality(tx: Tx, s: Session, engagementI
   });
   await log(tx, s, "confirm_planning_materiality", "engagement", engagementId, { benchmark: d.benchmark.benchmark, mandatoryOpen: q.mandatoryOpen });
   return warnings;
+}
+
+export interface AreaSignificanceView {
+  areaCode: string;
+  suggested: "yes" | "no" | null;
+  reason: string;
+  /** The person's decision in force, if any. */
+  stored: StoredAnswerView | null;
+  history: StoredAnswerView[];
+}
+
+/** For each area code given: what the figures suggest about its significance and what a person has decided. Saves nothing. */
+export async function getAreaSignificance(tx: Tx, engagementId: string, areas: { code: string; groups: string[] }[]): Promise<Map<string, AreaSignificanceView>> {
+  const state = await loadState(tx, engagementId);
+  const out = new Map<string, AreaSignificanceView>();
+  if (!state) return out;
+  for (const a of areas) {
+    const sig = areaSignificance(state.planned.derivation, a);
+    out.set(a.code, { areaCode: a.code, suggested: sig.suggested, reason: sig.reason, stored: state.current.get(significanceKey(a.code)) ?? null, history: state.history.filter((h) => h.key === significanceKey(a.code)) });
+  }
+  return out;
 }
 
 /** The materiality and the ratings on file, for the questionnaire page to show alongside (so an engagement already planned needs no re-entry). */

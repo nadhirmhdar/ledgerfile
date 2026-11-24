@@ -6,9 +6,11 @@ import * as repo from "@/server/repo";
 import * as audit from "@/server/audit";
 import { ASSERTIONS, BENCHMARKS, computeMateriality, STAGES, LIBRARY_STATUS, RISK_LEVELS, type Benchmark } from "@/domain/audit";
 import { guideRangesOf } from "@/domain/planning-settings";
-import { getPlanningDerivation } from "@/server/planning";
-import { getRevenuePresumption } from "@/server/planning-answers";
-import { REVENUE_FLAG_TEXT, revenueRatingFlag } from "@/domain/planning-questions";
+import { getAnsweredDerivation, getAreaSignificance, getRevenuePresumption } from "@/server/planning-answers";
+import { AREA_BY_CODE } from "@/domain/audit";
+import { fillPlan, REVENUE_FLAG_TEXT, revenueRatingFlag } from "@/domain/planning-questions";
+import { SuggestionFill } from "@/ui/suggestion-fill";
+import { savePlanningAnswerAction } from "@/app/planning-answers-actions";
 import { PlanningAssistant } from "@/ui/planning-assistant";
 import { canEditPlanningSettings } from "@/ui/planning-view";
 import { formatAmount } from "@/domain/money";
@@ -33,10 +35,11 @@ export default async function AuditPage({ params }: { params: Promise<{ id: stri
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
 
   const session = await getSession();
-  const { engagement, overview, planned, revenue } = await withFirm(await getDb(), session.firmId, async (tx) => ({
+  const { engagement, overview, planned, revenue, significance } = await withFirm(await getDb(), session.firmId, async (tx) => ({
     engagement: await repo.getEngagement(tx, id),
     overview: await audit.getAuditOverview(tx, id),
-    planned: await getPlanningDerivation(tx, id),
+    planned: await getAnsweredDerivation(tx, id),
+    significance: await getAreaSignificance(tx, id, [...AREA_BY_CODE.values()]),
     revenue: await getRevenuePresumption(tx, id),
   }));
   if (!engagement || !overview) notFound();
@@ -51,6 +54,14 @@ export default async function AuditPage({ params }: { params: Promise<{ id: stri
   const levelLabel = new Map(RISK_LEVELS.map((l) => [l.code, l.label]));
   const base = `/engagements/${id}`;
   const areasAssessed = overview.areas.filter((a) => a.assessed).length;
+  const sigBadge = (code: string, fixed: boolean) => {
+    const s = significance.get(code);
+    if (!s || fixed) return null;
+    const decided = s.stored?.value ?? null;
+    if (decided) return <Badge tone={decided === "yes" ? "warning" : "neutral"}>{decided === "yes" ? "Significant area (confirmed)" : "Not significant (confirmed)"}</Badge>;
+    if (s.suggested) return <Badge tone={s.suggested === "yes" ? "warning" : "neutral"}>{s.suggested === "yes" ? "Suggested significant" : "Suggested not significant"}</Badge>;
+    return null;
+  };
   const planning = {
     role: session.role,
     open,
@@ -220,6 +231,11 @@ export default async function AuditPage({ params }: { params: Promise<{ id: stri
                   const risk = riskSummary({ assessed: area.assessed, fixedRisk: area.fixedRisk, risks: area.risks });
                   const prog = programmeProgress(area);
                   const label = area.fixedRisk ? (open && reviewer && area.procedures === 0 ? "Load programme" : "Details") : open && reviewer ? (area.assessed ? "Change ratings" : "Assess risk") : "View ratings";
+                  const plan = fillPlan(
+                    planned!.derivation.areaSuggestions.filter((s) => s.areaCode === area.code).map((s) => ({ assertion: s.assertion, level: s.level, reason: s.reason })),
+                    area.risks,
+                  );
+                  const sig = significance.get(area.code);
                   const head = (
                     <>
                       <h3 className="min-w-0 basis-full font-semibold sm:basis-64">
@@ -228,6 +244,7 @@ export default async function AuditPage({ params }: { params: Promise<{ id: stri
                         </Link>
                       </h3>
                       <Badge tone={risk.tone}>{risk.label}</Badge>
+                      {sigBadge(area.code, !!area.fixedRisk)}
                       {prog.loaded ? (
                         <span className="flex min-w-40 flex-1 items-center gap-2 sm:max-w-xs">
                           <span className="min-w-16 flex-1">
@@ -288,6 +305,25 @@ export default async function AuditPage({ params }: { params: Promise<{ id: stri
                             ))}
                             <Button variant="primary">Save and load programme</Button>
                           </div>
+                          {(plan.fill.length > 0 || plan.kept.length > 0) && (
+                            <div className="mt-3 space-y-1 text-sm" id={`suggestions-${area.code}`}>
+                              <p className="font-medium">Suggested ratings (an unreviewed draft, from the planning assistant)</p>
+                              <ul className="space-y-1">
+                                {plan.fill.map((s) => (
+                                  <li key={s.assertion}>
+                                    {assertionLabel.get(s.assertion as never)}: {s.level}. <span className="text-ink-muted">{s.reason}</span>
+                                  </li>
+                                ))}
+                                {plan.kept.map((s) => (
+                                  <li key={s.assertion}>
+                                    {assertionLabel.get(s.assertion as never)}: already rated {levelLabel.get(s.current as never)?.toLowerCase()}, so the suggestion of {s.suggested} is not applied. <span className="text-ink-muted">{s.reason}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                              {plan.fill.length > 0 && <SuggestionFill fill={plan.fill} />}
+                              <p className="text-ink-muted">Filling puts the suggestions in the blank boxes only. Nothing is saved until you press Save, and a rating already set is never changed by a suggestion.</p>
+                            </div>
+                          )}
                         </ActionForm>
                       ) : (
                         <div className="text-sm">
@@ -296,6 +332,51 @@ export default async function AuditPage({ params }: { params: Promise<{ id: stri
                             <p className="mt-1">
                               <Badge tone="neutral">{waitingFor("reviewer")}</Badge>
                             </p>
+                          )}
+                        </div>
+                      )}
+                      {sig && !area.fixedRisk && (sig.suggested !== null || sig.stored !== null || open) && (
+                        <div className="mt-4 border-t border-border pt-3 text-sm" id={`significance-${area.code}`}>
+                          <p className="font-medium">Significant area</p>
+                          <p>
+                            Suggested: {sig.suggested === "yes" ? "significant" : sig.suggested === "no" ? "not significant" : "no suggestion"}. <span className="text-ink-muted">Source: {sig.reason}</span>
+                          </p>
+                          {sig.stored && (
+                            <p>
+                              <span className="font-medium">Decision:</span> {sig.stored.value === "yes" ? "significant" : "not significant"}{" "}
+                              <span className="text-ink-muted">
+                                ({sig.stored.source === "auto" ? "suggestion confirmed by" : "decided by"} {sig.stored.by} on {sig.stored.at}).
+                              </span>
+                              {sig.stored.reason ? ` Reason for differing: ${sig.stored.reason}` : ""}
+                            </p>
+                          )}
+                          {open && sig.suggested !== null && !sig.stored && (
+                            <ActionForm action={savePlanningAnswerAction} fields={{ engagementId: id, key: `sig_${area.code}`, value: sig.suggested }} className="mt-2">
+                              <Button variant="secondary">Confirm: {sig.suggested === "yes" ? "significant" : "not significant"}</Button>
+                            </ActionForm>
+                          )}
+                          {open && (
+                            <Disclosure summary={sig.stored ? "Change the decision" : sig.suggested ? "Decide differently" : "Record a decision"} className="mt-3">
+                              <ActionForm action={savePlanningAnswerAction} fields={{ engagementId: id, key: `sig_${area.code}` }}>
+                                <div className="flex flex-wrap items-end gap-3">
+                                  <label className={fieldLabel}>
+                                    This area is
+                                    <select name="value" required defaultValue={sig.stored?.value ?? ""} className={ctl}>
+                                      <option value="" disabled>
+                                        Choose
+                                      </option>
+                                      <option value="yes">Significant</option>
+                                      <option value="no">Not significant</option>
+                                    </select>
+                                  </label>
+                                  <label className={`${fieldLabel} min-w-64 flex-1`}>
+                                    Reason{sig.suggested ? " (required when it differs from the suggestion)" : ""}
+                                    <input name="reason" maxLength={2000} className={ctl} />
+                                  </label>
+                                  <Button variant="primary">Save the decision</Button>
+                                </div>
+                              </ActionForm>
+                            </Disclosure>
                           )}
                         </div>
                       )}
@@ -315,7 +396,7 @@ export default async function AuditPage({ params }: { params: Promise<{ id: stri
                     {approval.state === "none" && (open ? "The methodology expects approval before fieldwork starts; the engagement cannot be locked without it." : "No approval was recorded before this engagement was locked.")}
                   </span>
                 </p>
-                <p className="mt-2 text-sm text-ink-muted">The approval covers materiality and the risk ratings above, as recorded here. It lapses by itself if any of them changes.</p>
+                <p className="mt-2 text-sm text-ink-muted">The approval covers materiality and the risk ratings above, as recorded here. It lapses by itself if any of them changes. It also lapses when a partner rebuts the presumed revenue risk or puts it back, because that changes the risk assessment the approval was given for.</p>
                 {approvalShown.note && <p className="mt-2 text-sm">{plainCount(approvalShown.note)}</p>}
                 {approvalShown.action === "approve" && (
                   <ActionForm action={approveRiskAssessmentAction} fields={{ engagementId: id }} className="mt-3">

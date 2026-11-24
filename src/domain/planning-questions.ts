@@ -294,3 +294,56 @@ export function coveredInQuestionnaire(stepId: string): { label: string; anchor:
   if (c === undefined) return null;
   return c === "materiality" ? { label: "the materiality confirmation of the planning questionnaire", anchor: "confirm-materiality" } : { label: `the planning questionnaire, section ${c}`, anchor: `section-${c}` };
 }
+
+// --- Suggested area ratings ------------------------------------------------------------------------------------------------------------------
+
+export interface SuggestedRating {
+  assertion: string;
+  level: "moderate";
+  reason: string;
+}
+
+export interface FillPlan {
+  /** Suggestions for an assertion that has no rating yet: the one click fills these into the form (nothing is saved until the person presses Save). */
+  fill: SuggestedRating[];
+  /** Suggestions for an assertion that is already rated: never applied, and shown so the person can decide. */
+  kept: { assertion: string; current: string; suggested: string; reason: string }[];
+}
+
+/**
+ * What a suggestion may do to an area's form. An existing rating is never overwritten, whether or not it agrees with the suggestion: a suggestion fills a
+ * blank and nothing else.
+ */
+export function fillPlan(suggestions: SuggestedRating[], risks: AreaRisks): FillPlan {
+  const plan: FillPlan = { fill: [], kept: [] };
+  for (const s of suggestions) {
+    const current = risks[s.assertion as keyof AreaRisks];
+    if (current === undefined) plan.fill.push(s);
+    else plan.kept.push({ assertion: s.assertion, current, suggested: s.level, reason: s.reason });
+  }
+  return plan;
+}
+
+// --- Significant areas -----------------------------------------------------------------------------------------------------------------------
+
+export const significanceKey = (areaCode: string): string => `sig_${areaCode}`;
+
+export interface AreaSignificance {
+  /** What the figures suggest: yes, no, or null when they cannot say (a judgement for the team, or nothing to go on). */
+  suggested: "yes" | "no" | null;
+  reason: string;
+}
+
+/**
+ * Whether an area is suggested significant, from the lead sheets it covers: significant if any of them is at or above performance materiality in a balance
+ * or movement, either year; not significant if all of them are below the clearly trivial figure in both years; otherwise a judgement. A person confirms.
+ */
+export function areaSignificance(d: Derivation, area: { groups: string[] }): AreaSignificance {
+  if (!d.suggested) return { suggested: null, reason: "Performance materiality is not known yet, so nothing can be suggested." };
+  const sheets = d.significant.filter((s) => area.groups.includes(s.groupCode));
+  if (sheets.length === 0) return { suggested: null, reason: "No balance on this area's lead sheets: a judgement for the team." };
+  const sig = sheets.filter((s) => s.verdict === "significant");
+  if (sig.length > 0) return { suggested: "yes", reason: `${sig.map((s) => s.name).join(", ")}: ${sig[0].reason}` };
+  if (sheets.every((s) => s.verdict === "not_significant")) return { suggested: "no", reason: `${sheets.map((s) => s.name).join(", ")}: below the clearly trivial figure in both years.` };
+  return { suggested: null, reason: "Between the trivial and performance materiality figures: a judgement for the team." };
+}
