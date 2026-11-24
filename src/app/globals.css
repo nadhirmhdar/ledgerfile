@@ -1,76 +1,81 @@
 @import "tailwindcss";
 
 /*
- * Design tokens (light theme). LedgerFile's own palette: a deep ink-blue accent on a warm stone page with white cards, a muted brass for "needs review"
- * emphasis, and muted red, green and blue status colours at equal strength.
+ * Design tokens (light theme), direction C: a strong cobalt accent and near-black ink on a warm grey page with white cards, firm borders, squarer
+ * corners and heavier, larger headings. LedgerFile's own look. Status colours are deep enough to be read as text-adjacent marks, and status is never
+ * colour alone: every badge keeps its icon and its words.
  *
- * Role names: the brief's "text" and "text-muted" roles are `ink` and `ink-muted`, so the utilities read text-ink and
- * text-ink-muted rather than text-text.
+ * Role names: the brief's "text" and "text-muted" roles are `ink` and `ink-muted`, so the utilities read text-ink and text-ink-muted rather than
+ * text-text.
  *
- * Contrast (WCAG 2.x, measured; text needs 4.5:1, large text and UI parts need 3:1):
- *   ink on page 14.8, on surface 16.0        ink-muted on page 6.7, on surface-muted 6.2
- *   ink-subtle on surface 5.3                 border-strong (input edges) on surface 3.7
- *   surface on accent 11.1, on accent-hover 14.0     accent on surface 11.1, on accent-soft 9.3, on page 10.3
- *   brass (warning) on surface 4.7, on page 4.3 (UI parts only, 3:1 needed); warning-strong on warning-soft 7.1, on surface 8.3
- *   success-strong on success-soft 7.3
- *   danger-strong on danger-soft 7.1          info-strong on info-soft 8.1        neutral-strong on neutral-soft 9.1
- *   status dots on surface: success 4.3, warning 4.2, danger 5.4, info 4.9, neutral 4.5 (UI parts, 3:1 needed)
- * `border` is a decorative divider (1.3:1) and never the only sign of a control; inputs use `border-strong`.
+ * Contrast (WCAG 2.x, measured from the hex values; text needs 4.5:1, large text and UI parts need 3:1):
+ *   ink on page 17.0, on surface 19.1         ink-muted on page 9.9, on surface-muted 8.8      ink-subtle on surface 8.1
+ *   surface on accent 10.2, on accent-hover 13.5   accent on surface 10.2, on accent-soft 7.9, on page 9.0
+ *   border-strong (input edges) on surface 7.6
+ *   success-strong on success-soft 8.7        warning-strong on warning-soft 8.7      danger-strong on danger-soft 8.4
+ *   info-strong on info-soft 9.3              neutral-strong on neutral-soft 10.9
+ *   status dots on surface (UI parts, 3:1 needed): success 6.1, warning 6.8, danger 7.1, info 6.7, neutral 6.0
+ * `border` is a decorative divider (1.7:1) and never the only sign of a control; inputs use `border-strong`.
  */
 @theme {
-  --color-page: #f7f6f3;
+  --color-page: #f2f2ee;
   --color-surface: #ffffff;
-  --color-surface-muted: #efede8;
-  --color-border: #e2dfd8;
-  --color-border-strong: #80868d;
-  --color-ink: #1d2229;
-  --color-ink-muted: #505862;
-  --color-ink-subtle: #646c75;
+  --color-surface-muted: #e5e5df;
+  --color-border: #c9c9c0;
+  --color-border-strong: #4d555e;
+  --color-ink: #0b1016;
+  --color-ink-muted: #343c46;
+  --color-ink-subtle: #48515c;
 
-  --color-accent: #1e3a6e;
-  --color-accent-hover: #152b54;
-  --color-accent-soft: #e6ebf5;
+  --color-accent: #17389a;
+  --color-accent-hover: #0f2870;
+  --color-accent-soft: #d9e3fa;
 
-  --color-success: #2b8a57;
-  --color-success-soft: #e7f4ea;
-  --color-success-strong: #0f5a32;
-  --color-warning: #9a6b1f;
-  --color-warning-soft: #f6ecd9;
-  --color-warning-strong: #6b4710;
-  --color-danger: #c0392b;
-  --color-danger-soft: #fbeae8;
-  --color-danger-strong: #9a1b1b;
-  --color-info: #2f6fd0;
-  --color-info-soft: #e6eefb;
-  --color-info-strong: #1b3f9a;
-  --color-neutral: #6c7983;
-  --color-neutral-soft: #eceff1;
-  --color-neutral-strong: #33414c;
+  --color-success: #16703f;
+  --color-success-soft: #dcf0e2;
+  --color-success-strong: #0a4a28;
+  --color-warning: #7d5208;
+  --color-warning-soft: #f2e3c3;
+  --color-warning-strong: #563505;
+  --color-danger: #a8261a;
+  --color-danger-soft: #f8dfdb;
+  --color-danger-strong: #7f1010;
+  --color-info: #1f58b8;
+  --color-info-soft: #dbe7f9;
+  --color-info-strong: #12337f;
+  --color-neutral: #566570;
+  --color-neutral-soft: #e1e6e9;
+  --color-neutral-strong: #232f39;
 
-  /* Type scale: 12, 14, 16, 18, 20, 24, 30 px. Nothing smaller than xs. */
+  /* Type scale: 12, 14, 16, 19, 22, 28, 36 px. Nothing smaller than xs. */
   --text-xs: 0.75rem;
   --text-xs--line-height: 1rem;
   --text-sm: 0.875rem;
   --text-sm--line-height: 1.25rem;
   --text-base: 1rem;
   --text-base--line-height: 1.5rem;
-  --text-lg: 1.125rem;
+  --text-lg: 1.1875rem;
   --text-lg--line-height: 1.75rem;
-  --text-xl: 1.25rem;
-  --text-xl--line-height: 1.75rem;
-  --text-2xl: 1.5rem;
-  --text-2xl--line-height: 2rem;
-  --text-3xl: 1.875rem;
-  --text-3xl--line-height: 2.25rem;
+  --text-xl: 1.375rem;
+  --text-xl--line-height: 1.85rem;
+  --text-2xl: 1.75rem;
+  --text-2xl--line-height: 2.1rem;
+  --text-3xl: 2.25rem;
+  --text-3xl--line-height: 2.5rem;
 
-  --radius-sm: 0.25rem;
-  --radius-md: 0.375rem;
-  --radius-lg: 0.5rem;
+  /* IBM Plex Sans has 400, 500, 600 and 700. */
+  --font-weight-medium: 600;
+  --font-weight-semibold: 700;
+  --font-weight-bold: 700;
 
-  --shadow-card: 0 1px 3px rgb(29 34 41 / 0.05);
-  --shadow-pop: 0 8px 24px rgb(22 33 42 / 0.14);
+  --radius-sm: 0.125rem;
+  --radius-md: 0.1875rem;
+  --radius-lg: 0.25rem;
 
-  --font-sans: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  --shadow-card: 0 1px 0 rgb(11 16 22 / 0.14), 0 2px 6px rgb(11 16 22 / 0.07);
+  --shadow-pop: 0 8px 24px rgb(11 16 22 / 0.18);
+
+  --font-sans: var(--font-plex), Arial, Helvetica, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 }
 
@@ -80,9 +85,14 @@ body {
   font-family: var(--font-sans);
 }
 
+h1,
+h2 {
+  letter-spacing: -0.015em;
+}
+
 /* One visible focus ring for every interactive element. */
 :focus-visible {
-  outline: 2px solid var(--color-accent);
+  outline: 3px solid var(--color-accent);
   outline-offset: 2px;
 }
 
