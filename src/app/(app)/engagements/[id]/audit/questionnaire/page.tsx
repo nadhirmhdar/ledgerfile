@@ -197,6 +197,11 @@ export default async function QuestionnairePage({ params }: { params: Promise<{ 
                     ) : (
                       <p className="mt-2 text-sm">If a rating for C13 occurrence or cut-off is below significant, the planning page flags it. It is a flag, not a block.</p>
                     )}
+                    <p className="mt-2 text-sm">
+                      {onFile.approval.state === "current"
+                        ? "A partner has approved the risk assessment. Rebutting this presumption, or putting it back, changes that assessment, so the approval will lapse and have to be given again."
+                        : "Rebutting this presumption, or putting it back, lapses the partner's approval of the risk assessment if one is on record, because it changes what was approved."}
+                    </p>
                     {canAnswer &&
                       (partner ? (
                         q.revenue.rebutted ? (

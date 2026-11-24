@@ -316,8 +316,9 @@ export async function getAuditOverview(tx: Tx, engagementId: string): Promise<Au
     [engagementId],
   );
   const unrated = areaStatus.filter((a) => !a.assessed).length;
+  const revenueRebuttal = await revenueRebuttalOf(tx, engagementId);
   const approval: RiskApproval = {
-    state: last.rows.length === 0 ? "none" : last.rows[0].snapshot === assessmentSnapshot({ materiality, areas: areaStatus }) ? "current" : "lapsed",
+    state: last.rows.length === 0 ? "none" : last.rows[0].snapshot === assessmentSnapshot({ materiality, areas: areaStatus, revenueRebuttal }) ? "current" : "lapsed",
     approvedBy: last.rows[0]?.approvedBy ?? null,
     approvedAt: last.rows[0]?.approvedAt ?? null,
     notReady: !materiality
@@ -377,6 +378,12 @@ export async function getAuditOverview(tx: Tx, engagementId: string): Promise<Au
     approval,
     blockers,
   };
+}
+
+/** The partner's reason, while the presumed revenue risk is rebutted; null while it stands. Part of what a partner's approval of the risk assessment covers. */
+async function revenueRebuttalOf(tx: Tx, engagementId: string): Promise<string | null> {
+  const { rows } = await tx.query<{ value: string; reason: string | null }>("select value, reason from planning_answers where engagement_id = $1 and question_key = 'revenue_presumption' order by seq desc limit 1", [engagementId]);
+  return rows[0]?.value === "rebutted" ? (rows[0].reason ?? "rebutted") : null;
 }
 
 /** Set or revise materiality. The benchmark figure is taken from the engagement, never from the form. */
@@ -529,7 +536,7 @@ export async function approveRiskAssessment(tx: Tx, s: Session, engagementId: st
   if (overview.areas.length === 0) throw new Error("Import a trial balance and map its accounts first.");
   if (overview.approval.notReady) throw new Error(overview.approval.notReady);
   if (overview.approval.state === "current") throw new Error("The risk assessment is already approved as it stands.");
-  const snapshot = assessmentSnapshot({ materiality: overview.materiality, areas: overview.areas });
+  const snapshot = assessmentSnapshot({ materiality: overview.materiality, areas: overview.areas, revenueRebuttal: await revenueRebuttalOf(tx, engagementId) });
   await tx.query("insert into risk_approvals (firm_id, engagement_id, snapshot, approved_by) values ($1, $2, $3, $4)", [s.firmId, engagementId, snapshot, s.userId]);
   await log(tx, s, "approve_risk_assessment", "engagement", engagementId, { reapproval: overview.approval.state === "lapsed" });
 }

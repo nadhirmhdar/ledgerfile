@@ -1,13 +1,16 @@
 import { describe, expect, it } from "vitest";
+import { assessmentSnapshot } from "../src/domain/audit";
 import { derivePlanning, type PlanningAccount } from "../src/domain/planning";
 import { DEFAULT_PLANNING_SETTINGS } from "../src/domain/planning-settings";
 import {
   answerState,
+  areaSignificance,
   autoAnswers,
   buildRationale,
   buildSections,
   checkValue,
   coveredInQuestionnaire,
+  fillPlan,
   mandatoryOpen,
   planningAnswersOf,
   QUESTIONNAIRE_DRAFT,
@@ -239,5 +242,55 @@ describe("the wording", () => {
     const all = [...STATIC_QUESTIONS.map((q) => `${q.label} ${q.help ?? ""}`), ...SECTIONS.map((s) => `${s.title} ${s.standards} ${s.blurb}`)].join(" ");
     for (const m of all.matchAll(/ISA\s*[\w ,]*/g)) expect(m[0]).toMatch(/^ISA \d{3}/);
     expect(all).not.toMatch(/International Standard on Auditing/);
+  });
+});
+
+describe("suggested ratings never overwrite a rating", () => {
+  const suggestions = [
+    { assertion: "E", level: "moderate" as const, reason: "Inventories are above performance materiality." },
+    { assertion: "V", level: "moderate" as const, reason: "Inventories are above performance materiality." },
+  ];
+  it("fills the assertions with no rating, and keeps (without applying) the ones already rated, whether they agree or not", () => {
+    expect(fillPlan(suggestions, {})).toEqual({ fill: suggestions, kept: [] });
+    const plan = fillPlan(suggestions, { E: "low", V: "moderate" });
+    expect(plan.fill).toEqual([]);
+    expect(plan.kept).toEqual([
+      { assertion: "E", current: "low", suggested: "moderate", reason: suggestions[0].reason },
+      { assertion: "V", current: "moderate", suggested: "moderate", reason: suggestions[1].reason },
+    ]);
+    const partial = fillPlan(suggestions, { E: "high" });
+    expect(partial.fill.map((s) => s.assertion)).toEqual(["V"]);
+    expect(partial.kept.map((s) => s.assertion)).toEqual(["E"]);
+  });
+});
+
+describe("significant areas", () => {
+  const sheets = (accounts: PlanningAccount[]) => derivePlanning({ accounts });
+  it("suggests an area significant when a lead sheet it covers is at or above performance materiality, with the reason", () => {
+    const d = sheets(BASE);
+    const sig = areaSignificance(d, { groups: ["INVENT"] });
+    expect(sig.suggested).toBe("yes");
+    expect(sig.reason).toContain("performance materiality");
+  });
+  it("suggests not significant when every lead sheet is below the clearly trivial figure, and no suggestion between", () => {
+    const small = BASE.map((a) => (a.code === "1200" ? { ...a, closingMinor: 1000, priorMinor: 1000 } : a));
+    expect(areaSignificance(sheets(small), { groups: ["INVENT"] }).suggested).toBe("no");
+    const middle = BASE.map((a) => (a.code === "1200" ? { ...a, closingMinor: 5000 * 100, priorMinor: 5000 * 100 } : a));
+    const d = sheets(middle);
+    expect(d.significant.find((s) => s.groupCode === "INVENT")!.verdict).toBe("judgement");
+    expect(areaSignificance(d, { groups: ["INVENT"] }).suggested).toBeNull();
+  });
+  it("says nothing when materiality is not known or the area has no lead sheet balance", () => {
+    expect(areaSignificance(sheets(BASE.map((a) => ({ ...a, groupCode: null }))), { groups: ["INVENT"] }).suggested).toBeNull();
+    expect(areaSignificance(sheets(BASE), { groups: ["NOSUCHGROUP"] })).toMatchObject({ suggested: null });
+  });
+});
+
+describe("the risk assessment snapshot", () => {
+  const input = { materiality: null, areas: [{ code: "C5", risks: { E: "low" as const } }] };
+  it("is unchanged while the revenue presumption stands, so earlier approvals are not disturbed, and changes when it is rebutted", () => {
+    expect(assessmentSnapshot({ ...input, revenueRebuttal: null })).toBe(assessmentSnapshot(input));
+    expect(assessmentSnapshot({ ...input, revenueRebuttal: "A single contract with no judgement." })).not.toBe(assessmentSnapshot(input));
+    expect(assessmentSnapshot({ ...input, revenueRebuttal: "One reason." })).not.toBe(assessmentSnapshot({ ...input, revenueRebuttal: "Another reason." }));
   });
 });
