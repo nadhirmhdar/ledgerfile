@@ -1,5 +1,6 @@
 import type { Tx } from "./db";
 import type { TbAccount } from "../domain/tb-parse";
+import { cleanName, nameKey } from "../domain/client-import";
 import { proposeMappings, type MappingSource } from "../domain/mapping";
 import { GROUP_BY_CODE } from "../domain/groups";
 import type { MappedAccount } from "../domain/leadsheet";
@@ -74,8 +75,31 @@ export async function listClients(tx: Tx): Promise<ClientRow[]> {
   return (await tx.query<ClientRow>("select id, name, framework from clients order by name")).rows;
 }
 
+/**
+ * One change to the firm's list of clients at a time: the Add client form and the import both take this lock, and a second one waits here until the first
+ * has committed, so each reads the clients the other added and neither adds a name twice. A transaction lock, released at commit. Held again by the same
+ * transaction costs nothing.
+ *
+ * There is no unique index on the name, on purpose: it would fail the hosted migration for any firm that already has two clients with the same name,
+ * and that cannot be seen from here. The rule is kept here, in the server.
+ */
+export async function lockClients(tx: Tx, firmId: string): Promise<void> {
+  await tx.query("select pg_advisory_xact_lock(hashtext($1))", [`clients:${firmId}`]);
+}
+
+/** Add a client. The name is cleaned (inner spaces collapsed), and refused when a client of this firm already has it, in any case or spacing. */
 export async function createClient(tx: Tx, s: Session, name: string): Promise<string> {
   if (!canCreateClient(s.role)) throw new Error(CLIENT_REFUSAL);
+  await lockClients(tx, s.firmId);
+  const key = nameKey(name);
+  const existing = (await tx.query<{ name: string }>("select name from clients")).rows.find((c) => nameKey(c.name) === key);
+  if (existing) throw new Error(`${existing.name} is already a client.`);
+  return insertClient(tx, s, name);
+}
+
+/** Insert a client with no duplicate check, for the import, which has already taken the lock and classified every name against the clients as they are. */
+export async function insertClient(tx: Tx, s: Session, name: string): Promise<string> {
+  name = cleanName(name);
   const { rows } = await tx.query<{ id: string }>("insert into clients (firm_id, name) values ($1, $2) returning id", [s.firmId, name]);
   await audit(tx, s, "create", "client", rows[0].id, { name });
   return rows[0].id;
