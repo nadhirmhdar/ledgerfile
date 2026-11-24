@@ -32,7 +32,7 @@ export function TCell({
   className = "",
   ...props
 }: Omit<TdHTMLAttributes<HTMLTableCellElement>, "scope"> & { header?: "col" | "row"; numeric?: boolean }) {
-  const cls = `px-4 py-2.5 ${numeric ? "text-right tabular-nums whitespace-nowrap" : ""} ${header === "col" ? "font-medium" : ""} ${header === "row" ? "font-semibold text-ink" : ""} ${className}`;
+  const cls = `px-4 py-2.5 ${numeric ? "text-right tabular-nums whitespace-nowrap" : ""} ${header === "col" ? "font-medium" : ""} ${header === "row" ? "min-w-44 font-semibold text-ink" : ""} ${className}`;
   return header ? (
     <th {...props} scope={header} className={cls}>
       {children}
