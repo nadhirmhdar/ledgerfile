@@ -234,6 +234,8 @@ export async function addProcedure(tx: Tx, s: Session, areaCode: string, input: 
   // Only the assertions the LIBRARY's area covers, so the area's risk assessment still asks for exactly the same ones.
   const checked = checkOwnProcedure(input, assertionsOf(area));
   if (!checked.ok) throw new Error(checked.message);
+  // One add at a time for this firm and area: a second waits here until the first has committed, then reads the number it took and takes the next.
+  await tx.query("select pg_advisory_xact_lock(hashtext($1))", [`own-procedures:${s.firmId}:${areaCode}`]);
   const seq = nextOwnSeq((await ownRows(tx, areaCode)).map((r) => r.seq));
   if (seq === null) throw new Error(`An area can have at most ${MAX_OWN_PER_AREA} procedures added by your firm, retired ones included.`);
   const v = checked.value;

@@ -246,7 +246,7 @@ describe("importing clients", () => {
     expect((await clientNames(FIRM)).filter((n) => n === "Gamma Holdings, LLC" || n === "Delta Works")).toHaveLength(2);
     // The lock is a transaction lock on this firm's key: it is there and released at commit, on PGlite and on PostgreSQL alike.
     await as(partner, async (tx) => {
-      await tx.query("select pg_advisory_xact_lock(hashtext($1))", [`client-import:${FIRM}`]);
+      await tx.query("select pg_advisory_xact_lock(hashtext($1))", [`clients:${FIRM}`]);
     });
     // Two concurrent imports of the same list leave one copy as well.
     const both = await Promise.allSettled([as(partner, (tx) => importClients(tx, partner, ["Omega Ltd"])), as(partner, (tx) => importClients(tx, partner, ["Omega Ltd"]))]);

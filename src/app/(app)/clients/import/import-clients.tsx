@@ -50,7 +50,7 @@ export function ImportClients() {
       </p>
       <form ref={form} className="space-y-3" onSubmit={(e) => e.preventDefault()}>
         <Field label="Paste a list of names">
-          <Textarea name="pasted" rows={5} placeholder={"Client name\nFalcon Trading LLC\nAl Noor Contracting"} />
+          <Textarea name="pasted" rows={5} placeholder={"Client name\nFalcon Trading LLC (sample)\nInvented Contracting LLC (sample)"} />
         </Field>
         <label className="flex flex-col gap-1 text-sm font-medium">
           Or upload a file

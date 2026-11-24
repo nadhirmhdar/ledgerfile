@@ -10,6 +10,7 @@ import { parseTrialBalance } from "@/domain/tb-parse";
 import { formatAmount, parseAmount } from "@/domain/money";
 import * as journals from "@/server/journals";
 import type { JournalLineInput } from "@/domain/journal";
+import { cleanName, MAX_NAME, MIN_NAME } from "@/domain/client-import";
 
 export interface FormState {
   ok: boolean;
@@ -26,8 +27,8 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 export async function createClientAction(_prev: FormState, form: FormData): Promise<FormState> {
-  const name = String(form.get("name") ?? "").trim();
-  if (name.length < 2 || name.length > 200) return { ok: false, message: "Enter the client's name." };
+  const name = cleanName(form.get("name"));
+  if (name.length < MIN_NAME || name.length > MAX_NAME) return { ok: false, message: "Enter the client's name." };
   const session = await getSession();
   try {
     await withFirm(await getDb(), session.firmId, (tx) => repo.createClient(tx, session, name));

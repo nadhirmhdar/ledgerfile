@@ -149,6 +149,15 @@ describe("what is refused", () => {
   });
 });
 
+describe("two adds to the same area get the next numbers", () => {
+  it("one after the other get F01 and F02, and two at the same moment do too", async () => {
+    expect(await as(partner, (tx) => methodology.addProcedure(tx, partner, "C8", input({ body: "Invented first." })))).toBe("C8.F01");
+    expect(await as(partner, (tx) => methodology.addProcedure(tx, partner, "C8", input({ body: "Invented second." })))).toBe("C8.F02");
+    const both = await Promise.all([as(partner, (tx) => methodology.addProcedure(tx, partner, "C9", input({ body: "Invented one." }))), as(admin, (tx) => methodology.addProcedure(tx, admin, "C9", input({ body: "Invented two." })))]);
+    expect([...both].sort()).toEqual(["C9.F01", "C9.F02"]);
+  });
+});
+
 describe("an own procedure is loaded like any other, and marked as the firm's", () => {
   it("is loaded after the library's, with the firm mark on the row and not the rewording mark", async () => {
     const id = await as(partner, (tx) => methodology.addProcedure(tx, partner, "C5", input({ body: "Invented own procedure for receivables.", evidence: "Invented own evidence.", reference: "" })));
