@@ -56,7 +56,7 @@ export default async function AuditorsReportPage({ params }: { params: Promise<{
       />
       <EngagementNav id={id} current="report" status={engagement.status} archived={engagement.archivedAt !== null} />
 
-      <div className="mt-6 min-w-0 space-y-6">
+      <div className="mt-6 min-w-0 space-y-8">
         {!page.enabled ? (
           <Callout variant="info">
             The auditor&apos;s report is for audited engagements. Turn the audit on from the{" "}

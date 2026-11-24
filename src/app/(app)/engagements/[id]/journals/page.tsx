@@ -48,7 +48,7 @@ export default async function JournalsPage({ params }: { params: Promise<{ id: s
       />
       <EngagementNav id={id} current="journals" status={engagement.status} archived={engagement.archivedAt !== null} />
 
-      <div className="mt-6 min-w-0 space-y-6">
+      <div className="mt-6 min-w-0 space-y-8">
         {accounts.length === 0 ? (
           <EmptyState
             title="Import a trial balance first"

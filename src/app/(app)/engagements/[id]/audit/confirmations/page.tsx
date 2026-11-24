@@ -138,7 +138,7 @@ export default async function ConfirmationsPage({ params, searchParams }: { para
       />
       <EngagementNav id={id} current="confirmations" status={engagement.status} archived={engagement.archivedAt !== null} />
 
-      <div className="mt-6 space-y-6">
+      <div className="mt-6 space-y-8">
         {!auditOn ? (
           <Callout variant="info" title="The audit is off for this engagement">
             There are no confirmations to show. A reviewer or partner turns the audit on from the audit planning page.

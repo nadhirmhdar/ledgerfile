@@ -103,7 +103,7 @@ export default async function ProgrammePage({ params, searchParams }: { params: 
       />
       <EngagementNav id={id} current="audit" status={engagement.status} archived={engagement.archivedAt !== null} />
 
-      <div className="mt-6 space-y-6">
+      <div className="mt-6 space-y-8">
         {procedures.length > 0 && (
           <div className="max-w-xl">
             <ProgressBar value={completed} max={procedures.length} label={`${completed} of ${procedures.length} ${noun} completed`} />
