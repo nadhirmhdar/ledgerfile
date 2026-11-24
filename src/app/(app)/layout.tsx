@@ -21,7 +21,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       >
         Skip to main content
       </a>
-      <header className="border-b border-border bg-surface">
+      <header className="border-b-2 border-ink bg-surface">
         <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-2 px-4 sm:gap-3 sm:px-6">
           <div className="flex min-w-0 items-center gap-2 sm:gap-4">
             <Link href="/" className="py-3 text-lg font-bold tracking-tight text-accent">

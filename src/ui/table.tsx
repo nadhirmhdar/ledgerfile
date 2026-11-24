@@ -13,7 +13,7 @@ export function Table({ caption, sticky = false, children, className = "" }: { c
 }
 
 export function THead({ sticky = false, children }: { sticky?: boolean; children: ReactNode }) {
-  return <thead className={`border-b border-border bg-surface-muted text-ink-muted ${sticky ? "sticky top-0 z-10" : ""}`}>{children}</thead>;
+  return <thead className={`border-b-2 border-ink bg-surface-muted text-ink ${sticky ? "sticky top-0 z-10" : ""}`}>{children}</thead>;
 }
 
 export function TRow({ children, ...props }: HTMLAttributes<HTMLTableRowElement>) {
@@ -32,7 +32,7 @@ export function TCell({
   className = "",
   ...props
 }: Omit<TdHTMLAttributes<HTMLTableCellElement>, "scope"> & { header?: "col" | "row"; numeric?: boolean }) {
-  const cls = `px-4 py-2.5 ${numeric ? "text-right tabular-nums whitespace-nowrap" : ""} ${header === "col" ? "font-medium" : ""} ${header === "row" ? "font-semibold text-ink" : ""} ${className}`;
+  const cls = `px-4 py-2.5 ${numeric ? "text-right tabular-nums whitespace-nowrap" : ""} ${header === "col" ? "font-medium" : ""} ${header === "row" ? "min-w-44 font-semibold text-ink" : ""} ${className}`;
   return header ? (
     <th {...props} scope={header} className={cls}>
       {children}
