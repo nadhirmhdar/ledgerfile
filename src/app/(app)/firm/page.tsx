@@ -23,6 +23,13 @@ export default async function FirmPage() {
     <div className="py-8 text-ink">
       <PageHeader title="Firm" meta={<span>{view.firmName}</span>} subtitle={BRANDING_SHOWN_ON} />
       <div className="mt-6 max-w-3xl space-y-8">
+        <Callout variant="info" title="Planning settings">
+          The guide ranges and thresholds behind materiality and the planning assistant are on the{" "}
+          <Link href="/firm/planning" className="font-medium underline">
+            Planning settings page
+          </Link>
+          .
+        </Callout>
         <Callout variant="info" title="Methodology">
           The audit procedures your firm loads into its programmes can be reworded or hidden on the{" "}
           <Link href="/firm/methodology" className="font-medium underline">

@@ -5,12 +5,15 @@ import { canLock, canReview } from "../domain/signoff";
 import { buildStatements } from "../domain/statements";
 import { needsFinishing, presentationBalance, scheduleBlockers, type ScheduleState } from "../domain/test-schedule";
 import { confirmationBlockers, confirmationState } from "../domain/confirmations";
+import { getPlanningSettings } from "./planning";
+import { guideRangesOf } from "../domain/planning-settings";
 import { compareYears, unexplainedMovements, type ExplanationRecord } from "../domain/analytics";
 import {
   AREA_BY_CODE,
   CHECKLIST_BY_CODE,
   CHECKLISTS,
   needsPartner,
+  EXPENSE_BENCHMARK_GROUPS,
   RISK_APPROVAL_STEP,
   assessmentSnapshot,
   areasInScope,
@@ -299,7 +302,13 @@ export async function getAuditOverview(tx: Tx, engagementId: string): Promise<Au
   };
 
   const enabled = await isEnabled(tx, engagementId);
-  const benchmarks: Record<Benchmark, number> = { pbt: Math.abs(sci("PBT")), revenue: Math.abs(sci("REVENUE")), assets: sfp("TOTAL_ASSETS"), equity: Math.abs(sfp("TOTAL_EQUITY")) };
+  const benchmarks: Record<Benchmark, number> = {
+    pbt: Math.abs(sci("PBT")),
+    revenue: Math.abs(sci("REVENUE")),
+    expenses: Math.abs(EXPENSE_BENCHMARK_GROUPS.reduce((n, g) => n + sci(g), 0)),
+    assets: sfp("TOTAL_ASSETS"),
+    equity: Math.abs(sfp("TOTAL_EQUITY")),
+  };
   const materialityStale = materiality !== null && benchmarks[materiality.benchmark] !== materiality.benchmarkAmountMinor;
   const last = await tx.query<{ snapshot: string; approvedBy: string; approvedAt: string }>(
     `select a.snapshot, u.name as "approvedBy", to_char(a.created_at, 'YYYY-MM-DD') as "approvedAt"
@@ -383,7 +392,8 @@ export async function setMateriality(
   const benchmark = input.benchmark as Benchmark;
   const overview = (await getAuditOverview(tx, engagementId))!;
   const rationale = input.rationale.trim();
-  const result = computeMateriality({ ...input, benchmark, benchmarkAmountMinor: overview.benchmarks[benchmark] });
+  const guide = guideRangesOf((await getPlanningSettings(tx)).settings);
+  const result = computeMateriality({ ...input, benchmark, benchmarkAmountMinor: overview.benchmarks[benchmark] }, guide);
   if (result.errors.length > 0) throw new Error(result.errors.join(" "));
   if (rationale.length < 10) throw new Error("Record why this benchmark and these percentages are appropriate.");
   if (rationale.length > 2000) throw new Error("The rationale is too long.");

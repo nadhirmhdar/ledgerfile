@@ -146,7 +146,7 @@ describe("the audit on an engagement", () => {
   it("starts with the areas in scope, benchmarks from the statements, and no blockers", async () => {
     const o = await overview();
     expect(o.areas.map((a) => a.code)).toEqual(["C5", "C6", "C7", "C8", "C10", "C12", "C13", "C14", "C15", "C16"]);
-    expect(o.benchmarks).toEqual({ pbt: 40000000, revenue: 100000000, assets: 50000000, equity: 50000000 });
+    expect(o.benchmarks).toEqual({ pbt: 40000000, revenue: 100000000, expenses: 60000000, assets: 50000000, equity: 50000000 });
     expect(o).toMatchObject({ enabled: false, blockers: [], materiality: null });
     // An engagement that is not being audited is not held up by audit work.
     expect((await as(prep, (tx) => review.getOverview(tx, engagement)))!.readiness.blockers.some((b) => b.startsWith("Audit"))).toBe(false);

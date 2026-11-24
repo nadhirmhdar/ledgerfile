@@ -176,17 +176,33 @@ export function selectProcedures(area: Area, risks: AreaRisks): ProcedureTemplat
 
 // --- Materiality -------------------------------------------------------------
 
-export type Benchmark = "pbt" | "revenue" | "assets" | "equity";
+export type Benchmark = "pbt" | "revenue" | "expenses" | "assets" | "equity";
 
 /** Guide ranges in basis points of the benchmark. Common practice, not a requirement of any standard. */
 export const BENCHMARKS: Record<Benchmark, { label: string; minBp: number; maxBp: number }> = {
   pbt: { label: "Profit before tax", minBp: 500, maxBp: 1000 },
   revenue: { label: "Revenue", minBp: 50, maxBp: 200 },
+  expenses: { label: "Total expenses", minBp: 50, maxBp: 200 },
   assets: { label: "Total assets", minBp: 100, maxBp: 200 },
   equity: { label: "Total equity", minBp: 200, maxBp: 500 },
 };
 export const PERFORMANCE_RANGE = { min: 50, max: 75 };
 export const TRIVIAL_MAX = 5;
+
+/** The groups whose balances are the "total expenses" benchmark: everything charged against income before tax. */
+export const EXPENSE_BENCHMARK_GROUPS = ["COS", "STAFF", "DEPN", "ADMIN", "FINCOST"];
+
+/** The guide ranges that computeMateriality warns against. The defaults are the constants above; a firm's planning settings can replace them. */
+export interface GuideRanges {
+  benchmarks: Record<Benchmark, { minBp: number; maxBp: number }>;
+  performance: { min: number; max: number };
+  trivialMax: number;
+}
+export const DEFAULT_GUIDE: GuideRanges = {
+  benchmarks: Object.fromEntries(Object.entries(BENCHMARKS).map(([k, v]) => [k, { minBp: v.minBp, maxBp: v.maxBp }])) as GuideRanges["benchmarks"],
+  performance: PERFORMANCE_RANGE,
+  trivialMax: TRIVIAL_MAX,
+};
 
 export interface MaterialityInput {
   benchmark: Benchmark;
@@ -210,11 +226,12 @@ export interface MaterialityResult {
   errors: string[];
 }
 
-export function computeMateriality(input: MaterialityInput): MaterialityResult {
+export function computeMateriality(input: MaterialityInput, guideRanges: GuideRanges = DEFAULT_GUIDE): MaterialityResult {
   const errors: string[] = [];
   const warnings: string[] = [];
-  const guide = BENCHMARKS[input.benchmark];
-  if (!guide) errors.push("Choose a benchmark.");
+  const label = BENCHMARKS[input.benchmark];
+  if (!label) errors.push("Choose a benchmark.");
+  const guide = { label: label?.label ?? "", ...guideRanges.benchmarks[input.benchmark] };
   if (!Number.isInteger(input.benchmarkAmountMinor) || input.benchmarkAmountMinor <= 0) errors.push("The benchmark amount must be greater than zero. Choose a different benchmark.");
   if (!Number.isInteger(input.percentageBp) || input.percentageBp <= 0 || input.percentageBp > 2000) errors.push("Enter the percentage of the benchmark, between 0.01% and 20%.");
   if (!Number.isInteger(input.performancePct) || input.performancePct < 1 || input.performancePct > 100) errors.push("Enter performance materiality as a percentage of overall materiality, from 1 to 100.");
@@ -224,10 +241,10 @@ export function computeMateriality(input: MaterialityInput): MaterialityResult {
   if (input.percentageBp < guide.minBp || input.percentageBp > guide.maxBp) {
     warnings.push(`${input.percentageBp / 100}% of ${guide.label.toLowerCase()} is outside the guide range of ${guide.minBp / 100}% to ${guide.maxBp / 100}%.`);
   }
-  if (input.performancePct < PERFORMANCE_RANGE.min || input.performancePct > PERFORMANCE_RANGE.max) {
-    warnings.push(`Performance materiality of ${input.performancePct}% is outside the guide range of ${PERFORMANCE_RANGE.min}% to ${PERFORMANCE_RANGE.max}%.`);
+  if (input.performancePct < guideRanges.performance.min || input.performancePct > guideRanges.performance.max) {
+    warnings.push(`Performance materiality of ${input.performancePct}% is outside the guide range of ${guideRanges.performance.min}% to ${guideRanges.performance.max}%.`);
   }
-  if (input.trivialPct > TRIVIAL_MAX) warnings.push(`A trivial threshold of ${input.trivialPct}% is above the guide maximum of ${TRIVIAL_MAX}%.`);
+  if (input.trivialPct > guideRanges.trivialMax) warnings.push(`A trivial threshold of ${input.trivialPct}% is above the guide maximum of ${guideRanges.trivialMax}%.`);
 
   const overallMinor = Math.round((input.benchmarkAmountMinor * input.percentageBp) / 10000);
   return {
