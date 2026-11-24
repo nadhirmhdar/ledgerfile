@@ -4,7 +4,11 @@ import { getDb, withFirm } from "@/server/db";
 import { getSession } from "@/server/session";
 import * as repo from "@/server/repo";
 import * as audit from "@/server/audit";
-import { ASSERTIONS, BENCHMARKS, computeMateriality, STAGES, LIBRARY_STATUS, PERFORMANCE_RANGE, RISK_LEVELS, TRIVIAL_MAX, type Benchmark } from "@/domain/audit";
+import { ASSERTIONS, BENCHMARKS, computeMateriality, STAGES, LIBRARY_STATUS, RISK_LEVELS, type Benchmark } from "@/domain/audit";
+import { guideRangesOf } from "@/domain/planning-settings";
+import { getPlanningDerivation } from "@/server/planning";
+import { PlanningAssistant } from "@/ui/planning-assistant";
+import { canEditPlanningSettings } from "@/ui/planning-view";
 import { formatAmount } from "@/domain/money";
 import { ActionForm } from "@/app/action-form";
 import { bringForwardAction } from "@/app/schedule-actions";
@@ -27,9 +31,10 @@ export default async function AuditPage({ params }: { params: Promise<{ id: stri
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
 
   const session = await getSession();
-  const { engagement, overview } = await withFirm(await getDb(), session.firmId, async (tx) => ({
+  const { engagement, overview, planned } = await withFirm(await getDb(), session.firmId, async (tx) => ({
     engagement: await repo.getEngagement(tx, id),
     overview: await audit.getAuditOverview(tx, id),
+    planned: await getPlanningDerivation(tx, id),
   }));
   if (!engagement || !overview) notFound();
 
@@ -37,7 +42,8 @@ export default async function AuditPage({ params }: { params: Promise<{ id: stri
   const reviewer = mayDo(session.role, "reviewer");
   const approval = overview.approval;
   const m = overview.materiality;
-  const guideWarnings = m ? computeMateriality(m).warnings : [];
+  const guide = guideRangesOf(planned!.settings.settings);
+  const guideWarnings = m ? computeMateriality(m, guide).warnings : [];
   const assertionLabel = new Map(ASSERTIONS.map((a) => [a.code, a.label]));
   const levelLabel = new Map(RISK_LEVELS.map((l) => [l.code, l.label]));
   const base = `/engagements/${id}`;
@@ -166,7 +172,7 @@ export default async function AuditPage({ params }: { params: Promise<{ id: stri
                         <select name="benchmark" defaultValue={m?.benchmark ?? "revenue"} className={inputCls}>
                           {(Object.keys(BENCHMARKS) as Benchmark[]).map((b) => (
                             <option key={b} value={b} disabled={overview.benchmarks[b] <= 0}>
-                              {BENCHMARKS[b].label}: {formatAmount(overview.benchmarks[b])} (guide {BENCHMARKS[b].minBp / 100}% to {BENCHMARKS[b].maxBp / 100}%)
+                              {BENCHMARKS[b].label}: {formatAmount(overview.benchmarks[b])} (guide {guide.benchmarks[b].minBp / 100}% to {guide.benchmarks[b].maxBp / 100}%)
                             </option>
                           ))}
                         </select>
@@ -176,11 +182,11 @@ export default async function AuditPage({ params }: { params: Promise<{ id: stri
                         <input name="percentage" inputMode="decimal" required defaultValue={m ? m.percentageBp / 100 : 1} className={`${inputCls} w-24 text-right`} />
                       </label>
                       <label className={fieldLabel}>
-                        Performance % (guide {PERFORMANCE_RANGE.min} to {PERFORMANCE_RANGE.max})
+                        Performance % (guide {guide.performance.min} to {guide.performance.max})
                         <input name="performancePct" inputMode="numeric" required defaultValue={m?.performancePct ?? 75} className={`${inputCls} w-24 text-right`} />
                       </label>
                       <label className={fieldLabel}>
-                        Trivial % (guide up to {TRIVIAL_MAX})
+                        Trivial % (guide up to {guide.trivialMax})
                         <input name="trivialPct" inputMode="numeric" required defaultValue={m?.trivialPct ?? 5} className={`${inputCls} w-24 text-right`} />
                       </label>
                     </div>
@@ -195,6 +201,10 @@ export default async function AuditPage({ params }: { params: Promise<{ id: stri
                   </ActionForm>
                 </Disclosure>
               )}
+            </Section>
+
+            <Section title="Planning assistant" description="What the trial balance suggests for materiality, significant areas and indicators. It saves nothing." id="planning-assistant">
+              <PlanningAssistant derivation={planned!.derivation} engagementId={id} customised={planned!.settings.customised} settingsHref={canEditPlanningSettings(session.role) ? "/firm/planning" : null} />
             </Section>
 
             <Section
