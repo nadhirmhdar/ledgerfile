@@ -166,7 +166,7 @@ export default async function SchedulePage({ params }: { params: Promise<{ id: s
             <ul className="space-y-1.5 border-t border-border px-4 py-3 text-sm">
               {TICKMARKS.map((m) => (
                 <li key={m.code} className="flex items-start gap-3">
-                  <span className="inline-flex min-h-7 min-w-9 shrink-0 items-center justify-center rounded-md border border-border-strong bg-surface px-1.5 text-sm font-medium">{m.symbol}</span>
+                  <span className="inline-flex min-h-7 min-w-9 shrink-0 items-center justify-center rounded-md border border-border-input bg-surface px-1.5 text-sm font-medium">{m.symbol}</span>
                   <span className="text-ink-muted">{m.meaning}</span>
                 </li>
               ))}

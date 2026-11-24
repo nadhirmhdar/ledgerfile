@@ -7,8 +7,8 @@ import { NAV_COOKIE, NAV_GROUPS, sectionHref, serializeOpenGroups, type Engageme
 import { StripScroll } from "../../../../ui/strip-scroll";
 
 const linkClass = (active: boolean) =>
-  `inline-flex min-h-10 w-full items-center border-b-2 px-3 text-sm whitespace-nowrap lg:rounded-md lg:border-b-0 lg:border-l-4 ${
-    active ? "border-accent font-semibold text-ink lg:bg-accent-soft" : "border-transparent font-medium text-ink-muted hover:text-ink lg:font-normal lg:hover:bg-surface-muted"
+  `inline-flex min-h-10 w-full items-center border-b-2 px-3 text-sm whitespace-nowrap lg:rounded-md lg:border-b-0 lg:border-l-2 transition-colors ${
+    active ? "border-accent font-semibold text-ink lg:bg-accent-soft lg:text-accent" : "border-transparent font-medium text-ink-muted hover:text-ink lg:font-normal lg:hover:bg-surface-muted"
   }`;
 
 /** Remember the open groups in a cookie, for every engagement in this browser. A browser that refuses it still opens and closes the groups for this visit. */
@@ -42,13 +42,13 @@ export function EngagementSections({ id, current, initialOpen }: { id: string; c
           const list = `nav-list-${g.id}`;
           return (
             <div key={g.id}>
-              <h2 id={heading} className="text-base font-semibold text-ink">
+              <h2 id={heading} className="text-sm font-semibold text-ink">
                 <button
                   type="button"
                   aria-expanded={isOpen}
                   aria-controls={list}
                   onClick={() => toggle(g.id)}
-                  className="flex min-h-10 w-full items-center justify-between gap-2 rounded-md px-3 text-left text-base font-semibold text-ink hover:bg-accent-soft hover:text-accent"
+                  className="flex min-h-10 w-full items-center justify-between gap-2 rounded-md px-3 text-left text-sm font-semibold text-ink transition-colors hover:bg-surface-muted hover:text-accent"
                 >
                   {g.title}
                   <ChevronDownIcon width={16} height={16} className={`shrink-0 transition-transform motion-reduce:transition-none ${isOpen ? "" : "-rotate-90"}`} />

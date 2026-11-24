@@ -27,7 +27,7 @@ export function TwoLineRow({ line1, detail, quick, openLabel, label, accessibleN
             aria-expanded={open}
             aria-label={accessibleName}
             onClick={() => setOpen((o) => !o)}
-            className="inline-flex min-h-8 items-center gap-1 rounded-md border border-border-strong bg-surface px-3 text-sm font-medium text-accent hover:bg-accent-soft"
+            className="inline-flex min-h-8 items-center gap-1 rounded-md border border-border-input bg-surface px-3 text-sm font-medium text-accent hover:bg-accent-soft"
           >
             {label}
             <ChevronDownIcon className={`transition-transform ${open ? "rotate-180" : ""}`} />

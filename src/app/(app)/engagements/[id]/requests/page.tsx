@@ -93,7 +93,7 @@ export default async function RequestsPage({ params, searchParams }: { params: P
         }
         subtitle={heading.subtitle}
         actions={
-          <a href={`${base}/export`} className="inline-flex min-h-10 items-center justify-center rounded-md border border-border-strong bg-surface px-4 text-sm font-medium whitespace-nowrap text-ink hover:bg-surface-muted">
+          <a href={`${base}/export`} className="inline-flex min-h-10 items-center justify-center rounded-md border border-border-input bg-surface px-4 text-sm font-medium whitespace-nowrap text-ink hover:bg-surface-muted">
             Download as Excel
           </a>
         }
@@ -184,7 +184,7 @@ export default async function RequestsPage({ params, searchParams }: { params: P
                         <Link
                           href={link(chip.key)}
                           aria-current={active ? "true" : undefined}
-                          className={`inline-flex min-h-10 items-center rounded-full border px-4 text-sm font-medium ${active ? "border-accent bg-accent text-surface" : "border-border-strong bg-surface text-ink hover:bg-surface-muted"}`}
+                          className={`inline-flex min-h-10 items-center rounded-full border px-4 text-sm font-medium ${active ? "border-accent bg-accent text-surface" : "border-border-input bg-surface text-ink hover:bg-surface-muted"}`}
                         >
                           {chip.label} {chip.n}
                         </Link>

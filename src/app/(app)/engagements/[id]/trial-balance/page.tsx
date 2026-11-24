@@ -17,8 +17,7 @@ import { MappingSelect, UploadForm } from "@/app/forms";
 import { Badge } from "@/ui/badge";
 import { Button, LinkButton, buttonClass } from "@/ui/button";
 import { Callout, EmptyState } from "@/ui/feedback";
-import { Input } from "@/ui/form";
-import { ArrowRightIcon } from "@/ui/icons";
+import { SearchField } from "@/ui/form";
 import { Card, PageHeader, Section, Stat } from "@/ui/layout";
 import { countMappings, isBalanced, mappingControls, mappingSentence, mappingState, parseQuery, parseShow, resultsText, viewMappings, type MappingShow } from "@/ui/mapping-view";
 import { Table, TCell, THead, TRow } from "@/ui/table";
@@ -92,28 +91,51 @@ export default async function TrialBalancePage({ params, searchParams }: { param
     const suggested = a.source === "rule" || a.source === "ai" || a.source === "assistant";
     const basis = a.source ? (state === "mapped" && suggested ? `${SOURCE_LABEL[a.source]}, accepted` : SOURCE_LABEL[a.source]) : null;
     const assistant = a.source === "assistant" && a.confidence !== null;
+    const basisText = basis ? (assistant && state === "to_check" ? `${basis}, ${BAND_LABEL[bandOf(a.confidence!)].toLowerCase()}` : basis) : null;
     return (
-      <div className="flex flex-col items-start gap-0.5">
+      <div className="flex min-w-0 flex-col items-start gap-1">
         {state === "to_map" ? <Badge tone="danger">To map</Badge> : state === "to_check" ? <Badge tone="warning">To check</Badge> : <Badge tone="success">Mapped</Badge>}
-        {state !== "to_map" && basis && <span className="text-sm whitespace-nowrap text-ink-muted">{assistant && state === "to_check" ? `${basis}, ${BAND_LABEL[bandOf(a.confidence!)].toLowerCase()}` : basis}</span>}
-        {assistant && a.reason && <span className="max-w-xs text-sm text-ink-muted">{a.reason}</span>}
-        {state === "to_check" && !locked && (
-          <form action={acceptMappingAction}>
-            <input type="hidden" name="engagementId" value={id} />
-            <input type="hidden" name="accountId" value={a.id} />
-            <button type="submit" className="mt-1 inline-flex min-h-10 items-center rounded-md border border-border-strong px-3 text-sm font-medium text-ink hover:bg-surface-muted">
-              Accept<span className="sr-only"> {a.code} {a.name}</span>
-            </button>
-          </form>
+        {state !== "to_map" && basisText && <span className="text-small text-ink-muted">{basisText}</span>}
+        {/* One line under the chip; the whole reason is still in the page for a screen reader and shows in full on hover. */}
+        {assistant && a.reason && (
+          <span className="block w-full max-w-60 truncate text-small text-ink-muted" title={a.reason}>
+            {a.reason}
+          </span>
         )}
       </div>
     );
   };
+  const acceptForm = (a: (typeof accounts)[number]) =>
+    mappingState(a) === "to_check" && !locked ? (
+      <form action={acceptMappingAction}>
+        <input type="hidden" name="engagementId" value={id} />
+        <input type="hidden" name="accountId" value={a.id} />
+        <Button variant="secondary" size="sm">
+          Accept<span className="sr-only"> {a.code} {a.name}</span>
+        </Button>
+      </form>
+    ) : null;
+  // The group control, with Accept beside it when the row has a suggestion to accept.
   const groupCell = (a: (typeof accounts)[number]) =>
     controls.selects ? (
-      <MappingSelect key={`${a.id}:${a.groupCode}`} engagementId={id} accountId={a.id} value={a.groupCode} groups={groups} label={`Group for ${a.code} ${a.name}`} />
+      <div className="flex items-center gap-2">
+        <div className="min-w-0 flex-1">
+          <MappingSelect key={`${a.id}:${a.groupCode}`} engagementId={id} accountId={a.id} value={a.groupCode} groups={groups} label={`Group for ${a.code} ${a.name}`} />
+        </div>
+        {acceptForm(a)}
+      </div>
     ) : (
       <span>{a.groupCode ? (GROUP_BY_CODE.get(a.groupCode)?.name ?? a.groupCode) : "Not mapped"}</span>
+    );
+  // The account: its name, with the code before it in muted type; when the code and the name are the same text it is shown once.
+  const accountLabel = (a: { code: string; name: string }) =>
+    a.code.trim().toLowerCase() === a.name.trim().toLowerCase() ? (
+      <span className="font-medium">{a.name}</span>
+    ) : (
+      <>
+        <span className="mr-2 font-normal text-ink-muted">{a.code}</span>
+        <span className="font-medium">{a.name}</span>
+      </>
     );
 
   const chips: { key: MappingShow; label: string; n: number }[] = [
@@ -166,10 +188,10 @@ export default async function TrialBalancePage({ params, searchParams }: { param
                 <Stat label="Accounts" value={counts.all} href={here("all", "")} />
               </li>
               <li>
-                <Stat label="To map" value={counts.toMap} href={here("unmapped", "")} />
+                <Stat label="To map" value={counts.toMap} href={here("unmapped", "")} attention={counts.toMap > 0 ? "warning" : undefined} />
               </li>
               <li>
-                <Stat label="To check" value={counts.toCheck} href={here("review", "")} />
+                <Stat label="To check" value={counts.toCheck} href={here("review", "")} attention={counts.toCheck > 0 ? "warning" : undefined} />
               </li>
               <li>
                 <Stat
@@ -180,15 +202,15 @@ export default async function TrialBalancePage({ params, searchParams }: { param
             </ul>
 
             {!locked && counts.toMap > 0 ? (
-              <Card title={`Map ${count(counts.toMap, "account")}`} description="Each account needs a lead sheet group before the lead sheets and statements are right.">
+              <Card raised title={`Map ${count(counts.toMap, "account")}`} description="Each account needs a lead sheet group before the lead sheets and statements are right.">
                 <LinkButton href={here("unmapped", "")} variant="primary">
                   Show the accounts to map
-                  <ArrowRightIcon />
                 </LinkButton>
               </Card>
             ) : (
               controls.accept && (
                 <Card
+                  raised
                   title={`Check ${count(counts.toCheck, "suggested mapping")}`}
                   description="Accepting confirms the suggested group for each account. You can still change any of them afterwards."
                 >
@@ -221,8 +243,8 @@ export default async function TrialBalancePage({ params, searchParams }: { param
                 <ul className="divide-y divide-border rounded-lg border border-border bg-surface shadow-card">
                   {unplaced.map((u) => (
                     <li key={u.code} className="px-4 py-2.5">
-                      <p className="font-semibold">
-                        <span className="font-mono text-sm font-normal text-ink-muted">{u.code}</span> {u.name}
+                      <p>
+                        {accountLabel(u)}
                       </p>
                       <p className="text-sm text-ink-muted">{u.reason}</p>
                     </li>
@@ -242,7 +264,7 @@ export default async function TrialBalancePage({ params, searchParams }: { param
                           <Link
                             href={here(c.key, q)}
                             aria-current={active ? "true" : undefined}
-                            className={`inline-flex min-h-10 items-center rounded-full border px-4 text-sm font-medium ${active ? "border-accent bg-accent text-surface" : "border-border-strong bg-surface text-ink hover:bg-surface-muted"}`}
+                            className={`inline-flex min-h-10 items-center rounded-full border px-4 text-sm font-medium ${active ? "border-accent bg-accent text-surface" : "border-border-input bg-surface text-ink hover:bg-surface-muted"}`}
                           >
                             {c.label} {c.n}
                           </Link>
@@ -251,15 +273,9 @@ export default async function TrialBalancePage({ params, searchParams }: { param
                     })}
                   </ul>
                 </nav>
-                <form method="get" action={`${base}/trial-balance`} role="search" className="flex items-end gap-2">
+                <form method="get" action={`${base}/trial-balance`} role="search">
                   {show !== "all" && <input type="hidden" name="show" value={show} />}
-                  <div>
-                    <label htmlFor="account-search" className="mb-1 block text-sm font-medium text-ink">
-                      Search accounts
-                    </label>
-                    <Input id="account-search" name="q" type="search" defaultValue={q} placeholder="Code or name" className="w-56" />
-                  </div>
-                  <Button variant="secondary">Search</Button>
+                  <SearchField id="account-search" label="Search accounts" defaultValue={q} placeholder="Code or name" className="w-full sm:w-72" />
                 </form>
               </div>
               <p role="status" className="mt-3 text-sm text-ink-muted">
@@ -299,7 +315,7 @@ export default async function TrialBalancePage({ params, searchParams }: { param
                         {view.rows.map((a) => (
                           <TRow key={a.id}>
                             <TCell header="row">
-                              <span className="font-mono text-sm font-normal text-ink-muted">{a.code}</span> <span className="font-semibold">{a.name}</span>
+                              {accountLabel(a)}
                             </TCell>
                             <TCell numeric>{formatAmount(a.closingMinor)}</TCell>
                             <TCell numeric>{a.priorMinor === null ? "" : formatAmount(a.priorMinor)}</TCell>
@@ -315,8 +331,8 @@ export default async function TrialBalancePage({ params, searchParams }: { param
                     {view.rows.map((a) => (
                       <li key={a.id} className="px-4 py-2.5">
                         <div className="flex items-start justify-between gap-3">
-                          <p className="min-w-0 font-semibold">
-                            <span className="font-mono text-sm font-normal text-ink-muted">{a.code}</span> {a.name}
+                          <p className="min-w-0">
+                            {accountLabel(a)}
                           </p>
                           <p className="shrink-0 text-right tabular-nums">
                             <span className="sr-only">Closing </span>
@@ -342,7 +358,6 @@ export default async function TrialBalancePage({ params, searchParams }: { param
               <p className="mb-3">{ties ? <Badge tone="success">Agrees to the trial balance</Badge> : <Badge tone="danger">Does not agree</Badge>}</p>
               <LinkButton href={`${base}/lead-sheets`}>
                 Open the lead sheets
-                <ArrowRightIcon />
               </LinkButton>
             </Card>
 

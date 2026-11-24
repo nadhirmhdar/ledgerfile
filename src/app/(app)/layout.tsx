@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getSession } from "@/server/session";
 import { signOutAction } from "@/app/auth-actions";
 import { Button } from "@/ui/button";
+import { Wordmark } from "@/ui/auth-shell";
 import { ChevronDownIcon, UserIcon } from "@/ui/icons";
 import { roleLabel } from "@/ui/team-view";
 import { TopNav } from "@/ui/top-nav";
@@ -21,15 +22,15 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       >
         Skip to main content
       </a>
-      <header className="border-b-2 border-ink bg-surface">
-        <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-2 px-4 sm:gap-3 sm:px-6">
-          <div className="flex min-w-0 items-center gap-2 sm:gap-4">
-            <Link href="/" className="py-3 text-lg font-bold tracking-tight text-accent">
-              LedgerFile
+      <header className="border-b border-border bg-surface shadow-card">
+        <div className="mx-auto flex w-full max-w-7xl items-stretch justify-between gap-2 px-4 sm:gap-3 sm:px-6">
+          <div className="flex min-w-0 items-stretch gap-2 sm:gap-8">
+            <Link href="/" aria-label="LedgerFile, engagements" className="flex items-center rounded-sm">
+              <Wordmark />
             </Link>
             <TopNav admin={canManageFirm(session.role)} />
           </div>
-          <details className="group relative">
+          <details className="group relative self-center">
             <summary aria-label={session.name} className="inline-flex min-h-10 min-w-10 shrink-0 cursor-pointer justify-center list-none items-center gap-2 rounded-md px-2 text-sm font-medium text-ink hover:bg-surface-muted [&::-webkit-details-marker]:hidden">
               <UserIcon />
               <span className="hidden max-w-40 truncate sm:inline">{session.name}</span>

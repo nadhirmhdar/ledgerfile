@@ -96,7 +96,7 @@ export default async function FirmPage() {
               <div className="flex flex-wrap items-end gap-3">
                 <label className="flex flex-col gap-1 text-sm font-medium">
                   {view.hasLogo ? "Replace the logo" : "Upload a logo"}
-                  <input type="file" name="logo" required accept="image/png,image/jpeg,.png,.jpg,.jpeg" className="text-sm font-normal text-ink file:mr-3 file:min-h-10 file:cursor-pointer file:rounded-md file:border file:border-border-strong file:bg-surface file:px-4 file:text-sm file:font-medium file:text-ink hover:file:bg-surface-muted" />
+                  <input type="file" name="logo" required accept="image/png,image/jpeg,.png,.jpg,.jpeg" className="text-sm font-normal text-ink file:mr-3 file:min-h-10 file:cursor-pointer file:rounded-md file:border file:border-border-input file:bg-surface file:px-4 file:text-sm file:font-medium file:text-ink hover:file:bg-surface-muted" />
                 </label>
                 <Button variant="primary">Upload</Button>
               </div>

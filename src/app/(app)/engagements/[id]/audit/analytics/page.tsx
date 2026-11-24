@@ -144,7 +144,7 @@ export default async function AnalyticsPage({ params, searchParams }: { params: 
                         <Link
                           href={showHref(page, c.show)}
                           aria-current={active ? "true" : undefined}
-                          className={`inline-flex min-h-10 items-center rounded-full border px-4 text-sm font-medium ${active ? "border-accent bg-accent text-surface" : "border-border-strong bg-surface text-ink hover:bg-surface-muted"}`}
+                          className={`inline-flex min-h-10 items-center rounded-full border px-4 text-sm font-medium ${active ? "border-accent bg-accent text-surface" : "border-border-input bg-surface text-ink hover:bg-surface-muted"}`}
                         >
                           {c.label} {c.count}
                         </Link>

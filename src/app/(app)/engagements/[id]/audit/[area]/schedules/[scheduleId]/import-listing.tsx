@@ -61,7 +61,7 @@ export function ImportListing({ scheduleId, balanceMinor, existingLines, brought
           <Textarea name="pasted" rows={4} placeholder={"Description\tAmount\nSupplier A\t1,250.00"} />
         </Field>
         <Field label="Or choose a file">
-          <input type="file" name="file" accept=".xlsx,.csv" className="block w-full text-sm text-ink file:mr-3 file:min-h-10 file:cursor-pointer file:rounded-md file:border file:border-border-strong file:bg-surface file:px-4 file:text-sm file:font-medium file:text-ink hover:file:bg-surface-muted" />
+          <input type="file" name="file" accept=".xlsx,.csv" className="block w-full text-sm text-ink file:mr-3 file:min-h-10 file:cursor-pointer file:rounded-md file:border file:border-border-input file:bg-surface file:px-4 file:text-sm file:font-medium file:text-ink hover:file:bg-surface-muted" />
         </Field>
         <Button type="button" variant="secondary" disabled={pending} onClick={read}>
           {pending && !preview ? "Reading…" : "Read the listing"}

@@ -275,7 +275,7 @@ export default async function ConfirmationsPage({ params, searchParams }: { para
                             <Link
                               href={link(chip.key)}
                               aria-current={active ? "true" : undefined}
-                              className={`inline-flex min-h-10 items-center rounded-full border px-4 text-sm font-medium ${active ? "border-accent bg-accent text-surface" : "border-border-strong bg-surface text-ink hover:bg-surface-muted"}`}
+                              className={`inline-flex min-h-10 items-center rounded-full border px-4 text-sm font-medium ${active ? "border-accent bg-accent text-surface" : "border-border-input bg-surface text-ink hover:bg-surface-muted"}`}
                             >
                               {chip.label} {chip.n}
                             </Link>

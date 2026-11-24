@@ -14,15 +14,16 @@ export function TopNav({ admin = false }: { admin?: boolean }) {
   const pathname = usePathname();
   const items = admin ? [...ITEMS, { href: "/firm", label: "Firm", match: (p: string) => p.startsWith("/firm") }] : ITEMS;
   return (
-    <nav aria-label="Main" className="flex items-center sm:gap-1">
+    <nav aria-label="Main" className="flex items-stretch self-stretch sm:gap-1">
       {items.map((item) => {
         const current = item.match(pathname);
+        // The active link's underline sits on the bar's own bottom edge (-mb-px over the hairline).
         return (
           <Link
             key={item.href}
             href={item.href}
             aria-current={current ? "page" : undefined}
-            className={`inline-flex min-h-10 items-center border-b-2 px-2 text-sm sm:px-3 font-medium ${
+            className={`-mb-px inline-flex min-h-14 items-center border-b-2 px-1.5 text-sm font-medium transition-colors sm:px-3 ${
               current ? "border-accent text-ink" : "border-transparent text-ink-muted hover:text-ink"
             }`}
           >

@@ -220,12 +220,12 @@ export function LinesTable({
                                   aria-label={`${t.meaning} (line ${i + 1})`}
                                   aria-pressed={on}
                                   onClick={() => toggleTick(r, t.code)}
-                                  className={`inline-flex min-h-8 min-w-8 items-center justify-center rounded-md border px-1.5 text-sm ${on ? "border-accent bg-accent font-bold text-surface underline decoration-2 underline-offset-2" : "border-border-strong bg-surface text-ink-muted hover:bg-surface-muted"}`}
+                                  className={`inline-flex min-h-8 min-w-8 items-center justify-center rounded-md border px-1.5 text-sm ${on ? "border-accent bg-accent font-bold text-surface underline decoration-2 underline-offset-2" : "border-border-input bg-surface text-ink-muted hover:bg-surface-muted"}`}
                                 >
                                   {t.symbol}
                                 </button>
                               ) : on ? (
-                                <span key={t.code} role="img" title={t.meaning} aria-label={t.meaning} className="inline-flex min-h-7 min-w-7 items-center justify-center rounded-md border border-border-strong bg-surface px-1.5 text-sm font-medium text-ink">
+                                <span key={t.code} role="img" title={t.meaning} aria-label={t.meaning} className="inline-flex min-h-7 min-w-7 items-center justify-center rounded-md border border-border-input bg-surface px-1.5 text-sm font-medium text-ink">
                                   {t.symbol}
                                 </span>
                               ) : null;

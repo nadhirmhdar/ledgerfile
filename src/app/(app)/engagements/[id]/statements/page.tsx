@@ -28,7 +28,7 @@ export const dynamic = "force-dynamic";
 
 const num = "px-2 py-1.5 sm:px-4 text-right tabular-nums whitespace-nowrap";
 const th = "px-2 py-2 font-medium sm:px-4";
-const ruleFor = (kind: string) => (kind === "total" ? "border-t border-b-2 border-ink" : kind === "subtotal" ? "border-t border-border-strong" : "");
+const ruleFor = (kind: string) => (kind === "total" ? "border-t border-b-2 border-ink" : kind === "subtotal" ? "border-t border-border-input" : "");
 const chip = "inline-flex min-h-10 items-center rounded-full border px-4 text-sm font-medium";
 
 /** Text with its [bracketed placeholders] marked, so the ones still to be filled in stand out. The words are unchanged. */
@@ -255,7 +255,7 @@ export default async function StatementsPage({ params, searchParams }: { params:
                   <Link
                     href={`${base}/statements`}
                     aria-current={whole ? undefined : "true"}
-                    className={`${chip} ${whole ? "border-border-strong bg-surface text-ink hover:bg-surface-muted" : "border-accent bg-accent text-surface"}`}
+                    className={`${chip} ${whole ? "border-border-input bg-surface text-ink hover:bg-surface-muted" : "border-accent bg-accent text-surface"}`}
                   >
                     Exact
                   </Link>
@@ -264,7 +264,7 @@ export default async function StatementsPage({ params, searchParams }: { params:
                   <Link
                     href={`${base}/statements?units=whole`}
                     aria-current={whole ? "true" : undefined}
-                    className={`${chip} ${whole ? "border-accent bg-accent text-surface" : "border-border-strong bg-surface text-ink hover:bg-surface-muted"}`}
+                    className={`${chip} ${whole ? "border-accent bg-accent text-surface" : "border-border-input bg-surface text-ink hover:bg-surface-muted"}`}
                   >
                     Whole units
                   </Link>
@@ -318,7 +318,7 @@ export default async function StatementsPage({ params, searchParams }: { params:
             <li className="font-medium text-ink-muted">Jump to</li>
             {jumps.map((j) => (
               <li key={j.href}>
-                <a href={j.href} className="inline-flex min-h-8 items-center rounded-full border border-border-strong bg-surface px-3 font-medium text-accent hover:bg-accent-soft">
+                <a href={j.href} className="inline-flex min-h-8 items-center rounded-full border border-border-input bg-surface px-3 font-medium text-accent hover:bg-accent-soft">
                   {j.label}
                 </a>
               </li>

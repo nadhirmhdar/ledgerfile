@@ -87,7 +87,7 @@ export default async function PapersPage({ params, searchParams }: { params: Pro
                   <FileInput
                     maxBytes={limit.bytes}
                     accept={papers.ALLOWED_EXTENSIONS.map((e) => `.${e}`).join(",")}
-                    className="text-sm font-normal text-ink file:mr-3 file:min-h-10 file:cursor-pointer file:rounded-md file:border file:border-border-strong file:bg-surface file:px-4 file:text-sm file:font-medium file:text-ink hover:file:bg-surface-muted"
+                    className="text-sm font-normal text-ink file:mr-3 file:min-h-10 file:cursor-pointer file:rounded-md file:border file:border-border-input file:bg-surface file:px-4 file:text-sm file:font-medium file:text-ink hover:file:bg-surface-muted"
                   />
                 </label>
                 <label className={fieldLabel}>
@@ -130,7 +130,7 @@ export default async function PapersPage({ params, searchParams }: { params: Pro
                         <Link
                           href={link(c.key)}
                           aria-current={active ? "true" : undefined}
-                          className={`inline-flex min-h-10 items-center rounded-full border px-4 text-sm font-medium ${active ? "border-accent bg-accent text-surface" : "border-border-strong bg-surface text-ink hover:bg-surface-muted"}`}
+                          className={`inline-flex min-h-10 items-center rounded-full border px-4 text-sm font-medium ${active ? "border-accent bg-accent text-surface" : "border-border-input bg-surface text-ink hover:bg-surface-muted"}`}
                         >
                           {c.label} {c.n}
                         </Link>
@@ -180,7 +180,7 @@ export default async function PapersPage({ params, searchParams }: { params: Pro
                             {w.fileName}
                           </a>
                           <span className="rounded-full bg-surface-muted px-2.5 py-0.5 text-sm text-ink-muted">{w.targetLabel}</span>
-                          {w.reference && <span className="rounded-full border border-border-strong px-2.5 py-0.5 text-sm font-medium tabular-nums">{w.reference}</span>}
+                          {w.reference && <span className="rounded-full border border-border-input px-2.5 py-0.5 text-sm font-medium tabular-nums">{w.reference}</span>}
                         </>
                       }
                       detail={[w.description, fileSize(w.sizeBytes), `Uploaded by ${w.uploadedByName}, ${w.uploadedAt}`, filingText(w)].filter(Boolean).join(" · ")}

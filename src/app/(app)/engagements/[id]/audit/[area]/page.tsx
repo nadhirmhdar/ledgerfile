@@ -242,7 +242,7 @@ export default async function ProgrammePage({ params, searchParams }: { params: 
                           <Link
                             href={here(c.key)}
                             aria-current={active ? "true" : undefined}
-                            className={`inline-flex min-h-10 items-center rounded-full border px-4 text-sm font-medium ${active ? "border-accent bg-accent text-surface" : "border-border-strong bg-surface text-ink hover:bg-surface-muted"}`}
+                            className={`inline-flex min-h-10 items-center rounded-full border px-4 text-sm font-medium ${active ? "border-accent bg-accent text-surface" : "border-border-input bg-surface text-ink hover:bg-surface-muted"}`}
                           >
                             {c.label} {c.n}
                           </Link>
@@ -362,7 +362,7 @@ export default async function ProgrammePage({ params, searchParams }: { params: 
                                     maxBytes={limit.bytes}
                                     label={`Evidence file for ${p.templateId}`}
                                     accept={papers.ALLOWED_EXTENSIONS.map((e) => `.${e}`).join(",")}
-                                    className="text-sm text-ink file:mr-3 file:min-h-8 file:cursor-pointer file:rounded-md file:border file:border-border-strong file:bg-surface file:px-3 file:text-sm file:font-medium file:text-ink hover:file:bg-surface-muted"
+                                    className="text-sm text-ink file:mr-3 file:min-h-8 file:cursor-pointer file:rounded-md file:border file:border-border-input file:bg-surface file:px-3 file:text-sm file:font-medium file:text-ink hover:file:bg-surface-muted"
                                   />
                                   <Button variant="secondary" size="sm">
                                     Attach evidence

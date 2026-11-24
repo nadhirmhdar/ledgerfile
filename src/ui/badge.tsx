@@ -21,10 +21,13 @@ const ICON: Record<Tone, ReactNode> = {
   slate: <LockIcon />,
 };
 
-/** A soft-filled pill: a small icon and a sentence-case word. The word carries the meaning; the icon and fill only add to it. */
+/**
+ * A chip: one size (12 px, weight 500, so it never competes with a title), a small icon and a sentence-case word. The word carries the meaning; the
+ * icon and the tint only add to it.
+ */
 export function Badge({ tone = "neutral", children, className = "" }: { tone?: Tone; children: ReactNode; className?: string }) {
   return (
-    <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-sm font-medium whitespace-nowrap [&>svg]:size-3.5 ${PILL[tone]} ${className}`}>
+    <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium whitespace-nowrap [&>svg]:size-3 ${PILL[tone]} ${className}`}>
       {ICON[tone]}
       {children}
     </span>

@@ -85,7 +85,7 @@ function Question({ q, id, canAnswer }: { q: QuestionView; id: string; canAnswer
               <Field label="Reason for not using the suggestion" hint="Required when the answer differs from what the app suggested.">
                 <Textarea name="reason" maxLength={2000} rows={2} />
               </Field>
-              <Button variant="primary">Save the answer</Button>
+              <Button variant="secondary" size="sm">Save the answer</Button>
             </div>
           </ActionForm>
         </Disclosure>
@@ -94,7 +94,7 @@ function Question({ q, id, canAnswer }: { q: QuestionView; id: string; canAnswer
           <ActionForm action={savePlanningAnswerAction} fields={fields} className="mt-3">
             <div className="max-w-2xl space-y-3">
               <Field label={q.stored ? "Change the answer" : "Answer"}>{valueControl(q, q.value, q.label)}</Field>
-              <Button variant="primary">{q.stored ? "Save the change" : "Save the answer"}</Button>
+              <Button variant="secondary" size="sm">{q.stored ? "Save the change" : "Save the answer"}</Button>
             </div>
           </ActionForm>
         )

@@ -59,7 +59,7 @@ export function ImportClients() {
             type="file"
             name="file"
             accept=".xlsx,.csv"
-            className="text-sm font-normal text-ink file:mr-3 file:min-h-10 file:cursor-pointer file:rounded-md file:border file:border-border-strong file:bg-surface file:px-4 file:text-sm file:font-medium file:text-ink hover:file:bg-surface-muted"
+            className="text-sm font-normal text-ink file:mr-3 file:min-h-10 file:cursor-pointer file:rounded-md file:border file:border-border-input file:bg-surface file:px-4 file:text-sm file:font-medium file:text-ink hover:file:bg-surface-muted"
           />
         </label>
         <Button type="button" variant="primary" onClick={read} disabled={pending}>

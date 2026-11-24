@@ -4,9 +4,9 @@ import { getSession } from "@/server/session";
 import { listClientRows } from "@/server/clients";
 import { canCreateClient } from "@/domain/permissions";
 import { yearEndText } from "@/domain/client-details";
-import { Button, LinkButton } from "@/ui/button";
+import { LinkButton } from "@/ui/button";
 import { EmptyState } from "@/ui/feedback";
-import { Input } from "@/ui/form";
+import { SearchField } from "@/ui/form";
 import { PageHeader } from "@/ui/layout";
 import { Table, TCell, THead, TRow } from "@/ui/table";
 import { count } from "@/ui/text";
@@ -34,11 +34,7 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
         }
       />
       <form method="get" action="/clients" role="search" className="mt-6 flex flex-wrap items-end gap-3">
-        <label className="flex min-w-0 flex-1 flex-col gap-1 text-sm font-medium sm:max-w-sm">
-          Search clients
-          <Input name="q" defaultValue={q} placeholder="Name or licence number" maxLength={100} />
-        </label>
-        <Button variant="secondary">Search</Button>
+        <SearchField id="client-search" label="Search clients" defaultValue={q} placeholder="Name or licence number" className="min-w-0 flex-1 sm:max-w-sm" />
         {q.trim() && (
           <Link href="/clients" className="text-sm text-accent hover:underline">
             Show every client
