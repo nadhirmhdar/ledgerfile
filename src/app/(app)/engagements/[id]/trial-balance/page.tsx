@@ -6,9 +6,12 @@ import * as repo from "@/server/repo";
 import { buildLeadSheets } from "@/domain/leadsheet";
 import { GROUPS, GROUP_BY_CODE } from "@/domain/groups";
 import { formatAmount } from "@/domain/money";
-import { acceptHighConfidenceAction, acceptMappingAction, approveAllAction, suggestAgainAction } from "@/app/actions";
+import { acceptHighConfidenceAction, acceptMappingAction, approveAllAction, forgetTbLayoutAction, suggestAgainAction } from "@/app/actions";
 import { ActionForm } from "@/app/action-form";
 import { couldNotPlace } from "@/server/mapping-assistant";
+import * as tbLayout from "@/server/tb-layout";
+import { SOURCE_SENTENCE } from "@/domain/tb-layout";
+import { canReview } from "@/domain/signoff";
 import { bandOf, HIGH } from "@/domain/mapping-assistant";
 import { MappingSelect, UploadForm } from "@/app/forms";
 import { Badge } from "@/ui/badge";
@@ -44,13 +47,28 @@ export default async function TrialBalancePage({ params, searchParams }: { param
   const q = parseQuery(sp.q);
 
   const session = await getSession();
-  const { engagement, accounts, unplaced } = await withFirm(await getDb(), session.firmId, async (tx) => {
+  const { engagement, accounts, unplaced, remembered, usedSource } = await withFirm(await getDb(), session.firmId, async (tx) => {
     const engagement = await repo.getEngagement(tx, id);
-    return { engagement, accounts: await repo.listAccounts(tx, id), unplaced: engagement?.status === "open" ? await couldNotPlace(tx, session, id) : [] };
+    return { engagement, accounts: await repo.listAccounts(tx, id), remembered: await tbLayout.getRemembered(tx, id), usedSource: await tbLayout.latestImportSource(tx, id), unplaced: engagement?.status === "open" ? await couldNotPlace(tx, session, id) : [] };
   });
   if (!engagement) notFound();
 
   const locked = engagement.status !== "open";
+  // What is remembered for this client, with the way to forget it (a reviewer or partner may).
+  const rememberedNote =
+    remembered?.layout && !locked ? (
+      <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-ink-muted">
+        <span>Columns are remembered for this client{remembered.updatedAt ? ` (saved ${remembered.updatedAt})` : ""}.</span>
+        {canReview(session.role) && (
+          <form action={forgetTbLayoutAction}>
+            <input type="hidden" name="engagementId" value={id} />
+            <Button variant="secondary" size="sm">
+              Forget the remembered columns
+            </Button>
+          </form>
+        )}
+      </div>
+    ) : null;
   const highPending = accounts.filter((a) => a.source === "assistant" && !a.approved && (a.confidence ?? 0) >= HIGH).length;
   const counts = countMappings(accounts);
   const controls = mappingControls({ locked, accounts: accounts.length, toCheck: counts.toCheck });
@@ -119,6 +137,12 @@ export default async function TrialBalancePage({ params, searchParams }: { param
             </span>
             <span aria-hidden="true">·</span>
             <span>{engagement.priorEngagementId ? "Mappings carry forward from the prior year" : "No prior-year engagement linked"}</span>
+            {usedSource && (
+              <>
+                <span aria-hidden="true">·</span>
+                <span>{SOURCE_SENTENCE[usedSource]}</span>
+              </>
+            )}
           </>
         }
         subtitle={mappingSentence(counts)}
@@ -130,6 +154,7 @@ export default async function TrialBalancePage({ params, searchParams }: { param
           controls.importFirst ? (
             <Card title="Import the trial balance" description="Start here. The mapping, lead sheets and statements are all built from it.">
               <UploadForm engagementId={id} hasAccounts={false} />
+              {rememberedNote}
             </Card>
           ) : (
             <EmptyState title="No trial balance was imported" description="This engagement was locked before a trial balance was imported." />
@@ -329,6 +354,7 @@ export default async function TrialBalancePage({ params, searchParams }: { param
                     Replacing re-reads every balance and removes all lead-sheet sign-offs. Mappings are kept for account codes that stay the same. It cannot be done while there are journal entries.
                   </Callout>
                   <UploadForm engagementId={id} hasAccounts />
+                  {rememberedNote}
                 </div>
               </details>
             )}

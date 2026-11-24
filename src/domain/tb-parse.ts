@@ -19,7 +19,7 @@ export interface TbParseResult {
   layout: Record<string, number>;
 }
 
-type Cell = unknown;
+export type Cell = unknown;
 
 const HEADER_PATTERNS: Record<string, RegExp> = {
   code: /^(a\/?c|acc(ount)?|gl|ledger)?\s*(code|no\.?|number|#)$|^code$/i,
@@ -30,11 +30,11 @@ const HEADER_PATTERNS: Record<string, RegExp> = {
   prior: /^(prior|previous|last|comparative)\s*(year|period)?(\s*balance)?$|^py(\s*balance)?$|^opening(\s*balance)?$/i,
 };
 
-function text(cell: Cell): string {
+export function text(cell: Cell): string {
   return cell === null || cell === undefined ? "" : String(cell).trim();
 }
 
-function detectHeader(rows: Cell[][]): { index: number; layout: Record<string, number> } | null {
+export function detectHeader(rows: Cell[][]): { index: number; layout: Record<string, number> } | null {
   // The header is the first of the opening rows that names an account column and an amount column.
   for (let i = 0; i < Math.min(rows.length, 20); i++) {
     const layout: Record<string, number> = {};
@@ -63,12 +63,18 @@ export function parseTrialBalance(rows: Cell[][]): TbParseResult {
 
   const header = detectHeader(rows);
   if (!header) {
-    result.errors.push(
-      "Could not find a header row. The sheet needs a column for account code or name, and either Debit and Credit columns or a Balance column.",
-    );
+    result.errors.push(NO_HEADER);
     return result;
   }
-  const { layout } = header;
+  return parseWithHeader(rows, header.index, header.layout);
+}
+
+export const NO_HEADER = "Could not find a header row. The sheet needs a column for account code or name, and either Debit and Credit columns or a Balance column.";
+
+/** Read the accounts below a heading row, given which column holds what (0-based columns and row). Used for detected, remembered and chosen layouts alike. */
+export function parseWithHeader(rows: Cell[][], headerIndex: number, layout: Record<string, number>): TbParseResult {
+  const result: TbParseResult = { accounts: [], errors: [], warnings: [], differenceMinor: 0, balanced: false, layout: {} };
+  const header = { index: headerIndex };
   result.layout = layout;
   const seen = new Map<string, number>();
 
