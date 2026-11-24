@@ -10,7 +10,7 @@ import { buttonClass, Button } from "@/ui/button";
 import { ctl, fieldLabel } from "@/ui/controls";
 import { Callout, EmptyState } from "@/ui/feedback";
 import { chipCounts, indexResults, indexSentence, parseIndexSearch, sectionOpen, sectionSummary, viewIndex } from "@/ui/index-view";
-import { PageHeader, Stat } from "@/ui/layout";
+import { PageHeader, Stat, EngagementFacts } from "@/ui/layout";
 import type { Status as UiStatus } from "@/ui/status";
 import { SummaryChevron, summaryRow } from "@/ui/summary-cue";
 import { Table, TCell, THead, TRow } from "@/ui/table";
@@ -107,15 +107,7 @@ export default async function IndexPage({ params, searchParams }: { params: Prom
       <PageHeader
         breadcrumb={[{ label: "All engagements", href: "/" }]}
         title="Working paper index"
-        meta={
-          <>
-            <span>{engagement.clientName}</span>
-            <span aria-hidden="true">·</span>
-            <span>
-              {engagement.periodStart} to {engagement.periodEnd}
-            </span>
-          </>
-        }
+        meta={<EngagementFacts client={engagement.clientName} periodStart={engagement.periodStart} periodEnd={engagement.periodEnd} />}
         subtitle={indexSentence(o)}
         actions={
           <a href={`${base}/export`} className={buttonClass("secondary")}>
@@ -170,7 +162,7 @@ export default async function IndexPage({ params, searchParams }: { params: Prom
                         <Link
                           href={link(c.key)}
                           aria-current={active ? "true" : undefined}
-                          className={`inline-flex min-h-10 items-center rounded-full border px-4 text-sm font-medium ${active ? "border-accent bg-accent text-surface" : "border-border-strong bg-surface text-ink hover:bg-surface-muted"}`}
+                          className={`inline-flex min-h-10 items-center rounded-full border px-4 text-sm font-medium ${active ? "border-accent bg-accent text-surface" : "border-border-input bg-surface text-ink hover:bg-surface-muted"}`}
                         >
                           {c.label} {chips[c.key]}
                         </Link>

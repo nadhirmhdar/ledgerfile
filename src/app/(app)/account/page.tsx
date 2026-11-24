@@ -5,7 +5,7 @@ import { changePasswordAction } from "@/app/auth-actions";
 import { Button } from "@/ui/button";
 import { Callout } from "@/ui/feedback";
 import { Field, Input } from "@/ui/form";
-import { Card, PageHeader, Section } from "@/ui/layout";
+import { Card, Fact, PageHeader, Section } from "@/ui/layout";
 import { roleLabel, roleSummary } from "@/ui/team-view";
 
 export const dynamic = "force-dynamic";
@@ -20,7 +20,7 @@ export default async function AccountPage() {
   ];
   return (
     <div className="py-8 text-ink">
-      <PageHeader title="Account" meta={<span>{session.firmName}</span>} />
+      <PageHeader title="Account" meta={<Fact label="Firm">{session.firmName}</Fact>} />
 
       <div className="mt-6 max-w-xl space-y-8">
         <Card title="Your details">

@@ -7,7 +7,7 @@ import { canCreateClient } from "@/domain/permissions";
 import { DETAIL_LABEL, yearEndText } from "@/domain/client-details";
 import { ClientEditForm } from "@/app/client-edit-form";
 import { Callout } from "@/ui/feedback";
-import { Card, PageHeader } from "@/ui/layout";
+import { Card, Fact, PageHeader } from "@/ui/layout";
 import { count } from "@/ui/text";
 
 export const dynamic = "force-dynamic";
@@ -30,7 +30,7 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
   ];
   return (
     <div className="py-8 text-ink">
-      <PageHeader breadcrumb={[{ label: "Clients", href: "/clients" }]} title={client.name} meta={<span>{client.framework}</span>} subtitle={`${count(client.engagements, "engagement")}.`} />
+      <PageHeader breadcrumb={[{ label: "Clients", href: "/clients" }]} title={client.name} meta={<Fact label="Framework">{client.framework}</Fact>} subtitle={`${count(client.engagements, "engagement")}.`} />
       <div className="mt-6 max-w-3xl space-y-8">
         {!mayEdit && <Callout variant="info">Only a partner or the administrator can change a client&apos;s details. They are shown as saved.</Callout>}
         {mayEdit ? (

@@ -15,7 +15,7 @@ import { Button } from "@/ui/button";
 import { Disclosure } from "@/ui/controls";
 import { Callout } from "@/ui/feedback";
 import { Field, Select, Textarea } from "@/ui/form";
-import { PageHeader, Section, Stat } from "@/ui/layout";
+import { PageHeader, Section, Stat, EngagementFacts } from "@/ui/layout";
 import { count } from "@/ui/text";
 import { EngagementNav } from "../../nav";
 
@@ -85,7 +85,7 @@ function Question({ q, id, canAnswer }: { q: QuestionView; id: string; canAnswer
               <Field label="Reason for not using the suggestion" hint="Required when the answer differs from what the app suggested.">
                 <Textarea name="reason" maxLength={2000} rows={2} />
               </Field>
-              <Button variant="primary">Save the answer</Button>
+              <Button variant="secondary" size="sm">Save the answer</Button>
             </div>
           </ActionForm>
         </Disclosure>
@@ -94,7 +94,7 @@ function Question({ q, id, canAnswer }: { q: QuestionView; id: string; canAnswer
           <ActionForm action={savePlanningAnswerAction} fields={fields} className="mt-3">
             <div className="max-w-2xl space-y-3">
               <Field label={q.stored ? "Change the answer" : "Answer"}>{valueControl(q, q.value, q.label)}</Field>
-              <Button variant="primary">{q.stored ? "Save the change" : "Save the answer"}</Button>
+              <Button variant="secondary" size="sm">{q.stored ? "Save the change" : "Save the answer"}</Button>
             </div>
           </ActionForm>
         )
@@ -142,18 +142,11 @@ export default async function QuestionnairePage({ params }: { params: Promise<{ 
       <PageHeader
         breadcrumb={[{ label: "All engagements", href: "/" }]}
         title="Planning questionnaire"
-        meta={
-          <>
-            <span>{engagement.clientName}</span>
-            <span aria-hidden="true">·</span>
-            <span>
-              {engagement.periodStart} to {engagement.periodEnd}
-            </span>
-            <span aria-hidden="true">·</span>
-            <Link href={base} className="text-accent hover:underline">
-              Back to audit planning
-            </Link>
-          </>
+        meta={<EngagementFacts client={engagement.clientName} periodStart={engagement.periodStart} periodEnd={engagement.periodEnd} />}
+        note={
+          <Link href={base} className="text-accent hover:underline">
+            Back to audit planning
+          </Link>
         }
         subtitle={q.mandatoryOpen > 0 ? `${count(q.mandatoryOpen, "mandatory question")} still to answer. This does not hold up the lock.` : "No mandatory question is waiting. This questionnaire does not hold up the lock."}
       />

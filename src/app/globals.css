@@ -1,83 +1,127 @@
 @import "tailwindcss";
 
 /*
- * Design tokens (light theme), direction C: a strong cobalt accent and near-black ink on a warm grey page with white cards, firm borders, squarer
- * corners and heavier, larger headings. LedgerFile's own look. Status colours are deep enough to be read as text-adjacent marks, and status is never
- * colour alone: every badge keeps its icon and its words.
+ * Design tokens (light theme), direction C refined: one cobalt accent on a warm grey page, near-black ink, white surfaces. Three levels of elevation
+ * (page, surface, raised) so the one primary card on a page can be told from the rest without a heavier border. Status colours are deep enough to be
+ * read as text-adjacent marks, and status is never colour alone: every badge and callout keeps its icon and its words.
  *
- * Role names: the brief's "text" and "text-muted" roles are `ink` and `ink-muted`, so the utilities read text-ink and text-ink-muted rather than
- * text-text.
+ * Role names: the brief's "text" and "text-muted" roles are `ink` and `ink-muted`, so the utilities read text-ink and text-ink-muted.
+ *
+ * The brand surfaces (the sign-in panel and the top bar) are `brand-deep` with a cobalt glow, and the page and surfaces are a touch cooler to match.
+ * `accent-bright` is the companion that works on brand-deep only: it fails on a light surface (1.9:1), so it is never used there.
  *
  * Contrast (WCAG 2.x, measured from the hex values; text needs 4.5:1, large text and UI parts need 3:1):
- *   ink on page 17.0, on surface 19.1         ink-muted on page 9.9, on surface-muted 8.8      ink-subtle on surface 8.1
- *   surface on accent 10.2, on accent-hover 13.5   accent on surface 10.2, on accent-soft 7.9, on page 9.0
- *   border-strong (input edges) on surface 7.6
- *   success-strong on success-soft 8.7        warning-strong on warning-soft 8.7      danger-strong on danger-soft 8.4
- *   info-strong on info-soft 9.3              neutral-strong on neutral-soft 10.9
- *   status dots on surface (UI parts, 3:1 needed): success 6.1, warning 6.8, danger 7.1, info 6.7, neutral 6.0
- * `border` is a decorative divider (1.7:1) and never the only sign of a control; inputs use `border-strong`.
+ *   ink on page 17.3, on surface 19.1        ink-muted on page 6.7, on surface 7.3, on surface-muted 6.4
+ *   ink-subtle on surface 5.7, on page 5.2, on surface-muted 5.0, on accent-wash 5.0 (placeholders, hints and the table heading)
+ *   ink on accent-wash 16.7, ink-muted on accent-wash 6.4, accent on accent-wash 8.9 (the page header band)
+ *   on brand-deep: white 17.1, nav text #c9d4ee 11.5, sub text #aebbdc 8.9, accent-bright 8.9; brand-deep on accent-bright 8.9
+ *   white on the cobalt stage circle 10.2, white on the success stage circle 6.1
+ *   surface on accent 10.2, on accent-hover 13.5   accent on surface 10.2, on accent-soft 8.5, on page 9.2, on surface-muted 8.7
+ *   border-input (the edge of a field) on surface 3.4, border-strong (hover edge of a field and of a secondary button) on surface 7.6
+ *   border-control (the resting edge of a secondary button, which has its words as well) on surface 2.0
+ *   success-strong on success-soft 9.1       warning-strong on warning-soft 9.5      danger-strong on danger-soft 9.0
+ *   info-strong on info-soft 9.9             neutral-strong on neutral-soft 11.4     ink-muted on neutral-soft 6.1
+ *   callout tints (a near-white wash behind the callout text): success-strong on success-tint 9.7, warning-strong on warning-tint 10.4,
+ *   danger-strong on danger-tint 9.7, info-strong on info-tint 10.8, neutral-strong on neutral-tint 12.6
+ *   status dots, callout bars and icons on surface (UI parts, 3:1 needed): success 6.1, warning 6.8, danger 7.1, info 6.7, neutral 6.0
+ * `border` and `accent-edge` are decorative dividers and card edges (1.7:1 to 1.3:1) and never the only sign of a control: a field's edge is
+ * `border-input`, a button has a fill or the words, and a status never relies on its tint.
  */
 @theme {
-  --color-page: #f2f2ee;
+  --color-page: #f3f5f9;
   --color-surface: #ffffff;
-  --color-surface-muted: #e5e5df;
-  --color-border: #c9c9c0;
+  --color-surface-muted: #edf0f6;
+  --color-track: #d3d8e3;
+  --color-border: #dfe3ec;
+  --color-border-control: #b9b8af;
+  --color-border-input: #858b92;
   --color-border-strong: #4d555e;
   --color-ink: #0b1016;
-  --color-ink-muted: #343c46;
-  --color-ink-subtle: #48515c;
+  --color-ink-muted: #4f5762;
+  --color-ink-subtle: #5f6772;
 
   --color-accent: #17389a;
   --color-accent-hover: #0f2870;
-  --color-accent-soft: #d9e3fa;
+  --color-accent-soft: #e4ebfb;
+  --color-accent-edge: #b8c7ee;
+  --color-accent-wash: #eaf0fd;
+  --color-accent-bright: #6cc4ff;
+  --color-brand-deep: #0b1a3d;
+  --color-brand-glow: rgb(23 56 154 / 0.55);
+  --color-nav-text: #c9d4ee;
+  --color-brand-sub: #aebbdc;
 
   --color-success: #16703f;
-  --color-success-soft: #dcf0e2;
+  --color-success-soft: #e6f4ea;
+  --color-success-tint: #f2f9f5;
   --color-success-strong: #0a4a28;
   --color-warning: #7d5208;
-  --color-warning-soft: #f2e3c3;
+  --color-warning-soft: #f7eed6;
+  --color-warning-tint: #fcf8ec;
   --color-warning-strong: #563505;
   --color-danger: #a8261a;
-  --color-danger-soft: #f8dfdb;
+  --color-danger-soft: #fbe8e5;
+  --color-danger-tint: #fdf3f1;
   --color-danger-strong: #7f1010;
   --color-info: #1f58b8;
-  --color-info-soft: #dbe7f9;
+  --color-info-soft: #e5eefb;
+  --color-info-tint: #f2f7fd;
   --color-info-strong: #12337f;
   --color-neutral: #566570;
-  --color-neutral-soft: #e1e6e9;
+  --color-neutral-soft: #e8ebed;
+  --color-neutral-tint: #f4f6f7;
   --color-neutral-strong: #232f39;
 
-  /* Type scale: 12, 14, 16, 19, 22, 28, 36 px. Nothing smaller than xs. */
+  /*
+   * Type scale. page title 30/600 (text-2xl), section title 20/600 (text-lg), card title 16/600 (text-base), body 16/400 (kept at 16 so a field never
+   * makes a phone zoom), secondary 14/400 in ink-muted (text-sm), small 13 (text-small, table headings and hints), 12 only for chip text (text-xs),
+   * and the stat figure 28/600 (text-stat). 700 is only for a total.
+   */
   --text-xs: 0.75rem;
   --text-xs--line-height: 1rem;
+  --text-small: 0.8125rem;
+  --text-small--line-height: 1.125rem;
   --text-sm: 0.875rem;
   --text-sm--line-height: 1.25rem;
   --text-base: 1rem;
   --text-base--line-height: 1.5rem;
-  --text-lg: 1.1875rem;
+  --text-lg: 1.25rem;
   --text-lg--line-height: 1.75rem;
   --text-xl: 1.375rem;
   --text-xl--line-height: 1.85rem;
-  --text-2xl: 1.75rem;
-  --text-2xl--line-height: 2.1rem;
+  --text-stat: 1.75rem;
+  --text-stat--line-height: 2rem;
+  --text-2xl: 1.875rem;
+  --text-2xl--line-height: 2.25rem;
   --text-3xl: 2.25rem;
   --text-3xl--line-height: 2.5rem;
 
   /* IBM Plex Sans has 400, 500, 600 and 700. */
-  --font-weight-medium: 600;
-  --font-weight-semibold: 700;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
   --font-weight-bold: 700;
 
-  --radius-sm: 0.125rem;
-  --radius-md: 0.1875rem;
-  --radius-lg: 0.25rem;
+  /* Controls 6 px, cards 12 px, chips fully rounded: the radius says what a thing is. */
+  --radius-sm: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.75rem;
 
-  --shadow-card: 0 1px 0 rgb(11 16 22 / 0.14), 0 2px 6px rgb(11 16 22 / 0.07);
-  --shadow-pop: 0 8px 24px rgb(11 16 22 / 0.18);
+  --shadow-card: 0 1px 2px rgb(11 16 22 / 0.05);
+  --shadow-raised: 0 2px 4px rgb(11 16 22 / 0.06), 0 14px 32px -10px rgb(11 16 22 / 0.2);
+  --shadow-pop: 0 8px 24px rgb(11 16 22 / 0.16);
+
+  /* One duration and one easing, for hover, focus, open and close, and a status coming in. Nothing animates on page load. */
+  --default-transition-duration: 150ms;
+  --default-transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
 
   --font-sans: var(--font-plex), Arial, Helvetica, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 }
+
+/*
+ * The spacing scale: 4, 8, 12, 16, 24, 32, 48 and 64 px (Tailwind 1, 2, 3, 4, 6, 8, 12, 16). Layout gaps use only these: 8 or 12 inside a control group,
+ * 16 between fields, 24 between a page header and its content and between blocks inside a section, 32 between sections, 48 below the last block.
+ */
 
 body {
   background: var(--color-page);
@@ -85,9 +129,44 @@ body {
   font-family: var(--font-sans);
 }
 
-h1,
+h1 {
+  letter-spacing: -0.02em;
+}
 h2 {
-  letter-spacing: -0.015em;
+  letter-spacing: -0.01em;
+}
+
+/* Figures line up: every table cell, and any element that holds an amount. */
+td,
+th,
+.figure {
+  font-variant-numeric: tabular-nums;
+}
+
+@layer base {
+  ::placeholder {
+    color: var(--color-ink-subtle);
+    font-weight: 400;
+    opacity: 1;
+  }
+
+  /* One custom chevron for every single-choice select (a data URI, so it needs no request). */
+  select:not([multiple]) {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%234d555e' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m5.5 8 4.5 4.5L14.5 8'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 1rem;
+  }
+  select:disabled:not([multiple]) {
+    opacity: 0.7;
+  }
+}
+
+/* Room for the chevron: outside the base layer so it wins over a control's own px-3, and the chosen text truncates before the arrow. */
+select:not([multiple]) {
+  padding-right: 2.25rem;
+  text-overflow: ellipsis;
 }
 
 /* One visible focus ring for every interactive element. */

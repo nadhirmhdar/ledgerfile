@@ -10,7 +10,7 @@ import { Badge, StatusBadge } from "@/ui/badge";
 import { Callout, EmptyState } from "@/ui/feedback";
 import { buttonClass, LinkButton } from "@/ui/button";
 import { openPointsLabel, signBadge, signOffSentence } from "@/ui/leadsheet-view";
-import { PageHeader, Section } from "@/ui/layout";
+import { PageHeader, Section, EngagementFacts } from "@/ui/layout";
 import { OpenOnHash } from "@/ui/open-on-hash";
 import { SummaryChevron, summaryRow } from "@/ui/summary-cue";
 import { Table, TCell, THead, TRow } from "@/ui/table";
@@ -56,21 +56,8 @@ export default async function LeadSheetsPage({ params }: { params: Promise<{ id:
       <PageHeader
         breadcrumb={[{ label: "All engagements", href: "/" }]}
         title="Lead sheets"
-        meta={
-          <>
-            <span>{engagement.clientName}</span>
-            <span aria-hidden="true">·</span>
-            <span>
-              {engagement.periodStart} to {engagement.periodEnd}
-            </span>
-            {hasAdjustments && (
-              <>
-                <span aria-hidden="true">·</span>
-                <span>Balances include journal adjustments</span>
-              </>
-            )}
-          </>
-        }
+        meta={<EngagementFacts client={engagement.clientName} periodStart={engagement.periodStart} periodEnd={engagement.periodEnd} />}
+        note={hasAdjustments ? "Balances include journal adjustments." : undefined}
         subtitle={sentence}
         actions={
           accounts.length > 0 ? (

@@ -15,7 +15,7 @@ import { Button, LinkButton } from "@/ui/button";
 import { SummaryChevron } from "@/ui/summary-cue";
 import { Callout, EmptyState } from "@/ui/feedback";
 import { Field, Textarea } from "@/ui/form";
-import { PageHeader, Section } from "@/ui/layout";
+import { PageHeader, Section, EngagementFacts } from "@/ui/layout";
 import { Table, TCell, THead, TRow } from "@/ui/table";
 import { count } from "@/ui/text";
 import { EngagementNav } from "../../nav";
@@ -65,18 +65,11 @@ export default async function AnalyticsPage({ params, searchParams }: { params: 
       <PageHeader
         breadcrumb={[{ label: "All engagements", href: "/" }]}
         title="Analytical review and ratios"
-        meta={
-          <>
-            <span>{engagement.clientName}</span>
-            <span aria-hidden="true">·</span>
-            <span>
-              {engagement.periodStart} to {engagement.periodEnd}
-            </span>
-            <span aria-hidden="true">·</span>
-            <Link href={base} className="text-accent hover:underline">
-              Back to audit planning
-            </Link>
-          </>
+        meta={<EngagementFacts client={engagement.clientName} periodStart={engagement.periodStart} periodEnd={engagement.periodEnd} />}
+        note={
+          <Link href={base} className="text-accent hover:underline">
+            Back to audit planning
+          </Link>
         }
         subtitle={analyticsSentence({ hasComparatives: data.hasComparatives, hasThresholds: !!data.thresholds, ...counts })}
       />
@@ -144,7 +137,7 @@ export default async function AnalyticsPage({ params, searchParams }: { params: 
                         <Link
                           href={showHref(page, c.show)}
                           aria-current={active ? "true" : undefined}
-                          className={`inline-flex min-h-10 items-center rounded-full border px-4 text-sm font-medium ${active ? "border-accent bg-accent text-surface" : "border-border-strong bg-surface text-ink hover:bg-surface-muted"}`}
+                          className={`inline-flex min-h-10 items-center rounded-full border px-4 text-sm font-medium ${active ? "border-accent bg-accent text-surface" : "border-border-input bg-surface text-ink hover:bg-surface-muted"}`}
                         >
                           {c.label} {c.count}
                         </Link>

@@ -26,7 +26,7 @@ import { ArchiveForm } from "@/app/archive-form";
 import { ASSEMBLY_RULE } from "@/domain/archiving";
 import { todayIso } from "@/domain/client-requests";
 import { ARCHIVE_IRREVERSIBLE, ARCHIVE_PREVENTS, ARCHIVE_STAYS, archiveSection, deadlineView } from "@/ui/archive-view";
-import { Card, PageHeader, Section } from "@/ui/layout";
+import { Card, PageHeader, Section, EngagementFacts } from "@/ui/layout";
 import { ToDoRows } from "@/ui/todo-rows";
 import { openPointsPill, pointControls, readinessView, signCell, signOffProgress, type Level } from "@/ui/review-view";
 import { Table, TCell, THead, TRow } from "@/ui/table";
@@ -103,15 +103,7 @@ export default async function ReviewPage({ params }: { params: Promise<{ id: str
       <PageHeader
         breadcrumb={[{ label: "All engagements", href: "/" }]}
         title="Review and sign-off"
-        meta={
-          <>
-            <span>{engagement.clientName}</span>
-            <span aria-hidden="true">·</span>
-            <span>
-              {engagement.periodStart} to {engagement.periodEnd}
-            </span>
-          </>
-        }
+        meta={<EngagementFacts client={engagement.clientName} periodStart={engagement.periodStart} periodEnd={engagement.periodEnd} />}
         subtitle={view.sentence}
       />
       <EngagementNav id={id} current="review" status={engagement.status} archived={archived} />

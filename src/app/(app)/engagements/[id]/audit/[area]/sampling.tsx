@@ -4,7 +4,7 @@ import { useState } from "react";
 import { sampleSize, type SamplingRisk } from "@/domain/sampling";
 import { count } from "@/ui/text";
 
-const input = "min-h-10 rounded-md border border-border-strong bg-surface px-3 py-1.5 text-sm text-ink";
+const input = "min-h-10 rounded-md border border-border-input bg-surface px-3 py-1.5 text-sm text-ink";
 const label = "flex flex-col gap-1 text-sm font-medium text-ink";
 
 /** Works out a sample size as the auditor types. Nothing is saved: record the result under work done. */

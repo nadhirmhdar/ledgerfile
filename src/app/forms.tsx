@@ -224,7 +224,7 @@ export function UploadForm({ engagementId, hasAccounts }: { engagementId: string
             <div className="mt-3 flex flex-wrap items-end gap-3">
               <label className="flex flex-col gap-1 text-sm font-medium text-ink">
                 Heading row
-                <select name="headerRow" defaultValue={preview.headerRow} onChange={reread} className="min-h-10 rounded-md border border-border-strong bg-surface px-3 text-sm font-normal text-ink">
+                <select name="headerRow" defaultValue={preview.headerRow} onChange={reread} className="min-h-10 rounded-md border border-border-input bg-surface px-3 text-sm font-normal text-ink">
                   {preview.rows.map((r) => (
                     <option key={r.index} value={r.index}>
                       Row {r.index + 1}
@@ -246,7 +246,7 @@ export function UploadForm({ engagementId, hasAccounts }: { engagementId: string
                       {locked ? (
                         <span className="font-normal">{preview.selected[c] ? ROLE_LABEL[preview.selected[c] as keyof typeof ROLE_LABEL] : "Not read"}</span>
                       ) : (
-                        <select name={`role_${c}`} aria-label={`Role of column ${columnName(c)}`} defaultValue={preview.selected[c] ?? ""} onChange={reread} className="min-h-10 w-36 rounded-md border border-border-strong bg-surface px-2 text-sm font-normal text-ink">
+                        <select name={`role_${c}`} aria-label={`Role of column ${columnName(c)}`} defaultValue={preview.selected[c] ?? ""} onChange={reread} className="min-h-10 w-36 rounded-md border border-border-input bg-surface px-2 text-sm font-normal text-ink">
                           <option value="">Ignore</option>
                           {ROLES.map((role) => (
                             <option key={role} value={role}>
@@ -333,7 +333,7 @@ export function UploadForm({ engagementId, hasAccounts }: { engagementId: string
                   setFile(e.currentTarget.files?.[0] ?? null);
                   setChanged(false);
                 }}
-                className="text-sm font-normal text-ink file:mr-3 file:min-h-10 file:cursor-pointer file:rounded-md file:border file:border-border-strong file:bg-surface file:px-4 file:text-sm file:font-medium file:text-ink hover:file:bg-surface-muted"
+                className="text-sm font-normal text-ink file:mr-3 file:min-h-10 file:cursor-pointer file:rounded-md file:border file:border-border-input file:bg-surface file:px-4 file:text-sm file:font-medium file:text-ink hover:file:bg-surface-muted"
               />
             </label>
             <button
@@ -397,7 +397,7 @@ export function MappingSelect({
         aria-label={label}
         defaultValue={value ?? ""}
         onChange={(e) => e.currentTarget.form?.requestSubmit()}
-        className={`min-h-10 w-full rounded-md border bg-surface px-3 py-1.5 text-sm text-ink sm:w-80 ${value ? "border-border-strong" : "border-warning bg-warning-soft"}`}
+        className={`min-h-10 w-full rounded-md border bg-surface px-3 py-1.5 text-sm text-ink sm:w-80 ${value ? "border-border-input" : "border-warning bg-warning-soft"}`}
       >
         <option value="">Not mapped</option>
         {groups.map((g) => (

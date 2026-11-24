@@ -7,7 +7,7 @@ import { removeLogoAction, saveBrandingAction, uploadLogoAction } from "@/app/br
 import { Button } from "@/ui/button";
 import { Callout } from "@/ui/feedback";
 import { Field, Input, Textarea } from "@/ui/form";
-import { Card, PageHeader } from "@/ui/layout";
+import { Card, Fact, PageHeader } from "@/ui/layout";
 import { BRANDING_SHOWN_ON, LOGO_HINT } from "@/ui/branding-view";
 import { notFound } from "next/navigation";
 
@@ -21,7 +21,7 @@ export default async function FirmPage() {
 
   return (
     <div className="py-8 text-ink">
-      <PageHeader title="Firm" meta={<span>{view.firmName}</span>} subtitle={BRANDING_SHOWN_ON} />
+      <PageHeader title="Firm" meta={<Fact label="Firm">{view.firmName}</Fact>} subtitle={BRANDING_SHOWN_ON} />
       <div className="mt-6 max-w-3xl space-y-8">
         <Callout variant="info" title="Planning settings">
           The guide ranges and thresholds behind materiality and the planning assistant are on the{" "}
@@ -96,7 +96,7 @@ export default async function FirmPage() {
               <div className="flex flex-wrap items-end gap-3">
                 <label className="flex flex-col gap-1 text-sm font-medium">
                   {view.hasLogo ? "Replace the logo" : "Upload a logo"}
-                  <input type="file" name="logo" required accept="image/png,image/jpeg,.png,.jpg,.jpeg" className="text-sm font-normal text-ink file:mr-3 file:min-h-10 file:cursor-pointer file:rounded-md file:border file:border-border-strong file:bg-surface file:px-4 file:text-sm file:font-medium file:text-ink hover:file:bg-surface-muted" />
+                  <input type="file" name="logo" required accept="image/png,image/jpeg,.png,.jpg,.jpeg" className="text-sm font-normal text-ink file:mr-3 file:min-h-10 file:cursor-pointer file:rounded-md file:border file:border-border-input file:bg-surface file:px-4 file:text-sm file:font-medium file:text-ink hover:file:bg-surface-muted" />
                 </label>
                 <Button variant="primary">Upload</Button>
               </div>

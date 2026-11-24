@@ -10,7 +10,7 @@ import { Button, buttonClass } from "@/ui/button";
 import { Disclosure } from "@/ui/controls";
 import { EmptyState } from "@/ui/feedback";
 import { Input, Select } from "@/ui/form";
-import { PageHeader } from "@/ui/layout";
+import { Fact, PageHeader } from "@/ui/layout";
 import { OpenOnHash } from "@/ui/open-on-hash";
 import { ChevronDownIcon } from "@/ui/icons";
 import { ROLE_ORDER, roleLabel, roleSummary, teamControls, teamSentence } from "@/ui/team-view";
@@ -31,7 +31,7 @@ export default async function TeamPage() {
       {admin && <OpenOnHash />}
       <PageHeader
         title="Team"
-        meta={<span>{session.firmName}</span>}
+        meta={<Fact label="Firm">{session.firmName}</Fact>}
         subtitle={teamSentence(team)}
         actions={
           admin ? (

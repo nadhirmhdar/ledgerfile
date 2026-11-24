@@ -12,8 +12,7 @@ import { Badge, StatusBadge } from "@/ui/badge";
 import { LinkButton } from "@/ui/button";
 import { buildHomeModel, paths, seeAllLabel, type HomeInput } from "@/ui/engagement-home";
 import { Callout, EmptyState, StepList } from "@/ui/feedback";
-import { ArrowRightIcon } from "@/ui/icons";
-import { Card, PageHeader, Section, Stat } from "@/ui/layout";
+import { Card, Fact, PageHeader, Section, Stat } from "@/ui/layout";
 import { ToDoRows } from "@/ui/todo-rows";
 import { count } from "@/ui/text";
 import { EngagementNav } from "./nav";
@@ -89,11 +88,15 @@ export default async function EngagementHome({ params }: { params: Promise<{ id:
         breadcrumb={[{ label: "All engagements", href: "/" }]}
         meta={
           <>
-            <span>
+            <Fact label="Period">
               {engagement.periodStart} to {engagement.periodEnd}
-            </span>
-            <StatusBadge status={model.locked ? "locked" : "in_progress"} label={model.locked ? "Locked" : "Open"} />
-            <Badge tone={audit.enabled ? "info" : "muted"}>{audit.enabled ? "Audit on" : "Audit off"}</Badge>
+            </Fact>
+            <Fact label="Status">
+              <StatusBadge status={model.locked ? "locked" : "in_progress"} label={model.locked ? "Locked" : "Open"} />
+            </Fact>
+            <Fact label="Audit">
+              <Badge tone={audit.enabled ? "info" : "muted"}>{audit.enabled ? "Audit on" : "Audit off"}</Badge>
+            </Fact>
           </>
         }
         title={engagement.clientName}
@@ -120,9 +123,9 @@ export default async function EngagementHome({ params }: { params: Promise<{ id:
             }
           />
         ) : step ? (
-          <Card>
+          <Card raised>
             <p className="text-sm font-semibold text-accent">Your next step</p>
-            <h2 className="mt-1 text-xl font-bold text-ink">{step.title}</h2>
+            <h2 className="mt-1 text-xl font-semibold text-ink">{step.title}</h2>
             <p className="mt-1 text-base text-ink-muted">{step.description}</p>
             {step.waitingOn && step.kind === "action" && (
               <Callout variant="info" className="mt-3">
@@ -132,7 +135,6 @@ export default async function EngagementHome({ params }: { params: Promise<{ id:
             <div className="mt-4">
               <LinkButton href={step.href} variant={step.kind === "action" ? "primary" : "secondary"}>
                 {step.label}
-                <ArrowRightIcon />
               </LinkButton>
             </div>
           </Card>

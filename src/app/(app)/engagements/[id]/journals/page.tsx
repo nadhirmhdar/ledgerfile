@@ -10,7 +10,7 @@ import { Badge } from "@/ui/badge";
 import { LinkButton } from "@/ui/button";
 import { EmptyState } from "@/ui/feedback";
 import { entriesSentence, entryReference, entryTotals, postedText } from "@/ui/journal-entries-view";
-import { Card, PageHeader, Section } from "@/ui/layout";
+import { Card, PageHeader, Section, EngagementFacts } from "@/ui/layout";
 import { Table, TCell, THead, TRow } from "@/ui/table";
 import { EngagementNav } from "../nav";
 import { DeleteJournalButton, NewEntryPanel } from "./journal-form";
@@ -35,15 +35,7 @@ export default async function JournalsPage({ params }: { params: Promise<{ id: s
       <PageHeader
         breadcrumb={[{ label: "All engagements", href: "/" }]}
         title="Journal entries"
-        meta={
-          <>
-            <span>{engagement.clientName}</span>
-            <span aria-hidden="true">·</span>
-            <span>
-              {engagement.periodStart} to {engagement.periodEnd}
-            </span>
-          </>
-        }
+        meta={<EngagementFacts client={engagement.clientName} periodStart={engagement.periodStart} periodEnd={engagement.periodEnd} />}
         subtitle={accounts.length === 0 ? "Import a trial balance before posting journal entries." : entriesSentence(list)}
       />
       <EngagementNav id={id} current="journals" status={engagement.status} archived={engagement.archivedAt !== null} />

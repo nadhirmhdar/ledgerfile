@@ -2,8 +2,9 @@ import type { ReactNode } from "react";
 import { buttonClass } from "./button";
 
 /** Class names for form controls that sit inside existing forms (a plain element keeps its name, value and label as they are). */
-export const ctl = "min-h-10 max-w-full rounded-md border border-border-strong bg-surface px-3 py-1.5 text-sm text-ink";
-export const ctlWarn = "min-h-10 max-w-full rounded-md border border-warning bg-warning-soft px-3 py-1.5 text-sm text-ink";
+export const ctl =
+  "min-h-10 max-w-full rounded-md border border-border-input bg-surface px-3 py-1.5 text-sm text-ink transition-colors hover:border-border-strong focus-visible:border-accent disabled:bg-surface-muted disabled:text-ink-muted";
+export const ctlWarn = "min-h-10 max-w-full rounded-md border border-warning bg-warning-soft px-3 py-1.5 text-sm text-ink transition-colors hover:border-border-strong";
 export const fieldLabel = "flex min-w-0 max-w-full flex-col gap-1 text-sm font-medium text-ink";
 
 /** A closed section that opens in place. The summary looks like a secondary button, so it reads as an action. */

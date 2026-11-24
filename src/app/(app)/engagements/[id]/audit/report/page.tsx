@@ -10,7 +10,7 @@ import { clearOpinionAction } from "@/app/opinion-actions";
 import { Badge } from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { Callout } from "@/ui/feedback";
-import { Card, PageHeader } from "@/ui/layout";
+import { Card, PageHeader, EngagementFacts } from "@/ui/layout";
 import { decisionSentence, DOWNLOAD_BEFORE, DOWNLOAD_NOTE, misstatementPill, noticeBody, NOTICE_TITLE, opinionBadge, opinionReadOnlyReason } from "@/ui/opinion-view";
 import { Field, Input } from "@/ui/form";
 import { EngagementNav } from "../../nav";
@@ -39,18 +39,11 @@ export default async function AuditorsReportPage({ params }: { params: Promise<{
       <PageHeader
         breadcrumb={[{ label: "All engagements", href: "/" }]}
         title="Auditor's report"
-        meta={
-          <>
-            <span>{engagement.clientName}</span>
-            <span aria-hidden="true">·</span>
-            <span>
-              {engagement.periodStart} to {engagement.periodEnd}
-            </span>
-            <span aria-hidden="true">·</span>
-            <Link href={base} className="text-accent hover:underline">
-              Back to audit planning
-            </Link>
-          </>
+        meta={<EngagementFacts client={engagement.clientName} periodStart={engagement.periodStart} periodEnd={engagement.periodEnd} />}
+        note={
+          <Link href={base} className="text-accent hover:underline">
+            Back to audit planning
+          </Link>
         }
         subtitle="The partner's decision on the audit opinion. The report is worded from it."
       />

@@ -13,7 +13,7 @@ import { Badge } from "@/ui/badge";
 import { Button, buttonClass } from "@/ui/button";
 import { Callout } from "@/ui/feedback";
 import { Field, Input, Select, Textarea } from "@/ui/form";
-import { Card, PageHeader, Section } from "@/ui/layout";
+import { Card, PageHeader, Section, EngagementFacts } from "@/ui/layout";
 import { keyItemsSentence, readOnlyReason, reviewBadge, SCHEDULE_SELF_NOTE, SCHEDULE_WAITING_REASON, scheduleSentence, signOffControls } from "@/ui/schedule-view";
 import { SummaryChevron, summaryRow } from "@/ui/summary-cue";
 import { scheduleCrumbs } from "@/ui/engagement-nav";
@@ -60,22 +60,13 @@ export default async function SchedulePage({ params }: { params: Promise<{ id: s
       <PageHeader
         breadcrumb={scheduleCrumbs(id, { code: schedule.areaCode, title: schedule.areaTitle }, schedule)}
         title={`${schedule.reference} ${schedule.title}`}
-        meta={
-          <>
-            <span>{engagement.clientName}</span>
-            <span aria-hidden="true">·</span>
-            <span>
-              {engagement.periodStart} to {engagement.periodEnd}
-            </span>
-            {schedule.rolledFrom && (
-              <>
-                <span aria-hidden="true">·</span>
+        meta={<EngagementFacts client={engagement.clientName} periodStart={engagement.periodStart} periodEnd={engagement.periodEnd} />}
+        note={
+          schedule.rolledFrom && (
                 <Link href={`/engagements/${schedule.rolledFrom.engagementId}/audit/${area}/schedules/${schedule.rolledFrom.id}`} className="text-accent hover:underline">
                   Brought forward from {schedule.rolledFrom.reference} ({schedule.rolledFrom.periodEnd})
                 </Link>
-              </>
-            )}
-          </>
+          )
         }
         subtitle={scheduleSentence({
           lineCount: schedule.lines.length,
@@ -166,7 +157,7 @@ export default async function SchedulePage({ params }: { params: Promise<{ id: s
             <ul className="space-y-1.5 border-t border-border px-4 py-3 text-sm">
               {TICKMARKS.map((m) => (
                 <li key={m.code} className="flex items-start gap-3">
-                  <span className="inline-flex min-h-7 min-w-9 shrink-0 items-center justify-center rounded-md border border-border-strong bg-surface px-1.5 text-sm font-medium">{m.symbol}</span>
+                  <span className="inline-flex min-h-7 min-w-9 shrink-0 items-center justify-center rounded-md border border-border-input bg-surface px-1.5 text-sm font-medium">{m.symbol}</span>
                   <span className="text-ink-muted">{m.meaning}</span>
                 </li>
               ))}

@@ -37,7 +37,7 @@ import { Button, buttonClass } from "@/ui/button";
 import { ctl, Disclosure, fieldLabel } from "@/ui/controls";
 import { Callout, EmptyState } from "@/ui/feedback";
 import { CheckIcon, DotIcon, RingIcon } from "@/ui/icons";
-import { PageHeader, Section, Stat } from "@/ui/layout";
+import { PageHeader, Section, Stat, EngagementFacts } from "@/ui/layout";
 import { Table, TCell, THead, TRow } from "@/ui/table";
 import {
   confirmationLine,
@@ -118,15 +118,7 @@ export default async function ConfirmationsPage({ params, searchParams }: { para
       <PageHeader
         breadcrumb={[{ label: "Audit planning", href: `/engagements/${id}/audit` }]}
         title="External confirmations"
-        meta={
-          <>
-            <span>{engagement.clientName}</span>
-            <span aria-hidden="true">·</span>
-            <span>
-              {engagement.periodStart} to {engagement.periodEnd}
-            </span>
-          </>
-        }
+        meta={<EngagementFacts client={engagement.clientName} periodStart={engagement.periodStart} periodEnd={engagement.periodEnd} />}
         subtitle={auditOn && overall ? confirmationsSentence(overall) : undefined}
         actions={
           auditOn ? (
@@ -275,7 +267,7 @@ export default async function ConfirmationsPage({ params, searchParams }: { para
                             <Link
                               href={link(chip.key)}
                               aria-current={active ? "true" : undefined}
-                              className={`inline-flex min-h-10 items-center rounded-full border px-4 text-sm font-medium ${active ? "border-accent bg-accent text-surface" : "border-border-strong bg-surface text-ink hover:bg-surface-muted"}`}
+                              className={`inline-flex min-h-10 items-center rounded-full border px-4 text-sm font-medium ${active ? "border-accent bg-accent text-surface" : "border-border-input bg-surface text-ink hover:bg-surface-muted"}`}
                             >
                               {chip.label} {chip.n}
                             </Link>

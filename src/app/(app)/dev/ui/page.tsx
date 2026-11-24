@@ -3,7 +3,7 @@ import { Badge, StatusBadge } from "@/ui/badge";
 import { Button, LinkButton } from "@/ui/button";
 import { Callout, EmptyState, ProgressBar, StepList } from "@/ui/feedback";
 import { Field, Input, Select, Textarea } from "@/ui/form";
-import { Card, ListRow, ListRows, PageHeader, Section, Stat } from "@/ui/layout";
+import { Card, ListRow, ListRows, Fact, PageHeader, Section, Stat } from "@/ui/layout";
 import { STATUS_LABEL, type Status } from "@/ui/status";
 import { Table, TCell, THead, TRow } from "@/ui/table";
 import { count } from "@/ui/text";
@@ -19,7 +19,7 @@ export default function UiGallery() {
     <div className="space-y-10 py-8 text-ink">
       <PageHeader
         breadcrumb={[{ label: "Engagements", href: "/" }]}
-        meta={<Badge tone="muted">Development only</Badge>}
+        meta={<Fact label="Status"><Badge tone="muted">Development only</Badge></Fact>}
         title="UI components"
         subtitle="Every shared component and state. This page is not linked from the app and is not served in production."
         actions={<Button variant="primary">Primary action</Button>}

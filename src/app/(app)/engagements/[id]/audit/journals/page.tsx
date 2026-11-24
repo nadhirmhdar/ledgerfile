@@ -16,7 +16,7 @@ import { Button } from "@/ui/button";
 import { Disclosure } from "@/ui/controls";
 import { Callout } from "@/ui/feedback";
 import { Field, Textarea } from "@/ui/form";
-import { PageHeader, Section, Stat } from "@/ui/layout";
+import { PageHeader, Section, Stat, EngagementFacts } from "@/ui/layout";
 import { completenessSentence, entryPill, journalHref, journalSentence, matchingSentence } from "@/ui/journal-view";
 import { SummaryChevron } from "@/ui/summary-cue";
 import { Table, TCell, THead, TRow } from "@/ui/table";
@@ -51,7 +51,7 @@ export default async function JournalTestingPage({ params, searchParams }: { par
   const activeFlag = FLAGS.find((f) => f.code === filter.flag)?.code;
   const activeUser = overview.users.includes(filter.user ?? "") ? filter.user : undefined;
   const chip = (active: boolean) =>
-    `inline-flex min-h-9 items-center rounded-full border px-3 text-sm font-medium ${active ? "border-accent bg-accent text-surface" : "border-border-strong bg-surface text-ink hover:bg-surface-muted"}`;
+    `inline-flex min-h-9 items-center rounded-full border px-3 text-sm font-medium ${active ? "border-accent bg-accent text-surface" : "border-border-input bg-surface text-ink hover:bg-surface-muted"}`;
   const rec = overview.reconciliation;
 
   return (
@@ -59,18 +59,13 @@ export default async function JournalTestingPage({ params, searchParams }: { par
       <PageHeader
         breadcrumb={[{ label: "All engagements", href: "/" }]}
         title="Journal entry testing"
-        meta={
+        meta={<EngagementFacts client={engagement.clientName} periodStart={engagement.periodStart} periodEnd={engagement.periodEnd} />}
+        note={
           <>
-            <span>{engagement.clientName}</span>
-            <span aria-hidden="true">·</span>
-            <span>
-              {engagement.periodStart} to {engagement.periodEnd}
-            </span>
-            <span aria-hidden="true">·</span>
             <Link href={`/engagements/${id}/audit`} className="text-accent hover:underline">
               Audit planning
             </Link>
-            <span aria-hidden="true">·</span>
+            <span aria-hidden="true"> and </span>
             <Link href={`/engagements/${id}/audit/C16`} className="text-accent hover:underline">
               C16 programme
             </Link>
@@ -106,7 +101,7 @@ export default async function JournalTestingPage({ params, searchParams }: { par
                       maxBytes={maxUploadBytes()}
                       accept=".xlsx,.csv"
                       label="Journal listing file"
-                      className="block max-w-full text-sm text-ink file:mr-3 file:min-h-10 file:cursor-pointer file:rounded-md file:border file:border-border-strong file:bg-surface file:px-4 file:text-sm file:font-medium file:text-ink hover:file:bg-surface-muted"
+                      className="block max-w-full text-sm text-ink file:mr-3 file:min-h-10 file:cursor-pointer file:rounded-md file:border file:border-border-input file:bg-surface file:px-4 file:text-sm file:font-medium file:text-ink hover:file:bg-surface-muted"
                     />
                     <Button variant="primary">{overview.listing ? "Replace" : "Import"}</Button>
                   </div>
