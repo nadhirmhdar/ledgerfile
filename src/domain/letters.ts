@@ -52,9 +52,12 @@ export interface EngagementLetterInput {
   aiFeatures: boolean;
   /** The firm's letterhead lines under its name (address, contact, registration), when it has set them. None leaves the letter as it was. */
   letterhead?: string[];
+  /** The client's address, one string per line, when the client's record has one: printed under the addressee line. None leaves the letter as it was. */
+  clientAddress?: string[];
 }
 
 export const ENGAGEMENT = {
+  clientAddress: "{Client address: the lines held on the client's record, when there are any}",
   title: "Audit of the financial statements for the year ending {period end}",
   intro:
     'You have asked us to audit the financial statements of {Client legal name} ("the Company") for the year ending {period end}. This letter sets out what the engagement covers and what each of us is responsible for. Please read it and sign the copy to confirm your agreement.',
@@ -132,6 +135,7 @@ export function buildEngagementLetter(input: EngagementLetterInput): Block[] {
     ...(input.letterhead ?? []).map((text): Block => ({ kind: "para", text })),
     { kind: "para", text: f("{Date}") },
     { kind: "para", text: f("To: {Addressee}, {Client legal name}") },
+    ...(input.clientAddress ?? []).map((text): Block => ({ kind: "para", text })),
     { kind: "heading", text: f(ENGAGEMENT.title) },
     { kind: "para", text: f(ENGAGEMENT.intro) },
   ];

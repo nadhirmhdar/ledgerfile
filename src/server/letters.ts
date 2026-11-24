@@ -22,6 +22,8 @@ export interface LetterContext {
   periodEnd: string;
   framework: string;
   firmName: string;
+  /** The client's address, as saved on its record, or null. */
+  clientAddress: string | null;
   /** Which balances the client has, to suggest the representations that apply. */
   has: { inventory: boolean; receivables: boolean; tax: boolean };
   uncorrected: { description: string; amountMinor: number }[];
@@ -35,8 +37,8 @@ export async function getLetterContext(tx: Tx, engagementId: string): Promise<Le
   if (!engagement) return null;
   const overview = await audit.getAuditOverview(tx, engagementId);
   if (!overview?.enabled) return null;
-  const { rows } = await tx.query<{ framework: string; firmName: string }>(
-    'select c.framework, f.name as "firmName" from clients c join firms f on f.id = c.firm_id where c.id = $1',
+  const { rows } = await tx.query<{ framework: string; firmName: string; address: string | null }>(
+    'select c.framework, c.address, f.name as "firmName" from clients c join firms f on f.id = c.firm_id where c.id = $1',
     [engagement.clientId],
   );
   if (rows.length === 0) return null;
@@ -46,6 +48,7 @@ export async function getLetterContext(tx: Tx, engagementId: string): Promise<Le
     periodEnd: engagement.periodEnd,
     framework: rows[0].framework,
     firmName: rows[0].firmName,
+    clientAddress: rows[0].address,
     has: { inventory: groups.has("INVENT"), receivables: groups.has("TRADEREC"), tax: groups.has("TAXEXP") || groups.has("TAXLIAB") },
     uncorrected: overview.misstatements.items.filter((m) => !m.corrected).map((m) => ({ description: m.description, amountMinor: m.amountMinor })),
     exceedsMateriality: overview.misstatements.exceedsMateriality,
@@ -104,6 +107,7 @@ export async function generateLetter(
       otherServices: Boolean(other),
       aiFeatures: form.ai === "on",
       letterhead: hasBranding(branding) ? letterheadLines(branding) : undefined,
+      clientAddress: context.clientAddress ? context.clientAddress.split("\n").map((l) => l.trim()).filter(Boolean) : undefined,
     });
   } else {
     const supporter = clean(form.supporter);

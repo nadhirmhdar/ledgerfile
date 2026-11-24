@@ -4,6 +4,7 @@ import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { importClientsAction, previewClientImportAction, type PreviewResult } from "@/app/client-import-actions";
 import { confirmLabel, importSentence, rowsToShow, STATUS_LABEL, type ImportRow, type RowStatus } from "@/domain/client-import";
+import { DETAIL_LABEL, yearEndText } from "@/domain/client-details";
 import { Badge } from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { Callout } from "@/ui/feedback";
@@ -31,7 +32,7 @@ export function ImportClients() {
   const confirm = () => {
     if (!preview) return;
     startTransition(async () => {
-      const r = await importClientsAction(preview.names);
+      const r = await importClientsAction(preview.entries);
       setMessage({ ok: r.ok, text: r.message });
       if (r.ok) {
         setResult(null);
@@ -45,7 +46,7 @@ export function ImportClients() {
   return (
     <div className="space-y-5">
       <p className="text-sm text-ink-muted">
-        You need a column of client names with a heading such as Client name, Client, Name, Company or Entity. Without a heading, the first column is used. Upload an .xlsx or .csv file, or paste one name per line. A client that is already
+        You need a column of client names with a heading such as Client name, Client, Name, Company or Entity. Without a heading, the first column is used. Optional columns next to it, with headings such as Licence number, Licensing authority, TRN, Year end and Address, are read too; a value that does not fit is left out and named, and the client is still added. Upload an .xlsx or .csv file, or paste one name per line. A client that is already
         in LedgerFile is not added twice, and a name that appears twice in your list is added once.
       </p>
       <form ref={form} className="space-y-3" onSubmit={(e) => e.preventDefault()}>
@@ -80,6 +81,18 @@ export function ImportClients() {
                     <span className="min-w-0 flex-1 break-words">
                       <span className="mr-2 text-ink-subtle tabular-nums">{r.line}</span>
                       {r.name.length > 200 ? `${r.name.slice(0, 200)}…` : r.name}
+                      {r.details && Object.keys(r.details).length > 0 && (
+                        <span className="mt-0.5 block text-ink-muted">
+                          {Object.entries(r.details)
+                            .map(([k, v]) => `${DETAIL_LABEL[k as keyof typeof DETAIL_LABEL]}: ${k === "yearEnd" ? yearEndText(String(v)) : String(v).split("\n").join(", ")}`)
+                            .join(" · ")}
+                        </span>
+                      )}
+                      {r.notes?.map((n) => (
+                        <span key={n} className="mt-0.5 block text-warning-strong">
+                          {n}
+                        </span>
+                      ))}
                     </span>
                     <Badge tone={TONE[r.status]}>{STATUS_LABEL[r.status]}</Badge>
                   </li>
