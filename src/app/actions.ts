@@ -10,6 +10,7 @@ import { readSheets } from "@/server/excel";
 import { readsDiffer, recogniseWorkbook } from "@/domain/tb-recognise";
 import { buildPreview, chosenFromEntries, type Preview as TbPreview, readTrialBalance, ROLE_LABEL, savedFrom, SOURCE_SENTENCE, type Layout } from "@/domain/tb-layout";
 import * as tbLayout from "@/server/tb-layout";
+import { headingsChangedMessage, parseTemplate, recogniseTemplate, TEMPLATE_LINK_TEXT, type SheetGrid, type TemplateReading } from "@/domain/tb-template";
 import { formatAmount, parseAmount } from "@/domain/money";
 import * as journals from "@/server/journals";
 import type { JournalLineInput } from "@/domain/journal";
@@ -72,6 +73,35 @@ export async function createEngagementAction(_prev: FormState, form: FormData): 
 
 const DISAGREE = "This file can be read two ways that give different closing balances (for example, the movement columns and the closing columns). Check which columns are the closing balance.";
 
+/** A file that is the LedgerFile template is read as the template, with certainty: its example rows are left out and every message names its row. */
+async function importTemplate(session: Awaited<ReturnType<typeof getSession>>, engagementId: string, fileName: string, sheet: SheetGrid, tpl: Extract<TemplateReading, { kind: "template" }>): Promise<FormState> {
+  const parsed = parseTemplate(sheet.rows, tpl.headerRow, tpl.columns);
+  const left = parsed.skipped.map((k) => `Row ${k.row} was left out: ${k.reason}.`);
+  if (parsed.errors.length > 0) return { ok: false, message: "The trial balance was not imported.", details: [...parsed.errors, ...left].slice(0, 20) };
+  if (!parsed.balanced) {
+    return { ok: false, message: `The trial balance does not balance: debits and credits differ by ${formatAmount(Math.abs(parsed.differenceMinor))}. Nothing was imported.`, details: left.slice(0, 20) };
+  }
+  try {
+    const r = await withFirm(await getDb(), session.firmId, (tx) =>
+      repo.importTrialBalance(tx, session, engagementId, fileName, parsed.accounts, { source: "template", sheet: sheet.name, headerRow: tpl.headerRow, skippedRows: parsed.skipped.length }),
+    );
+    revalidatePath(`/engagements/${engagementId}`);
+    return {
+      ok: true,
+      message: `Imported ${r.imported} accounts: ${r.carriedForward} mapped from earlier work, ${r.suggested} suggested for review, ${r.unmapped} left unmapped. ${SOURCE_SENTENCE.template}.`,
+      details: [...left, ...parsed.warnings].slice(0, 20),
+    };
+  } catch (e) {
+    return { ok: false, message: e instanceof Error ? e.message : "The import failed." };
+  }
+}
+
+/** Put a sentence about the template in front of a reading that went the usual way. */
+function withNote(state: FormState, note: string | null): FormState {
+  if (!note) return state;
+  return state.ok ? { ...state, details: [note, ...(state.details ?? [])] } : { ...state, message: `${note} ${state.message}` };
+}
+
 export async function uploadTrialBalanceAction(_prev: FormState, form: FormData): Promise<FormState> {
   const session = await getSession();
   const engagementId = String(form.get("engagementId") ?? "");
@@ -83,7 +113,7 @@ export async function uploadTrialBalanceAction(_prev: FormState, form: FormData)
   try {
     sheets = await readSheets(file.name, await file.arrayBuffer(), undefined, { keepIndent: true });
   } catch (e) {
-    return { ok: false, message: e instanceof Error ? e.message : "The file could not be read." };
+    return { ok: false, message: `${e instanceof Error ? e.message : "The file could not be read."} Or start from our template: ${TEMPLATE_LINK_TEXT}.` };
   }
 
   // Everything is read again here: the browser's preview is only a way to say which column is which, never what the file holds.
@@ -100,6 +130,12 @@ export async function uploadTrialBalanceAction(_prev: FormState, form: FormData)
     return { ok: false, message: `Each role can be one column only: ${chosenEntries.clashes.map((r) => ROLE_LABEL[r]).join(", ")} was chosen more than once.`, preview: preview(chosenEntries.layout) };
   }
 
+  // The LedgerFile template is read with certainty. With its heading changed it goes the usual way, and says so.
+  const tpl = !chosenEntries && entries.chooseColumns !== "1" ? recogniseTemplate(sheets) : null;
+  if (tpl?.kind === "template") return importTemplate(session, engagementId, file.name, sheets[tpl.sheetIndex], tpl);
+  const note = tpl?.kind === "edited" ? headingsChangedMessage(tpl.changed) : null;
+
+  const rest = async (): Promise<FormState> => {
   const db = await getDb();
   const remembered = chosenEntries ? null : (await withFirm(db, session.firmId, (tx) => tbLayout.getRemembered(tx, engagementId)))?.layout ?? null;
   const reading = readTrialBalance(grid, { chosen: chosenEntries?.layout ?? null, remembered, ask: entries.chooseColumns === "1" });
@@ -180,6 +216,8 @@ export async function uploadTrialBalanceAction(_prev: FormState, form: FormData)
   } catch (e) {
     return { ok: false, message: e instanceof Error ? e.message : "The import failed." };
   }
+  };
+  return withNote(await rest(), note);
 }
 
 /** Forget the columns remembered for the engagement's client. */
