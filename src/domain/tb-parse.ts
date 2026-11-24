@@ -17,6 +17,8 @@ export interface TbParseResult {
   balanced: boolean;
   /** Which columns were recognised, for showing the user what was detected. */
   layout: Record<string, number>;
+  /** Rows left out, numbered as in the sheet (1-based), with the reason. Blank rows are not listed. Present when the reading reports them. */
+  skipped?: { row: number; reason: string }[];
 }
 
 export type Cell = unknown;
@@ -29,6 +31,15 @@ const HEADER_PATTERNS: Record<string, RegExp> = {
   balance: /^(closing\s*)?(balance|amount|net)$|^(current\s*(year|period)|cy)(\s*balance)?$/i,
   prior: /^(prior|previous|last|comparative)\s*(year|period)?(\s*balance)?$|^py(\s*balance)?$|^opening(\s*balance)?$/i,
 };
+
+const COMBINED = [/^(\d[\w./-]*)\s*[-–:·•]\s*(.+)$/, /^(.+?)\s*\(\s*(\d[\w./-]*)\s*\)$/, /^(\d{3,}[\w./-]*)\s+(.+)$/];
+/** An account code and name in one cell: "1100 - Debtors", "1100 Debtors" or "Debtors (1100)". Null when the cell does not look like that. */
+export function splitCombined(value: string): { code: string; name: string } | null {
+  const a = COMBINED[0].exec(value) ?? COMBINED[2].exec(value);
+  if (a) return { code: a[1], name: a[2].trim() };
+  const b = COMBINED[1].exec(value);
+  return b ? { code: b[2], name: b[1].trim() } : null;
+}
 
 export function text(cell: Cell): string {
   return cell === null || cell === undefined ? "" : String(cell).trim();
@@ -77,15 +88,27 @@ export function parseWithHeader(rows: Cell[][], headerIndex: number, layout: Rec
   const header = { index: headerIndex };
   result.layout = layout;
   const seen = new Map<string, number>();
+  const skipped: { row: number; reason: string }[] = [];
+  result.skipped = skipped;
 
   for (let i = header.index + 1; i < rows.length; i++) {
     const row = rows[i];
     const line = i + 1;
-    const code = "code" in layout ? text(row[layout.code]) : "";
-    const name = "name" in layout ? text(row[layout.name]) : "";
+    let code = "code" in layout ? text(row[layout.code]) : "";
+    let name = "name" in layout ? text(row[layout.name]) : "";
+    if ("codename" in layout) {
+      // One column holds both: split it when it can be split; otherwise the whole text is the name.
+      const joined = text(row[layout.codename]);
+      const split = splitCombined(joined);
+      if (split) ({ code, name } = split);
+      else name = joined;
+    }
     if (!code && !name) continue;
     // Total lines repeat the column sums and must not be imported as accounts.
-    if (/^(grand\s*)?totals?\b/i.test(code) || /^(grand\s*)?totals?\b/i.test(name)) continue;
+    if (/^(grand\s*)?totals?\b/i.test(code) || /^(grand\s*)?totals?\b/i.test(name)) {
+      skipped.push({ row: line, reason: "A total line, not an account" });
+      continue;
+    }
 
     // An account closed during the year has no closing amount but still belongs in the comparatives.
     const priorOnly = "prior" in layout ? parseAmount(row[layout.prior]) : null;
@@ -99,7 +122,10 @@ export function parseWithHeader(rows: Cell[][], headerIndex: number, layout: Rec
         result.errors.push(`Row ${line}: amount is not a number.`);
         continue;
       }
-      if (dr === null && cr === null && !hasPrior) continue; // heading row within the list
+      if (dr === null && cr === null && !hasPrior) {
+        skipped.push({ row: line, reason: "No amount, so a heading line within the list" });
+        continue;
+      }
       closing = (dr ?? 0) - (cr ?? 0);
     } else {
       const bal = parseAmount(row[layout.balance]);
@@ -107,7 +133,10 @@ export function parseWithHeader(rows: Cell[][], headerIndex: number, layout: Rec
         result.errors.push(`Row ${line}: amount is not a number.`);
         continue;
       }
-      if (bal === null && !hasPrior) continue;
+      if (bal === null && !hasPrior) {
+        skipped.push({ row: line, reason: "No amount, so a heading line within the list" });
+        continue;
+      }
       closing = bal ?? 0;
     }
 

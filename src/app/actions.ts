@@ -30,7 +30,69 @@ export interface UploadPreview extends TbPreview {
   sheet: number;
   /** The roles already chosen, by column, so the chooser shows them again after a refusal. */
   selected: Record<number, string>;
+  /** What importing would do, from the same reading the import uses. Present on every preview of a file that could be read. */
+  review?: ImportReview;
+  /** True when the roles shown are the person's own choice (so importing takes them as chosen). */
+  edited?: boolean;
+  /** True when the columns are fixed (the LedgerFile template), so there is nothing to choose. */
+  locked?: boolean;
 }
+
+/** What an import would do, shown before anything is saved. */
+export interface ImportReview {
+  /** How the columns were found, in words. */
+  source: string;
+  sheetName: string;
+  accounts: number;
+  debitMinor: number;
+  creditMinor: number;
+  differenceMinor: number;
+  balanced: boolean;
+  /** Rows left out, numbered as in the sheet, with why. */
+  skipped: { row: number; reason: string }[];
+  errors: string[];
+  warnings: string[];
+  /** How sure the reading is, with the reasons that lowered it. Null when the columns were chosen or remembered, which are not guesses. */
+  confidence: { level: "high" | "medium" | "low"; reasons: string[] } | null;
+  /** True when the reading is a low-confidence guess: the person must say they have checked it. */
+  mustConfirm: boolean;
+  /** True when the file would import as it is: nothing wrong and balanced. */
+  canImport: boolean;
+}
+
+function reviewOf(r: {
+  source: string;
+  sheetName: string;
+  accounts: { closingMinor: number }[];
+  differenceMinor: number;
+  balanced: boolean;
+  skipped?: { row: number; reason: string }[];
+  errors?: string[];
+  warnings?: string[];
+  confidence?: { level: "high" | "medium" | "low"; reasons: string[] } | null;
+}): ImportReview {
+  const errors = r.errors ?? [];
+  return {
+    source: r.source,
+    sheetName: r.sheetName,
+    accounts: r.accounts.length,
+    debitMinor: r.accounts.reduce((n, a) => n + Math.max(a.closingMinor, 0), 0),
+    creditMinor: r.accounts.reduce((n, a) => n + Math.max(-a.closingMinor, 0), 0),
+    differenceMinor: r.differenceMinor,
+    balanced: r.balanced,
+    skipped: (r.skipped ?? []).slice(0, 200),
+    errors: errors.slice(0, 20),
+    warnings: (r.warnings ?? []).slice(0, 20),
+    confidence: r.confidence ?? null,
+    mustConfirm: r.confidence?.level === "low",
+    canImport: errors.length === 0 && r.balanced && r.confidence?.level !== "low",
+  };
+}
+
+const PREVIEW_OK = "This is what the import would do. Nothing has been imported yet: check it, then press Import.";
+
+/** The sentence about accounts whose name changed since their mapping was accepted (the group is kept only as a suggestion). */
+const renamedNote = (r: { renamed?: number }): string[] => (r.renamed ? [`${r.renamed} account${r.renamed === 1 ? "" : "s"} changed name since the mapping was accepted, so the group is kept only as a suggestion to check.`] : []);
 
 /** Log a refused change without failing the request. */
 function refused(e: unknown): void {
@@ -74,9 +136,26 @@ export async function createEngagementAction(_prev: FormState, form: FormData): 
 const DISAGREE = "This file can be read two ways that give different closing balances (for example, the movement columns and the closing columns). Check which columns are the closing balance.";
 
 /** A file that is the LedgerFile template is read as the template, with certainty: its example rows are left out and every message names its row. */
-async function importTemplate(session: Awaited<ReturnType<typeof getSession>>, engagementId: string, fileName: string, sheet: SheetGrid, tpl: Extract<TemplateReading, { kind: "template" }>): Promise<FormState> {
+async function importTemplate(
+  session: Awaited<ReturnType<typeof getSession>>,
+  engagementId: string,
+  fileName: string,
+  sheet: SheetGrid,
+  tpl: Extract<TemplateReading, { kind: "template" }>,
+  /** Preview only: say what the import would do and save nothing. The template's columns are fixed, so the preview is short and has one Import button. */
+  showPreview = false,
+): Promise<FormState> {
   const parsed = parseTemplate(sheet.rows, tpl.headerRow, tpl.columns);
   const left = parsed.skipped.map((k) => `Row ${k.row} was left out: ${k.reason}.`);
+  if (showPreview) {
+    const roleOf: Record<number, string> = { [tpl.columns["Account code"]]: "code", [tpl.columns["Account name"]]: "name", [tpl.columns["Debit"]]: "debit", [tpl.columns["Credit"]]: "credit" };
+    const review = reviewOf({ source: SOURCE_SENTENCE.template, sheetName: sheet.name, accounts: parsed.accounts, differenceMinor: parsed.differenceMinor, balanced: parsed.balanced, skipped: parsed.skipped, errors: parsed.errors, warnings: parsed.warnings });
+    return {
+      ok: review.canImport,
+      message: review.canImport ? PREVIEW_OK : "The file was read as the LedgerFile template, but it cannot be imported as it is. Nothing has been imported.",
+      preview: { ...buildPreview(sheet.rows), headerRow: tpl.headerRow, fileName, sheet: 0, selected: roleOf, review, locked: true },
+    };
+  }
   if (parsed.errors.length > 0) return { ok: false, message: "The trial balance was not imported.", details: [...parsed.errors, ...left].slice(0, 20) };
   if (!parsed.balanced) {
     return { ok: false, message: `The trial balance does not balance: debits and credits differ by ${formatAmount(Math.abs(parsed.differenceMinor))}. Nothing was imported.`, details: left.slice(0, 20) };
@@ -89,7 +168,7 @@ async function importTemplate(session: Awaited<ReturnType<typeof getSession>>, e
     return {
       ok: true,
       message: `Imported ${r.imported} accounts: ${r.carriedForward} mapped from earlier work, ${r.suggested} suggested for review, ${r.unmapped} left unmapped. ${SOURCE_SENTENCE.template}.`,
-      details: [...left, ...parsed.warnings].slice(0, 20),
+      details: [...renamedNote(r), ...left, ...parsed.warnings].slice(0, 20),
     };
   } catch (e) {
     return { ok: false, message: e instanceof Error ? e.message : "The import failed." };
@@ -119,7 +198,12 @@ export async function uploadTrialBalanceAction(_prev: FormState, form: FormData)
   // Everything is read again here: the browser's preview is only a way to say which column is which, never what the file holds.
   const entries: Record<string, string> = {};
   for (const [key, value] of form.entries()) if (typeof value === "string") entries[key] = value;
-  const chosenEntries = "headerRow" in entries ? chosenFromEntries(entries) : null;
+  // The step: "preview" says what an import would do and saves nothing; "import" saves. A caller that sends neither (the action as it always was) imports.
+  // After a preview the columns come from the form only if the person changed them (edited) or asked to choose them; otherwise the file is read the way the
+  // preview read it, so what is imported is what was shown.
+  const dry = entries.intent === "preview";
+  const picks = "headerRow" in entries && (entries.intent === undefined || entries.edited === "1" || entries.chooseColumns === "1");
+  const chosenEntries = picks ? chosenFromEntries(entries) : null;
   // The sheet a choice was made on; anything else is the first sheet, as it has always been.
   const sheetIndex = chosenEntries && /^\d{1,2}$/.test(entries.sheet ?? "") && sheets[Number(entries.sheet)] ? Number(entries.sheet) : 0;
   const grid = sheets[sheetIndex].rows;
@@ -132,8 +216,12 @@ export async function uploadTrialBalanceAction(_prev: FormState, form: FormData)
 
   // The LedgerFile template is read with certainty. With its heading changed it goes the usual way, and says so.
   const tpl = !chosenEntries && entries.chooseColumns !== "1" ? recogniseTemplate(sheets) : null;
-  if (tpl?.kind === "template") return importTemplate(session, engagementId, file.name, sheets[tpl.sheetIndex], tpl);
+  if (tpl?.kind === "template") return importTemplate(session, engagementId, file.name, sheets[tpl.sheetIndex], tpl, dry);
   const note = tpl?.kind === "edited" ? headingsChangedMessage(tpl.changed) : null;
+
+  if (entries.intent === "import" && entries.low === "1" && entries.confirmLow !== "1") {
+    return { ok: false, message: "Tick the box to say you have checked the columns and the totals. Nothing was imported.", preview: { ...preview(chosenEntries?.layout ?? null), edited: true } };
+  }
 
   const rest = async (): Promise<FormState> => {
   const db = await getDb();
@@ -144,10 +232,15 @@ export async function uploadTrialBalanceAction(_prev: FormState, form: FormData)
   const recognise = async (): Promise<FormState | null> => {
     const found = recogniseWorkbook(sheets);
     if (!found) return null;
+    const reviewFound = reviewOf({ source: SOURCE_SENTENCE.recognised, sheetName: found.sheetName, accounts: found.accounts, differenceMinor: found.differenceMinor, balanced: found.balanced, skipped: found.skipped, confidence: found.confidence });
     if (found.confidence.level === "low") {
       const rows = sheets[found.sheetIndex].rows;
-      const pre = { ...buildPreview(rows), headerRow: found.prefill.headerRow, fileName: file.name, sheet: found.sheetIndex, selected: selectedOf(found.prefill) };
+      const pre = { ...buildPreview(rows), headerRow: found.prefill.headerRow, fileName: file.name, sheet: found.sheetIndex, selected: selectedOf(found.prefill), review: reviewFound, edited: true };
       return { ok: false, message: `The columns could not be read with confidence. Nothing was imported. ${found.confidence.reasons.join(" ")}`, preview: pre };
+    }
+    if (dry) {
+      const pre = { ...buildPreview(sheets[found.sheetIndex].rows), headerRow: found.prefill.headerRow, fileName: file.name, sheet: found.sheetIndex, selected: selectedOf(found.prefill), review: reviewFound };
+      return { ok: true, message: PREVIEW_OK, preview: pre };
     }
     try {
       const r = await withFirm(db, session.firmId, (tx) =>
@@ -157,7 +250,7 @@ export async function uploadTrialBalanceAction(_prev: FormState, form: FormData)
       return {
         ok: true,
         message: `Imported ${r.imported} accounts: ${r.carriedForward} mapped from earlier work, ${r.suggested} suggested for review, ${r.unmapped} left unmapped. ${SOURCE_SENTENCE.recognised}, ${found.confidence.level} confidence.`,
-        details: [...found.confidence.reasons, ...found.skipped.map((k) => `Row ${k.row} was left out: ${k.reason.toLowerCase()}.`)].slice(0, 20),
+        details: [...renamedNote(r), ...found.confidence.reasons, ...found.skipped.map((k) => `Row ${k.row} was left out: ${k.reason.toLowerCase()}.`)].slice(0, 20),
       };
     } catch (e) {
       return { ok: false, message: e instanceof Error ? e.message : "The import failed." };
@@ -179,7 +272,8 @@ export async function uploadTrialBalanceAction(_prev: FormState, form: FormData)
   if (mayRecognise && parsed.errors.length === 0 && parsed.balanced) {
     const found = recogniseWorkbook(sheets);
     if (readsDiffer(parsed.accounts, found)) {
-      const pre = { ...buildPreview(sheets[found.sheetIndex].rows), headerRow: found.prefill.headerRow, fileName: file.name, sheet: found.sheetIndex, selected: selectedOf(found.prefill) };
+      const review = reviewOf({ source: SOURCE_SENTENCE.recognised, sheetName: found.sheetName, accounts: found.accounts, differenceMinor: found.differenceMinor, balanced: found.balanced, skipped: found.skipped, confidence: { level: "low", reasons: [DISAGREE] } });
+      const pre = { ...buildPreview(sheets[found.sheetIndex].rows), headerRow: found.prefill.headerRow, fileName: file.name, sheet: found.sheetIndex, selected: selectedOf(found.prefill), review, edited: true };
       return { ok: false, message: DISAGREE, preview: pre };
     }
   }
@@ -187,6 +281,15 @@ export async function uploadTrialBalanceAction(_prev: FormState, form: FormData)
     const state = await recognise();
     // A reading that is not sure leaves today's message in place rather than replacing it.
     if (state?.ok) return state;
+  }
+  if (dry) {
+    const review = reviewOf({ source: SOURCE_SENTENCE[source], sheetName: sheets[sheetIndex].name, accounts: parsed.accounts, differenceMinor: parsed.differenceMinor, balanced: parsed.balanced, skipped: parsed.skipped, errors: parsed.errors, warnings: parsed.warnings });
+    const message = review.canImport
+      ? PREVIEW_OK
+      : parsed.errors.length > 0
+        ? "The trial balance cannot be imported as it is. Nothing has been imported."
+        : `The trial balance does not balance: debits and credits differ by ${formatAmount(Math.abs(parsed.differenceMinor))}. Nothing has been imported.`;
+    return { ok: review.canImport, message, preview: { ...preview(layout), review, edited: source === "chosen" } };
   }
   const again = source === "chosen" ? { preview: preview(layout) } : {};
   if (parsed.errors.length > 0) {
@@ -211,7 +314,7 @@ export async function uploadTrialBalanceAction(_prev: FormState, form: FormData)
     return {
       ok: true,
       message: `Imported ${r.imported} accounts: ${r.carriedForward} mapped from earlier work, ${r.suggested} suggested for review, ${r.unmapped} left unmapped. ${SOURCE_SENTENCE[source]}.`,
-      details: parsed.warnings.slice(0, 20),
+      details: [...renamedNote(r), ...parsed.warnings].slice(0, 20),
     };
   } catch (e) {
     return { ok: false, message: e instanceof Error ? e.message : "The import failed." };

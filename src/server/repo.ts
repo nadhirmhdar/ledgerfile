@@ -2,7 +2,7 @@ import type { Tx } from "./db";
 import type { TbAccount } from "../domain/tb-parse";
 import { cleanName, nameKey } from "../domain/client-import";
 import type { MappingSource } from "../domain/mapping";
-import { assist } from "../domain/mapping-assistant";
+import { assist, sameAccountName } from "../domain/mapping-assistant";
 import { learnedExamples } from "./mapping-examples";
 import { GROUP_BY_CODE } from "../domain/groups";
 import type { MappedAccount } from "../domain/leadsheet";
@@ -143,8 +143,8 @@ export async function createEngagement(tx: Tx, s: Session, clientId: string, per
 }
 
 async function mappingsByCode(tx: Tx, engagementId: string, approvedOnly = false) {
-  const { rows } = await tx.query<{ code: string; groupCode: string; source: MappingSource; confidence: string; approved: boolean; reason: string | null; approvedBy: string | null; approvedAt: string | null }>(
-    `select a.code, m.group_code as "groupCode", m.source, m.confidence, m.approved, m.reason, m.approved_by as "approvedBy", m.approved_at as "approvedAt"
+  const { rows } = await tx.query<{ code: string; name: string; groupCode: string; source: MappingSource; confidence: string; approved: boolean; reason: string | null; approvedBy: string | null; approvedAt: string | null }>(
+    `select a.code, a.name, m.group_code as "groupCode", m.source, m.confidence, m.approved, m.reason, m.approved_by as "approvedBy", m.approved_at as "approvedAt"
      from mappings m join accounts a on a.id = m.account_id where a.engagement_id = $1 and (m.approved or not $2::boolean)`,
     [engagementId, approvedOnly],
   );
@@ -164,7 +164,7 @@ export async function importTrialBalance(
   accounts: TbAccount[],
   /** How the columns were found and which they were (domain/tb-layout.ts), kept with the import. */
   layout?: unknown,
-): Promise<{ imported: number; carriedForward: number; suggested: number; unmapped: number }> {
+): Promise<{ imported: number; carriedForward: number; suggested: number; unmapped: number; renamed?: number }> {
   const engagement = await getEngagement(tx, engagementId);
   if (!engagement) throw new Error("Engagement not found.");
   if (engagement.status !== "open") throw new Error("This engagement is locked.");
@@ -219,11 +219,20 @@ export async function importTrialBalance(
     ]);
 
   let kept = 0;
+  let renamed = 0;
   for (const a of accounts) {
     const m = existing.get(a.code);
     if (m && GROUP_BY_CODE.has(m.groupCode)) {
-      await insert(idByCode.get(a.code)!, m.groupCode, m.source, Number(m.confidence), m.approved, m);
-      kept++;
+      // An accepted mapping was made for the account as it was named then. If the same code now carries a different account (a name that is not the same
+      // account by sameAccountName), the group is only a suggestion to check, with the old name in the reason. Unchanged names keep what they had. This runs
+      // only here, when a trial balance is imported or replaced: nothing on an existing engagement changes until then.
+      if (m.approved && !sameAccountName(m.name, a.name)) {
+        await insert(idByCode.get(a.code)!, m.groupCode, "assistant", Number(m.confidence), false, { reason: `The account's name changed since this mapping was accepted (was: ${m.name})`, approvedBy: null, approvedAt: null });
+        renamed++;
+      } else {
+        await insert(idByCode.get(a.code)!, m.groupCode, m.source, Number(m.confidence), m.approved, m);
+        kept++;
+      }
     }
   }
   // Prior-year mappings were a person's choice last year, so they arrive approved. The assistant's suggestions arrive unapproved, with their reason;
@@ -240,8 +249,10 @@ export async function importTrialBalance(
   const result = {
     imported: accounts.length,
     carriedForward: carried + kept,
-    suggested,
+    suggested: suggested + renamed,
     unmapped: rest.length - suggested,
+    // Only present when it happened, so an import with no renamed account reports exactly what it always did.
+    ...(renamed > 0 ? { renamed } : {}),
   };
   await audit(tx, s, "import", "trial_balance", engagementId, { fileName, ...result });
   return result;
