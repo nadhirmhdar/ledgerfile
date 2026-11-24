@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { getDb, withFirm } from "@/server/db";
 import { getSession } from "@/server/session";
 import * as planning from "@/server/planning";
-import { BENCHMARK_ORDER } from "@/domain/planning-settings";
+import { BENCHMARK_ORDER, INDICATOR_KEYS } from "@/domain/planning-settings";
 import type { FormState } from "./actions";
 
 const num = (form: FormData, name: string): number => {
@@ -24,6 +24,7 @@ function fromForm(form: FormData) {
       reducedMaxPct: num(form, "reducedMaxPct"),
     },
     trivial: { pct: num(form, "trivialPct"), maxPct: num(form, "trivialMaxPct") },
+    goingConcernTriggers: INDICATOR_KEYS.filter((k) => form.get(`gc_${k}`) !== null),
     thresholds: {
       movementPct: num(form, "movementPct"),
       revenueDropPct: num(form, "revenueDropPct"),

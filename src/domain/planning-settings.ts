@@ -10,6 +10,28 @@ import { BENCHMARKS, PERFORMANCE_RANGE, TRIVIAL_MAX, type Benchmark, type GuideR
 
 export const BENCHMARK_ORDER: Benchmark[] = ["pbt", "revenue", "expenses", "assets", "equity"];
 
+/** The ten indicators the planning assistant checks, in the order it shows them, with a short name for the firm's settings. */
+export const INDICATOR_LABEL = {
+  loss: "A loss",
+  negative_equity: "Negative equity",
+  net_current_liabilities: "Net current liabilities",
+  overdraft: "A bank overdraft",
+  borrowings_against_cash: "Borrowings against cash",
+  related_parties: "Related-party balances above performance materiality",
+  suspense_unmapped: "Suspense, unmapped or unbalanced items",
+  large_movement: "A line with a large movement",
+  revenue_down: "Revenue down",
+  margin_swing: "A gross margin swing",
+} as const;
+export type IndicatorKey = keyof typeof INDICATOR_LABEL;
+export const INDICATOR_KEYS = Object.keys(INDICATOR_LABEL) as IndicatorKey[];
+
+/**
+ * The indicators that make the going-concern questions mandatory (a draft default the firm can change). The others still open their own question,
+ * but do not trigger going concern.
+ */
+export const DEFAULT_GOING_CONCERN_TRIGGERS: IndicatorKey[] = ["loss", "negative_equity", "net_current_liabilities", "overdraft", "borrowings_against_cash", "revenue_down"];
+
 export interface PlanningSettings {
   /** The percentage of each benchmark that is the guide range for overall materiality, in basis points (500 = 5%). */
   percentages: Record<Benchmark, { minBp: number; maxBp: number }>;
@@ -17,6 +39,8 @@ export interface PlanningSettings {
   performance: { guideMinPct: number; guideMaxPct: number; defaultPct: number; reducedMinPct: number; reducedMaxPct: number };
   /** The clearly-trivial threshold as a percentage of overall materiality, and the most the guide allows before a warning. */
   trivial: { pct: number; maxPct: number };
+  /** The indicators that make the going-concern questions mandatory, in the order the indicators are shown. */
+  goingConcernTriggers: IndicatorKey[];
   /** The thresholds the planning assistant uses. */
   thresholds: {
     /** A line that moved by more than this percentage (and by more than performance materiality) is an indicator. */
@@ -36,6 +60,7 @@ export const DEFAULT_PLANNING_SETTINGS: PlanningSettings = {
   percentages: Object.fromEntries(BENCHMARK_ORDER.map((b) => [b, { minBp: BENCHMARKS[b].minBp, maxBp: BENCHMARKS[b].maxBp }])) as PlanningSettings["percentages"],
   performance: { guideMinPct: PERFORMANCE_RANGE.min, guideMaxPct: PERFORMANCE_RANGE.max, defaultPct: 75, reducedMinPct: 50, reducedMaxPct: 60 },
   trivial: { pct: 5, maxPct: TRIVIAL_MAX },
+  goingConcernTriggers: [...DEFAULT_GOING_CONCERN_TRIGGERS],
   thresholds: { movementPct: 25, revenueDropPct: 20, marginSwingPoints: 5, pbtMovementPct: 50, nearBreakEvenPct: 2 },
 };
 
@@ -80,6 +105,13 @@ export function checkPlanningSettings(input: unknown): { ok: true; value: Planni
   const trivial = { pct: t.pct ?? d.trivial.pct, maxPct: t.maxPct ?? d.trivial.maxPct };
   if (!isInt(trivial.pct, 1, 100) || !isInt(trivial.maxPct, 1, 100)) return { ok: false, message: "The trivial percentages must be whole numbers from 1 to 100." };
   out.trivial = trivial as { pct: number; maxPct: number };
+
+  const given = (input as { goingConcernTriggers?: unknown } | null)?.goingConcernTriggers;
+  if (given !== undefined) {
+    if (!Array.isArray(given) || given.some((k) => !INDICATOR_KEYS.includes(k as IndicatorKey))) return { ok: false, message: "The going-concern triggers must be chosen from the indicators." };
+    // Kept in the order the indicators are shown, with no repeats, so the same choice is always stored the same way.
+    out.goingConcernTriggers = INDICATOR_KEYS.filter((k) => given.includes(k));
+  }
 
   const h = (raw.thresholds ?? {}) as Record<string, unknown>;
   const thresholds = {

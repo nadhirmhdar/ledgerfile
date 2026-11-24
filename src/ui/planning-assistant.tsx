@@ -8,7 +8,7 @@ import { Table, TCell, THead, TRow } from "@/ui/table";
 import { NOT_SAVED, PLANNING_DRAFT, PLANNING_DRAFT_TITLE, VERDICT_LABEL } from "@/ui/planning-view";
 
 /** The planning assistant panel on the audit planning page: what the trial balance says and what it suggests. Read-only: it saves nothing. */
-export function PlanningAssistant({ derivation: d, engagementId, customised, settingsHref }: { derivation: Derivation; engagementId: string; customised: boolean; settingsHref: string | null }) {
+export function PlanningAssistant({ derivation: d, engagementId, customised, settingsHref, questionnaireHref }: { derivation: Derivation; engagementId: string; customised: boolean; settingsHref: string | null; questionnaireHref: string }) {
   const lead = (code: string) => (
     <Link key={code} href={`/engagements/${engagementId}/lead-sheets#ls-${code}`} className="text-accent underline-offset-2 hover:underline">
       {code}
@@ -21,6 +21,12 @@ export function PlanningAssistant({ derivation: d, engagementId, customised, set
       <Callout variant="draft" title={PLANNING_DRAFT_TITLE}>
         {PLANNING_DRAFT}
       </Callout>
+      <p className="text-sm">
+        <Link href={questionnaireHref} className="font-medium text-accent underline-offset-2 hover:underline">
+          Answer the planning questionnaire
+        </Link>{" "}
+        to confirm these suggestions, with a reason for any change, and to record the going-concern, fraud and understanding answers.
+      </p>
       {d.notes.map((n) => (
         <p key={n} className="text-sm text-ink-muted">
           {n}
@@ -99,8 +105,8 @@ export function PlanningAssistant({ derivation: d, engagementId, customised, set
           <div>
             <h3 className="font-semibold">Indicators</h3>
             <p className="text-sm text-ink-muted">
-              Source: the adjusted trial balance and the firm&apos;s thresholds. Each one that is found opens a question for the team.{" "}
-              {d.goingConcern.required ? "Because at least one is found, the going-concern questions (ISA 570) are mandatory." : "None is found, so the going-concern questions are not triggered by the figures."}
+              Source: the adjusted trial balance and the firm&apos;s thresholds. Each one that is found opens a question for the team. Only these make the going-concern questions (ISA 570) mandatory: {d.goingConcern.triggers.length > 0 ? d.goingConcern.triggers.join(", ").toLowerCase() : "none, because the firm has ticked none"} (the firm&apos;s list, a draft default).{" "}
+              {d.goingConcern.required ? `Found: ${d.goingConcern.hits.join(", ").toLowerCase()}, so the going-concern questions are mandatory.` : "None of those is found, so the going-concern questions are not mandatory."}
             </p>
             <ul className="mt-2 divide-y divide-border rounded-lg border border-border bg-surface shadow-card">
               {d.indicators.map((i) => (

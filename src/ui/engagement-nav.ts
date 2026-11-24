@@ -19,6 +19,7 @@ export const NAV_GROUPS = [
     // Planning first, then the audit work in the order it is done: confirmations, journal testing, analytical review, client requests.
     items: [
       { key: "audit", label: "Planning", path: "/audit" },
+      { key: "questionnaire", label: "Planning questionnaire", path: "/audit/questionnaire" },
       { key: "confirmations", label: "Confirmations", path: "/audit/confirmations" },
       { key: "journaltesting", label: "Journal testing", path: "/audit/journals" },
       { key: "analytics", label: "Analytical review", path: "/audit/analytics" },

@@ -4,6 +4,7 @@ import { getDb, withFirm } from "@/server/db";
 import { getSession } from "@/server/session";
 import * as repo from "@/server/repo";
 import * as review from "@/server/review";
+import { getRevenuePresumption } from "@/server/planning-answers";
 import { GROUPS } from "@/domain/groups";
 import { formatAmount } from "@/domain/money";
 import { ActionForm } from "@/app/action-form";
@@ -39,9 +40,10 @@ export default async function ReviewPage({ params }: { params: Promise<{ id: str
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
 
   const session = await getSession();
-  const { engagement, overview } = await withFirm(await getDb(), session.firmId, async (tx) => ({
+  const { engagement, overview, revenue } = await withFirm(await getDb(), session.firmId, async (tx) => ({
     engagement: await repo.getEngagement(tx, id),
     overview: await review.getOverview(tx, id),
+    revenue: await getRevenuePresumption(tx, id),
   }));
   if (!engagement || !overview) notFound();
 
@@ -115,6 +117,11 @@ export default async function ReviewPage({ params }: { params: Promise<{ id: str
       <EngagementNav id={id} current="review" status={engagement.status} archived={archived} />
 
       <div className="mt-6 space-y-8">
+        {overview.audited && revenue.rebutted && (
+          <Callout variant="warning" title="Revenue presumption rebutted">
+            A partner rebutted the presumed significant risk on revenue recognition (C13, ISA 240). Reason: {revenue.reason} Rebutted by {revenue.by} on {revenue.at}.
+          </Callout>
+        )}
         {view.state === "locked" ? (
           <>
             <Card title={archived ? "Archived" : "Locked"}>

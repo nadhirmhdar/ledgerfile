@@ -5,7 +5,7 @@ const labels = (id: string) => NAV_GROUPS.find((g) => g.id === id)!.items.map((i
 
 describe("the groups", () => {
   it("lists the audit work in work order, with the new entries", () => {
-    expect(labels("audit")).toEqual(["Planning", "Confirmations", "Journal testing", "Analytical review", "Client requests"]);
+    expect(labels("audit")).toEqual(["Planning", "Planning questionnaire", "Confirmations", "Journal testing", "Analytical review", "Client requests"]);
     expect(labels("finish")).toEqual(["Letters", "Auditor's report", "Review and sign-off"]);
   });
   it("keeps the other groups as they were", () => {

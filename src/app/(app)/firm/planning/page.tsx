@@ -3,7 +3,7 @@ import { getDb, withFirm } from "@/server/db";
 import { getSession } from "@/server/session";
 import { getPlanningSettings } from "@/server/planning";
 import { BENCHMARKS } from "@/domain/audit";
-import { BENCHMARK_ORDER, THRESHOLD_LABEL } from "@/domain/planning-settings";
+import { BENCHMARK_ORDER, INDICATOR_KEYS, INDICATOR_LABEL, THRESHOLD_LABEL } from "@/domain/planning-settings";
 import { ActionForm } from "@/app/action-form";
 import { resetPlanningSettingsAction, updatePlanningSettingsAction } from "@/app/planning-actions";
 import { Badge } from "@/ui/badge";
@@ -48,6 +48,21 @@ export default async function PlanningSettingsPage() {
           {field("Trivial %", "trivialPct", s.trivial.pct, "Of overall materiality.")}
           {field("Trivial, most before a warning %", "trivialMaxPct", s.trivial.maxPct)}
         </div>
+      </Card>
+      <Card title="Going-concern triggers" description="An indicator found on the trial balance that is ticked here makes the going-concern questions (ISA 570) mandatory in the planning questionnaire. The others still open their own question, but do not make the going-concern questions mandatory. The ticked list below is a draft default, unreviewed: the firm can change it.">
+        <fieldset disabled={!edit}>
+          <legend className="sr-only">Indicators that make the going-concern questions mandatory</legend>
+          <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            {INDICATOR_KEYS.map((k) => (
+              <li key={k}>
+                <label className="flex min-h-10 items-center gap-2 text-sm">
+                  <input type="checkbox" name={`gc_${k}`} defaultChecked={s.goingConcernTriggers.includes(k)} className="size-4" />
+                  {INDICATOR_LABEL[k]}
+                </label>
+              </li>
+            ))}
+          </ul>
+        </fieldset>
       </Card>
       <Card title="Indicator thresholds" description="When the planning assistant flags an indicator.">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">

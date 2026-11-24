@@ -179,7 +179,7 @@ describe("the indicators", () => {
     const d = derive(BASE);
     expect(d.indicators.map((i) => i.key)).toEqual(["loss", "negative_equity", "net_current_liabilities", "overdraft", "borrowings_against_cash", "related_parties", "suspense_unmapped", "large_movement", "revenue_down", "margin_swing"]);
     expect(d.indicators.every((i) => i.detail.length > 10 && i.question.length > 10 && !i.hit)).toBe(true);
-    expect(d.goingConcern).toEqual({ required: false, hits: [] });
+    expect(d.goingConcern).toMatchObject({ required: false, hits: [] });
   });
 
   it("a loss, and negative equity", () => {
@@ -246,6 +246,36 @@ describe("the indicators", () => {
     const d = derive(change("4000", -800000));
     expect(d.goingConcern.required).toBe(true);
     expect(d.goingConcern.hits).toContain("A loss");
+  });
+
+  it("only the six indicators on the firm's list make the going-concern questions mandatory; the others open a question but do not", () => {
+    expect(DEFAULT_PLANNING_SETTINGS.goingConcernTriggers).toEqual(["loss", "negative_equity", "net_current_liabilities", "overdraft", "borrowings_against_cash", "revenue_down"]);
+    const others = derive([...change("5000", 700000), acc("1300", "Due from a shareholder", "RPREC", 30000, 0)]);
+    expect(hit(others, "related_parties")).toBe(true);
+    expect(hit(others, "margin_swing")).toBe(true);
+    expect(others.goingConcern).toMatchObject({ required: false, hits: [] });
+    expect(indicator(others, "related_parties").triggersGoingConcern).toBe(false);
+    expect(indicator(others, "margin_swing").triggersGoingConcern).toBe(false);
+    const loss = derive(change("4000", -800000));
+    expect(indicator(loss, "loss").triggersGoingConcern).toBe(true);
+    expect(loss.goingConcern.hits).toEqual(["A loss"]);
+  });
+
+  it("follows the firm's list: a different trigger, or none", () => {
+    const accounts = [...BASE, acc("1300", "Due from a shareholder", "RPREC", 30000, 0)];
+    const onlyRelated = derive(accounts, { settings: settings({ goingConcernTriggers: ["related_parties"] }) });
+    expect(onlyRelated.goingConcern).toMatchObject({ required: true, hits: ["Related-party balances above performance materiality"], triggers: ["Related-party balances above performance materiality"] });
+    const none = derive(change("4000", -800000), { settings: settings({ goingConcernTriggers: [] }) });
+    expect(hit(none, "loss")).toBe(true);
+    expect(none.goingConcern).toMatchObject({ required: false, hits: [], triggers: [] });
+  });
+
+  it("the trigger list is checked, kept in the indicators' order, and part of the settings", () => {
+    expect(checkPlanningSettings({ goingConcernTriggers: ["revenue_down", "loss", "loss"] })).toMatchObject({ ok: true, value: { goingConcernTriggers: ["loss", "revenue_down"] } });
+    expect(checkPlanningSettings({ goingConcernTriggers: ["not_an_indicator"] })).toMatchObject({ ok: false });
+    expect(checkPlanningSettings({ goingConcernTriggers: "loss" })).toMatchObject({ ok: false });
+    expect(checkPlanningSettings({})).toMatchObject({ ok: true, value: { goingConcernTriggers: DEFAULT_PLANNING_SETTINGS.goingConcernTriggers } });
+    expect(isDefault(settings({ goingConcernTriggers: ["loss"] }))).toBe(false);
   });
 
   it("reads the firm's thresholds", () => {

@@ -1,7 +1,7 @@
 import { AREA_BY_CODE, assertionsOf, BENCHMARKS, EXPENSE_BENCHMARK_GROUPS, type Benchmark } from "./audit";
 import { formatAmount } from "./money";
 import { buildLeadSheets, variancePct } from "./leadsheet";
-import { DEFAULT_PLANNING_SETTINGS, type PlanningSettings } from "./planning-settings";
+import { DEFAULT_PLANNING_SETTINGS, INDICATOR_LABEL, type IndicatorKey, type PlanningSettings } from "./planning-settings";
 import { buildStatements, type StatementOptions } from "./statements";
 
 /**
@@ -90,6 +90,8 @@ export interface Indicator {
   key: string;
   label: string;
   hit: boolean;
+  /** True when the firm's settings make this indicator one that triggers the going-concern questions. */
+  triggersGoingConcern: boolean;
   /** What was found (or, when not hit, what was checked). */
   detail: string;
   /** The question a hit opens, for the questionnaire. */
@@ -114,7 +116,7 @@ export interface Derivation {
   suggested: { overallMinor: number; performanceMinor: number; trivialMinor: number; trivialPct: number } | null;
   significant: SignificantArea[];
   indicators: Indicator[];
-  goingConcern: { required: boolean; hits: string[] };
+  goingConcern: { required: boolean; hits: string[]; triggers: string[] };
   presumedRisks: { areaCode: string; text: string; source: string }[];
   areaSuggestions: AreaSuggestion[];
   notes: string[];
@@ -257,7 +259,7 @@ export function derivePlanning(input: DerivationInput): Derivation {
   // --- Item 7: the indicators ------------------------------------------------------------------------------------------------------
   const pm = suggested?.performanceMinor ?? 0;
   const indicators: Indicator[] = [];
-  const add = (key: string, label: string, hit: boolean, detail: string, question: string, leadSheets: string[] = []) => indicators.push({ key, label, hit, detail, question, leadSheets });
+  const add = (key: string, label: string, hit: boolean, detail: string, question: string, leadSheets: string[] = []) => indicators.push({ key, label, hit, triggersGoingConcern: settings.goingConcernTriggers.includes(key as IndicatorKey), detail, question, leadSheets });
 
   add("loss", "A loss", pbt.current < 0 && !empty, pbt.current < 0 ? `Profit before tax is a loss of ${money(pbt.current)}.` : "Profit before tax is not a loss.", "What caused the loss, and how does management expect to return to profit?", SCI_GROUPS);
   const equity = fig("equity");
@@ -290,8 +292,9 @@ export function derivePlanning(input: DerivationInput): Derivation {
   add("margin_swing", `A gross margin swing of more than ${t.marginSwingPoints} points`, swing !== null && Math.abs(swing) > t.marginSwingPoints, swing === null ? "There is no gross margin in one of the years to compare." : `Gross margin moved from ${pct(gmPri!)} to ${pct(gmCur!)} (${Math.round(swing * 10) / 10} points).`, "What changed in selling prices or costs to move the margin?", ["REVENUE", "COS"]);
 
   // --- Item 8: going concern -------------------------------------------------------------------------------------------------------
-  const hits = indicators.filter((i) => i.hit).map((i) => i.label);
-  const goingConcern = { required: hits.length > 0, hits };
+  // Only the indicators on the firm's trigger list make the going-concern questions mandatory; the others open their own question but do not.
+  const hits = indicators.filter((i) => i.hit && i.triggersGoingConcern).map((i) => i.label);
+  const goingConcern = { required: hits.length > 0, hits, triggers: settings.goingConcernTriggers.map((k) => INDICATOR_LABEL[k]) };
 
   // --- Item 9: the presumed risks --------------------------------------------------------------------------------------------------
   const presumedRisks = [
