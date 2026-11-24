@@ -5,7 +5,7 @@ import { Badge, StatusBadge } from "../src/ui/badge";
 import { buttonClass } from "../src/ui/button";
 import { Callout, ProgressBar, StepList } from "../src/ui/feedback";
 import { Field, Input } from "../src/ui/form";
-import { EngagementNav } from "../src/app/(app)/engagements/[id]/nav";
+import { EngagementSections } from "../src/app/(app)/engagements/[id]/sections";
 import { Table, TCell, THead, TRow } from "../src/ui/table";
 
 const html = (node: Parameters<typeof renderToStaticMarkup>[0]) => renderToStaticMarkup(node);
@@ -83,7 +83,7 @@ describe("components render the accessibility attributes they promise", () => {
     expect(buttonClass("danger", "sm")).toContain("min-h-8");
   });
   it("the engagement nav labels each group list with one real heading id", () => {
-    const out = html(h(EngagementNav, { id: "x", current: "home", status: "open" }));
+    const out = html(h(EngagementSections, { id: "x", current: "home", initialOpen: ["overview"] }));
     const labels = [...out.matchAll(/aria-labelledby="([^"]*)"/g)].map((m) => m[1]);
     expect(labels).toHaveLength(5);
     for (const l of labels) {

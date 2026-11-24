@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { areaCrumbs, NAV_GROUPS, scheduleCrumbs, sectionHref, stripScrollLeft, tabForPath } from "../src/ui/engagement-nav";
+import { areaCrumbs, groupOfTab, NAV_COOKIE, NAV_GROUPS, openGroups, parseOpenGroups, scheduleCrumbs, sectionHref, serializeOpenGroups, stripScrollLeft, tabForPath } from "../src/ui/engagement-nav";
 
 const labels = (id: string) => NAV_GROUPS.find((g) => g.id === id)!.items.map((i) => i.label);
 
@@ -93,5 +93,53 @@ describe("stripScrollLeft", () => {
   });
   it("is zero when nothing scrolls", () => {
     expect(stripScrollLeft({ stripWidth: 390, stripScrollWidth: 390, stripScrollLeft: 0, childLeft: 200, childWidth: 100 })).toBe(0);
+  });
+});
+
+describe("which groups of sections are open", () => {
+  it("opens only the current page's group when nothing is remembered", () => {
+    expect(openGroups("tb", undefined)).toEqual(["setup"]);
+    expect(openGroups("home", null)).toEqual(["overview"]);
+    expect(openGroups("review", "")).toEqual(["finish"]);
+    expect(openGroups("confirmations", undefined)).toEqual(["audit"]);
+    expect(openGroups("requests", undefined)).toEqual(["audit"]);
+  });
+
+  it("adds the groups remembered, in the order of the sidebar, and always the current one", () => {
+    expect(openGroups("tb", "finish.audit")).toEqual(["setup", "audit", "finish"]);
+    expect(openGroups("papers", "overview")).toEqual(["overview", "file"]);
+    // The current group is open whatever the cookie says.
+    expect(openGroups("tb", "audit")).toEqual(["setup", "audit"]);
+  });
+
+  it("treats a missing, empty or garbled cookie as the defaults", () => {
+    for (const bad of [undefined, null, "", ".", "..", "nonsense", "Setup", "setup,audit", "setup;audit", "%00", "x".repeat(500), "audit.audit.audit", "__proto__", "constructor"]) {
+      const open = openGroups("tb", bad);
+      if (bad === "audit.audit.audit") expect(open).toEqual(["setup", "audit"]);
+      else expect(open, String(bad)).toEqual(["setup"]);
+    }
+  });
+
+  it("ignores ids that are not groups, and keeps the ones that are", () => {
+    expect(parseOpenGroups("setup.nonsense.finish")).toEqual(["setup", "finish"]);
+    expect(parseOpenGroups("finish.setup")).toEqual(["setup", "finish"]);
+  });
+
+  it("round-trips: what is written is what is read, in the sidebar's order", () => {
+    for (const ids of [[], ["audit"], ["finish", "overview"], ["overview", "setup", "audit", "file", "finish"]]) {
+      expect(parseOpenGroups(serializeOpenGroups(ids))).toEqual(NAV_GROUPS.map((g) => g.id as string).filter((id) => ids.includes(id)));
+    }
+    expect(serializeOpenGroups(["finish", "setup"])).toBe("setup.finish");
+    expect(serializeOpenGroups(new Set(["audit"]))).toBe("audit");
+    expect(serializeOpenGroups(["nonsense"])).toBe("");
+  });
+
+  it("finds the group of every section", () => {
+    for (const g of NAV_GROUPS) for (const item of g.items) expect(groupOfTab(item.key)).toBe(g.id);
+  });
+
+  it("uses a cookie name and a value that are safe in a cookie", () => {
+    expect(NAV_COOKIE).toBe("lf_nav");
+    expect(serializeOpenGroups(NAV_GROUPS.map((g) => g.id))).toMatch(/^[a-z.]+$/);
   });
 });

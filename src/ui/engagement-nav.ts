@@ -100,3 +100,31 @@ export function stripScrollLeft(m: { stripWidth: number; stripScrollWidth: numbe
   const max = Math.max(0, m.stripScrollWidth - m.stripWidth);
   return Math.min(max, Math.max(0, Math.round(centred)));
 }
+
+// --- Which groups of sections are open in the sidebar ----------------------------------------------------------------------------------
+
+/** The cookie that remembers the open groups across engagements in this browser. Written on toggle; read on the server so the first render matches. */
+export const NAV_COOKIE = "lf_nav";
+const NAV_COOKIE_SEPARATOR = ".";
+const GROUP_IDS: string[] = NAV_GROUPS.map((g) => g.id);
+
+/** The group a section is in. */
+export const groupOfTab = (tab: EngagementTab): string => NAV_GROUPS.find((g) => g.items.some((i) => i.key === tab))!.id;
+
+/** The group ids a cookie value holds. A missing, empty or garbled value, and any id that is not a group, give nothing. */
+export function parseOpenGroups(value: string | null | undefined): string[] {
+  if (typeof value !== "string" || value.length > 200) return [];
+  const asked = new Set(value.split(NAV_COOKIE_SEPARATOR));
+  return GROUP_IDS.filter((id) => asked.has(id));
+}
+
+/** The cookie value for a set of open groups, in the order of the sidebar. */
+export const serializeOpenGroups = (ids: Iterable<string>): string => {
+  const asked = new Set(ids);
+  return GROUP_IDS.filter((id) => asked.has(id)).join(NAV_COOKIE_SEPARATOR);
+};
+
+/** The groups open when the page is drawn: the ones remembered, and always the one the current page is in. With nothing remembered, only that one. */
+export function openGroups(current: EngagementTab, cookie: string | null | undefined): string[] {
+  return GROUP_IDS.filter((id) => id === groupOfTab(current) || parseOpenGroups(cookie).includes(id));
+}
