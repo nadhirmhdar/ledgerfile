@@ -234,3 +234,74 @@ describe("what plain detection already reads is not this engine's to change", ()
     ]);
   });
 });
+
+describe("a ledger-system export: heading over two rows, group lines carrying their group totals, ledgers indented below", () => {
+  // Invented company and figures, written in the shape such an export has.
+  const rows: unknown[][] = [
+    ["Invented Trading LLC (sample)"],
+    ["Trial Balance"],
+    ["1-Jan-2025 to 31-Dec-2025"],
+    [],
+    ["Particulars", "Closing Balance", null],
+    [null, "Debit", "Credit"],
+    ["Current Assets", "15,000.00", null],
+    ["   Cash-in-Hand", "1,000.00", null],
+    ["   Invented Bank A/c", "14,000.00", null],
+    ["Capital Account", null, "10,000.00"],
+    ["   Owner Capital", null, "10,000.00"],
+    ["Sales Accounts", null, "20,000.00"],
+    ["   Sales - Local", null, "20,000.00"],
+    ["Indirect Expenses", "15,000.00", null],
+    ["   Rent", "9,000.00", null],
+    ["   Salaries", "6,000.00", null],
+    ["Grand Total", "30,000.00", "30,000.00"],
+  ];
+
+  it("reads Debit and Credit under a heading that runs across them, with the lower words winning", () => {
+    const r = one(rows);
+    expect(r.header).toEqual({ start: 4, end: 5 });
+    expect(r.roles).toEqual({ 0: "name", 1: "debit", 2: "credit" });
+  });
+
+  it("leaves out each group line, on either side, and the grand total, and keeps the six ledgers", () => {
+    const r = one(rows);
+    expect(r.accounts.map((a) => [a.name, a.closingMinor])).toEqual([
+      ["Cash-in-Hand", 100000],
+      ["Invented Bank A/c", 1400000],
+      ["Owner Capital", -1000000],
+      ["Sales - Local", -2000000],
+      ["Rent", 900000],
+      ["Salaries", 600000],
+    ]);
+    expect(r.skipped.map((s) => [s.row, s.reason])).toEqual([
+      [7, "A group line (it equals the lines indented below it)"],
+      [10, "A group line (it equals the lines indented below it)"],
+      [12, "A group line (it equals the lines indented below it)"],
+      [14, "A group line (it equals the lines indented below it)"],
+      [17, "A total row"],
+    ]);
+    expect(r.balanced).toBe(true);
+    expect(["medium", "high"]).toContain(r.confidence.level);
+    expect(r.confidence.reasons).toContain("The heading spans two rows.");
+  });
+
+  it("treats a credit group the same as a debit one, and a group nested in a group", () => {
+    const nested = one([
+      ["Particulars", "Debit", "Credit"],
+      ["Assets", "30,000.00", null],
+      ["  Current", "30,000.00", null],
+      ["    Cash", "10,000.00", null],
+      ["    Bank", "20,000.00", null],
+      ["Liabilities", null, "30,000.00"],
+      ["  Payables", null, "30,000.00"],
+    ]);
+    expect(nested.accounts.map((a) => a.name)).toEqual(["Cash", "Bank", "Payables"]);
+    expect(nested.balanced).toBe(true);
+  });
+
+  it("does not drop an indented account that merely shares an amount with the line above, and leaves flat sheets alone", () => {
+    const r = one([["Name", "Debit", "Credit"], ["Bank", "500.00", null], ["  Petty cash", "100.00", null], ["Capital", null, "600.00"]]);
+    expect(r.accounts.map((a) => a.name)).toEqual(["Bank", "Petty cash", "Capital"]);
+    expect(r.skipped).toEqual([]);
+  });
+});

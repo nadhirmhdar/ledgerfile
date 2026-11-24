@@ -79,7 +79,7 @@ export async function uploadTrialBalanceAction(_prev: FormState, form: FormData)
 
   let sheets: { name: string; rows: unknown[][] }[];
   try {
-    sheets = await readSheets(file.name, await file.arrayBuffer());
+    sheets = await readSheets(file.name, await file.arrayBuffer(), undefined, { keepIndent: true });
   } catch (e) {
     return { ok: false, message: e instanceof Error ? e.message : "The file could not be read." };
   }

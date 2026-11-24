@@ -174,3 +174,28 @@ describe("what was already read is read as before", () => {
     expect(state).toMatchObject({ ok: false, message: "Old-format .xls files are not supported. Save the file as .xlsx or .csv and upload it again." });
   });
 });
+
+describe("indentation kept as an Excel indent", () => {
+  it("tells a group line from the accounts indented below it, though the cells hold no spaces", async () => {
+    const wb = new ExcelJS.Workbook();
+    const ws = wb.addWorksheet("Trial Balance");
+    ws.addRow(["Particulars", "Closing Balance", null]);
+    ws.addRow([null, "Debit", "Credit"]);
+    const body: [string, number | null, number | null, number][] = [
+      ["Current Assets", 1500, null, 0],
+      ["Cash", 500, null, 1],
+      ["Bank", 1000, null, 1],
+      ["Capital", null, 1500, 0],
+      ["Owner capital", null, 1500, 1],
+    ];
+    for (const [name, dr, cr, indent] of body) {
+      const row = ws.addRow([name, dr, cr]);
+      row.getCell(1).alignment = { indent };
+    }
+    const e = await engagement();
+    const state = await upload(e.id, file("tb.xlsx", (await wb.xlsx.writeBuffer()) as ArrayBuffer));
+    expect(state.ok).toBe(true);
+    expect((await accounts(e.id)).map((a) => a.code)).toEqual(["Bank", "Cash", "Owner capital"]);
+    expect(state.details).toEqual(expect.arrayContaining(["Row 3 was left out: a group line (it equals the lines indented below it).", "Row 6 was left out: a group line (it equals the lines indented below it)."]));
+  });
+});

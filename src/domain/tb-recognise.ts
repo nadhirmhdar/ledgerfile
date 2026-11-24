@@ -169,8 +169,16 @@ function labelsOf(rows: Cell[][], start: number, end: number, width: number): (L
   for (let c = 0; c < width; c++) {
     const lower = text(rows[end]?.[c]);
     const upper = end > start ? text(rows[start]?.[c]) : "";
-    if (end > start) carried = upper !== "" ? upper : lower === "" ? "" : carried;
-    out.push(readLabel(end > start ? `${carried} ${lower}`.trim() : lower));
+    if (end === start) {
+      out.push(readLabel(lower));
+      continue;
+    }
+    // The upper heading runs across the blank cells to its right, but only fills a column whose own upper cell is blank.
+    carried = upper !== "" ? upper : lower === "" ? "" : carried;
+    // The words on the lower row win ("Debit" under "Closing Balance" is a debit column); the upper heading only says which set it is.
+    const own = readLabel(lower);
+    const set = readLabel(carried)?.set ?? null;
+    out.push(own ? { roles: own.roles, set: own.set ?? set } : readLabel(`${carried} ${lower}`.trim()));
   }
   return out;
 }
@@ -185,11 +193,13 @@ function findHeader(rows: Cell[][]): HeaderFound | null {
   for (let i = 0; i < Math.min(rows.length, SEARCH_ROWS); i++) {
     if (!rows[i].some((c) => text(c) !== "")) continue;
     const one = labelsOf(rows, i, i, width);
+    const two = i + 1 < rows.length ? labelsOf(rows, i, i + 1, width) : null;
+    // When the next row holds amount words of its own (Debit and Credit under a heading that runs across them), the heading spans both rows.
+    const lower = i + 1 < rows.length ? labelsOf(rows, i + 1, i + 1, width) : [];
+    const lowerAmounts = lower.some((l) => l?.roles.some((r) => r === "debit" || r === "credit"));
+    if (two && lowerAmounts && usable(two)) return { start: i, end: i + 1, labels: two };
     if (usable(one)) return { start: i, end: i, labels: one };
-    if (i + 1 < rows.length) {
-      const two = labelsOf(rows, i, i + 1, width);
-      if (usable(two)) return { start: i, end: i + 1, labels: two };
-    }
+    if (two && usable(two)) return { start: i, end: i + 1, labels: two };
   }
   return null;
 }
@@ -201,6 +211,8 @@ interface Row {
   closing: number | null;
   prior: number | null;
   hadAmount: boolean;
+  /** How far the name is indented (leading spaces), for a group line with its accounts indented below it. */
+  indent: number;
 }
 
 const COMBINED = [/^(\d[\w./-]*)\s*[-–:]\s*(.+)$/, /^(.+?)\s*\(\s*(\d[\w./-]*)\s*\)$/, /^(\d{3,}[\w./-]*)\s+(.+)$/];
@@ -323,7 +335,8 @@ function recogniseSheet(rows: Cell[][], index: number, name: string, sheetsSeen:
     const prior = has("prior") ? amount(row[col("prior")], conv.value) : { minor: null, bad: false };
     if (bad) return void skipped.push({ row: line, reason: "An amount that is not a number" });
     if (closing === null && prior.minor === null) return void skipped.push({ row: line, reason: "A heading row with no amounts" });
-    kept.push({ line, code, name: label, closing, prior: prior.minor, hadAmount: closing !== null });
+    const rawName = String(row[has("name") ? col("name") : split ? col("codename") : col("code")] ?? "");
+    kept.push({ line, code, name: label, closing, prior: prior.minor, hadAmount: closing !== null, indent: /^\s*/.exec(rawName)![0].length });
   });
 
   // Subtotals and parent lines: a row that only repeats the rows next to it must not be counted twice.
@@ -341,6 +354,21 @@ function recogniseSheet(rows: Cell[][], index: number, name: string, sheetsSeen:
       if (k >= 2 && sum === value(r)) {
         alive.delete(r.line);
         skipped.push({ row: r.line, reason: "A subtotal (it equals the rows above it)" });
+        return;
+      }
+    }
+    // A group line with its accounts indented below it, whose amount is the sum of those lines, is a parent (whichever side the amount is on).
+    const below: Row[] = [];
+    for (const next of kept.slice(i + 1)) {
+      if (next.indent > r.indent) below.push(next);
+      else break;
+    }
+    if (below.length > 0) {
+      const direct = below.filter((b) => b.indent === Math.min(...below.map((x) => x.indent)));
+      const sum = (list: Row[]) => list.reduce((a, c) => a + value(c), 0);
+      if (sum(direct) === value(r) || sum(below) === value(r)) {
+        alive.delete(r.line);
+        skipped.push({ row: r.line, reason: "A group line (it equals the lines indented below it)" });
         return;
       }
     }

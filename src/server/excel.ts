@@ -19,7 +19,11 @@ function plain(value: ExcelJS.CellValue): unknown {
 const MAX_SHEETS = 10;
 
 /** Read every worksheet of an .xlsx file (up to ten), or a .csv file (one sheet), each as a grid of cells. Old .xls files are refused. */
-export async function readSheets(fileName: string, data: ArrayBuffer, maxRows: number = MAX_ROWS): Promise<{ name: string; rows: unknown[][] }[]> {
+/**
+ * `keepIndent` puts two spaces in front of a text cell for each level of indent the cell has in Excel, so a reader of the grid can tell a group line from
+ * the accounts indented below it (a CSV shows its own leading spaces). Readers that trim text, as the plain detection does, are not affected.
+ */
+export async function readSheets(fileName: string, data: ArrayBuffer, maxRows: number = MAX_ROWS, options: { keepIndent?: boolean } = {}): Promise<{ name: string; rows: unknown[][] }[]> {
   if (data.byteLength === 0) throw new Error("The file is empty.");
   if (data.byteLength > maxUploadBytes()) throw new Error(uploadTooLargeMessage());
   const lower = fileName.toLowerCase();
@@ -49,7 +53,12 @@ export async function readSheets(fileName: string, data: ArrayBuffer, maxRows: n
     for (let r = 1; r <= last; r++) {
       const row = sheet.getRow(r);
       const cells: unknown[] = [];
-      for (let c = 1; c <= columns; c++) cells.push(plain(row.getCell(c).value));
+      for (let c = 1; c <= columns; c++) {
+        const cell = row.getCell(c);
+        const value = plain(cell.value);
+        const indent = options.keepIndent ? (cell.alignment?.indent ?? 0) : 0;
+        cells.push(typeof value === "string" && indent > 0 ? " ".repeat(indent * 2) + value : value);
+      }
       grid.push(cells);
     }
     return { name: sheet.name, rows: grid };
