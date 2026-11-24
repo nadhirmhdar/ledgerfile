@@ -7,9 +7,9 @@ import { detectHeader, NO_HEADER, parseWithHeader, text, type Cell, type TbParse
  * always been there, and if none of them reads the sheet, a chooser. A layout is the heading row and, for each role, a column (both 0-based).
  */
 
-export type Role = "code" | "name" | "debit" | "credit" | "balance" | "prior";
-export const ROLES: Role[] = ["code", "name", "debit", "credit", "balance", "prior"];
-export const ROLE_LABEL: Record<Role, string> = { code: "Account code", name: "Account name", debit: "Debit", credit: "Credit", balance: "Balance", prior: "Prior year" };
+export type Role = "code" | "name" | "codename" | "debit" | "credit" | "balance" | "prior";
+export const ROLES: Role[] = ["code", "name", "codename", "debit", "credit", "balance", "prior"];
+export const ROLE_LABEL: Record<Role, string> = { code: "Account code", name: "Account name", codename: "Code and name in one column", debit: "Debit", credit: "Credit", balance: "Balance", prior: "Prior year" };
 
 export type LayoutSource = "remembered" | "detected" | "chosen" | "recognised" | "template";
 export const SOURCE_SENTENCE: Record<LayoutSource, string> = {
@@ -57,7 +57,8 @@ export function validateLayout(layout: Layout, rowCount: number): string[] {
   const errors: string[] = [];
   const c = layout.columns;
   if (!Number.isInteger(layout.headerRow) || layout.headerRow < 0 || layout.headerRow >= rowCount) errors.push("Choose the heading row from the rows shown.");
-  if (c.code === undefined && c.name === undefined) errors.push("Choose which column is the account code or the account name.");
+  if (c.code === undefined && c.name === undefined && c.codename === undefined) errors.push("Choose which column is the account code or the account name.");
+  if (c.codename !== undefined && (c.code !== undefined || c.name !== undefined)) errors.push("Use one Code and name column, or separate Account code and Account name columns, not both.");
   const hasDebit = c.debit !== undefined;
   const hasCredit = c.credit !== undefined;
   if (hasDebit !== hasCredit) errors.push("Choose both a Debit and a Credit column, or use one Balance column.");

@@ -257,3 +257,21 @@ export function assist(input: { accounts: AssistantAccount[]; priorYear?: Map<st
     return extra.length === 0 && note === null ? first[i] : decide(r.account, r.n, [...r.evidence, ...extra], note);
   });
 }
+
+/**
+ * Is a name the same account as another? Used when a trial balance is imported again and a code arrives with a different name. Both names are
+ * normalised (case, spacing, punctuation and abbreviations); they are the same if those are equal, or if all the content words of one are among the
+ * content words of the other, so "Trade receivables" and "Trade Receivables - AED" are one account and "Accrued expenses" and "Trade payables" are not.
+ * The rule is the owner's to change.
+ */
+export function sameAccountName(a: string, b: string): boolean {
+  const na = normalise(a);
+  const nb = normalise(b);
+  if (na === nb) return true;
+  const ta = contentTokens(na);
+  const tb = contentTokens(nb);
+  if (ta.length === 0 || tb.length === 0) return false;
+  const inB = new Set(tb);
+  const inA = new Set(ta);
+  return ta.every((t) => inB.has(t)) || tb.every((t) => inA.has(t));
+}

@@ -216,12 +216,12 @@ describe("an export that can be read two ways with different closing balances", 
     const asked = await upload(e.id, file("tb.csv", erpnext));
     expect(asked.ok).toBe(false);
     expect(asked.message).toBe("This file can be read two ways that give different closing balances (for example, the movement columns and the closing columns). Check which columns are the closing balance.");
-    expect(asked.preview).toMatchObject({ headerRow: 4, sheet: 0, selected: { 0: "name", 5: "debit", 6: "credit" } });
+    expect(asked.preview).toMatchObject({ headerRow: 4, sheet: 0, selected: { 0: "codename", 5: "debit", 6: "credit" } });
     expect(await accounts(e.id)).toHaveLength(0);
     expect(await remembered(e.client)).toBeNull();
 
-    // The person confirms the columns the chooser showed (the account column is a name; the closing pair is the balance).
-    const done = await upload(e.id, file("tb.csv", erpnext), { headerRow: "4", sheet: "0", role_0: "name", role_5: "debit", role_6: "credit" });
+    // The person confirms the columns the chooser showed (the account column holds the code and the name; the closing pair is the balance).
+    const done = await upload(e.id, file("tb.csv", erpnext), { headerRow: "4", sheet: "0", role_0: "codename", role_5: "debit", role_6: "credit" });
     expect(done.ok).toBe(true);
     expect(done.message).toContain("Columns you chose");
     const rows = await accounts(e.id);

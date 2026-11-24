@@ -1,4 +1,4 @@
-import type { Cell, TbAccount } from "./tb-parse";
+import { splitCombined, type Cell, type TbAccount } from "./tb-parse";
 import type { Layout, Role } from "./tb-layout";
 
 /**
@@ -253,14 +253,6 @@ interface Row {
   indent: number;
 }
 
-const COMBINED = [/^(\d[\w./-]*)\s*[-–:·•]\s*(.+)$/, /^(.+?)\s*\(\s*(\d[\w./-]*)\s*\)$/, /^(\d{3,}[\w./-]*)\s+(.+)$/];
-function splitCombined(value: string): { code: string; name: string } | null {
-  const a = COMBINED[0].exec(value) ?? COMBINED[2].exec(value);
-  if (a) return { code: a[1], name: a[2].trim() };
-  const b = COMBINED[1].exec(value);
-  return b ? { code: b[2], name: b[1].trim() } : null;
-}
-
 function recogniseSheet(rows: Cell[][], index: number, name: string, sheetsSeen: number): Recognition | null {
   const header = findHeader(rows);
   if (!header) return null;
@@ -472,10 +464,8 @@ function recogniseSheet(rows: Cell[][], index: number, name: string, sheetsSeen:
   const level: Confidence = low.length > 0 ? "low" : medium.length > 0 ? "medium" : "high";
 
   const prefillColumns: Partial<Record<Role, number>> = {};
-  // The chooser has no "code and name in one column" role: that column is shown as the name.
   for (const [c, role] of Object.entries(roles)) {
-    if (["code", "name", "debit", "credit", "balance", "prior"].includes(role)) prefillColumns[role as Role] = Number(c);
-    else if (role === "codename") prefillColumns.name = Number(c);
+    if (["code", "name", "codename", "debit", "credit", "balance", "prior"].includes(role)) prefillColumns[role as Role] = Number(c);
   }
   return {
     sheetIndex: index,
