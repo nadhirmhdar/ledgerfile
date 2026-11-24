@@ -6,7 +6,7 @@ import { readFileSync } from "node:fs";
 import ExcelJS from "exceljs";
 import { readGrid } from "../src/server/excel";
 import { parseTrialBalance } from "../src/domain/tb-parse";
-import { proposeMappings } from "../src/domain/mapping";
+import { proposeMappings } from "./rule-mapping";
 
 const HEADER = ["Date", "Journal No", "Account Code", "Account Name", "Description", "Debit", "Credit", "Posted By"];
 

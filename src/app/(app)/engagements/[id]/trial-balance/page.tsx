@@ -6,7 +6,10 @@ import * as repo from "@/server/repo";
 import { buildLeadSheets } from "@/domain/leadsheet";
 import { GROUPS, GROUP_BY_CODE } from "@/domain/groups";
 import { formatAmount } from "@/domain/money";
-import { approveAllAction } from "@/app/actions";
+import { acceptHighConfidenceAction, acceptMappingAction, approveAllAction, suggestAgainAction } from "@/app/actions";
+import { ActionForm } from "@/app/action-form";
+import { couldNotPlace } from "@/server/mapping-assistant";
+import { bandOf, HIGH } from "@/domain/mapping-assistant";
 import { MappingSelect, UploadForm } from "@/app/forms";
 import { Badge } from "@/ui/badge";
 import { Button, LinkButton, buttonClass } from "@/ui/button";
@@ -24,9 +27,12 @@ export const dynamic = "force-dynamic";
 const SOURCE_LABEL: Record<string, string> = {
   prior_year: "Prior year",
   rule: "Suggested",
-  ai: "AI suggested",
+  // Older rows only: nothing makes a suggestion of this kind any more.
+  ai: "Suggested",
+  assistant: "Assistant",
   manual: "Set by hand",
 };
+const BAND_LABEL = { high: "High confidence", medium: "Medium confidence", low: "Low confidence" } as const;
 
 type Params = { show?: string | string[]; q?: string | string[] };
 
@@ -38,13 +44,14 @@ export default async function TrialBalancePage({ params, searchParams }: { param
   const q = parseQuery(sp.q);
 
   const session = await getSession();
-  const { engagement, accounts } = await withFirm(await getDb(), session.firmId, async (tx) => ({
-    engagement: await repo.getEngagement(tx, id),
-    accounts: await repo.listAccounts(tx, id),
-  }));
+  const { engagement, accounts, unplaced } = await withFirm(await getDb(), session.firmId, async (tx) => {
+    const engagement = await repo.getEngagement(tx, id);
+    return { engagement, accounts: await repo.listAccounts(tx, id), unplaced: engagement?.status === "open" ? await couldNotPlace(tx, session, id) : [] };
+  });
   if (!engagement) notFound();
 
   const locked = engagement.status !== "open";
+  const highPending = accounts.filter((a) => a.source === "assistant" && !a.approved && (a.confidence ?? 0) >= HIGH).length;
   const counts = countMappings(accounts);
   const controls = mappingControls({ locked, accounts: accounts.length, toCheck: counts.toCheck });
   const total = accounts.reduce((s, a) => s + a.closingMinor, 0);
@@ -64,11 +71,23 @@ export default async function TrialBalancePage({ params, searchParams }: { param
   const statusCell = (a: (typeof accounts)[number]) => {
     const state = mappingState(a);
     // A suggestion that a person has accepted says so, so "Suggested" never reads as still pending.
-    const basis = a.source ? (state === "mapped" && (a.source === "rule" || a.source === "ai") ? `${SOURCE_LABEL[a.source]}, accepted` : SOURCE_LABEL[a.source]) : null;
+    const suggested = a.source === "rule" || a.source === "ai" || a.source === "assistant";
+    const basis = a.source ? (state === "mapped" && suggested ? `${SOURCE_LABEL[a.source]}, accepted` : SOURCE_LABEL[a.source]) : null;
+    const assistant = a.source === "assistant" && a.confidence !== null;
     return (
       <div className="flex flex-col items-start gap-0.5">
         {state === "to_map" ? <Badge tone="danger">To map</Badge> : state === "to_check" ? <Badge tone="warning">To check</Badge> : <Badge tone="success">Mapped</Badge>}
-        {state !== "to_map" && basis && <span className="text-sm whitespace-nowrap text-ink-muted">{basis}</span>}
+        {state !== "to_map" && basis && <span className="text-sm whitespace-nowrap text-ink-muted">{assistant && state === "to_check" ? `${basis}, ${BAND_LABEL[bandOf(a.confidence!)].toLowerCase()}` : basis}</span>}
+        {assistant && a.reason && <span className="max-w-xs text-sm text-ink-muted">{a.reason}</span>}
+        {state === "to_check" && !locked && (
+          <form action={acceptMappingAction}>
+            <input type="hidden" name="engagementId" value={id} />
+            <input type="hidden" name="accountId" value={a.id} />
+            <button type="submit" className="mt-1 inline-flex min-h-10 items-center rounded-md border border-border-strong px-3 text-sm font-medium text-ink hover:bg-surface-muted">
+              Accept<span className="sr-only"> {a.code} {a.name}</span>
+            </button>
+          </form>
+        )}
       </div>
     );
   };
@@ -154,6 +173,37 @@ export default async function TrialBalancePage({ params, searchParams }: { param
                   </form>
                 </Card>
               )
+            )}
+
+            {!locked && (
+              <Card title="Mapping assistant" description="Suggests a group for each account that is not yet accepted, from the account's wording and the mappings your firm has already accepted. It runs inside LedgerFile and sends nothing anywhere. You accept each suggestion, and an accepted mapping is never changed.">
+                <div className="flex flex-wrap items-start gap-3">
+                  <ActionForm action={suggestAgainAction} fields={{ engagementId: id }}>
+                    <Button variant="secondary">Suggest again</Button>
+                  </ActionForm>
+                  {highPending > 0 && (
+                    <form action={acceptHighConfidenceAction}>
+                      <input type="hidden" name="engagementId" value={id} />
+                      <Button variant="primary">{highPending === 1 ? "Accept 1 high-confidence suggestion" : `Accept all ${highPending} high-confidence suggestions`}</Button>
+                    </form>
+                  )}
+                </div>
+              </Card>
+            )}
+
+            {unplaced.length > 0 && (
+              <Section title={`Could not place ${unplaced.length}`} description="The assistant does not guess. Choose a group for each of these below.">
+                <ul className="divide-y divide-border rounded-lg border border-border bg-surface shadow-card">
+                  {unplaced.map((u) => (
+                    <li key={u.code} className="px-4 py-2.5">
+                      <p className="font-semibold">
+                        <span className="font-mono text-sm font-normal text-ink-muted">{u.code}</span> {u.name}
+                      </p>
+                      <p className="text-sm text-ink-muted">{u.reason}</p>
+                    </li>
+                  ))}
+                </ul>
+              </Section>
             )}
 
             <Section title="Account mapping" description={locked ? "This engagement is locked, so the mapping is read-only." : "Choose a group for each account. A change is saved as soon as you pick it."}>

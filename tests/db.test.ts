@@ -37,12 +37,12 @@ beforeAll(async () => {
 });
 
 describe("trial balance import and mapping", () => {
-  it("imports, suggests by rule, and leaves suggestions unapproved", async () => {
+  it("imports, suggests with the assistant, and leaves suggestions unapproved", async () => {
     const result = await withFirm(db, FIRM_A.firmId, (tx) => repo.importTrialBalance(tx, FIRM_A, engagement2024, "tb2024.xlsx", TB_2024));
     expect(result).toEqual({ imported: 4, carriedForward: 0, suggested: 4, unmapped: 0 });
     const accounts = await withFirm(db, FIRM_A.firmId, (tx) => repo.listAccounts(tx, engagement2024));
     expect(accounts.map((a) => a.groupCode)).toEqual(["CASH", "TRADEREC", "TRADEPAY", "CAPITAL"]);
-    expect(accounts.every((a) => a.source === "rule" && !a.approved)).toBe(true);
+    expect(accounts.every((a) => a.source === "assistant" && !a.approved && !!a.reason)).toBe(true);
     expect(accounts[0].closingMinor).toBe(4000000);
   });
 

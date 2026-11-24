@@ -3,7 +3,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { readGrid } from "../src/server/excel";
 import { parseTrialBalance } from "../src/domain/tb-parse";
-import { proposeMappings } from "../src/domain/mapping";
+import { proposeMappings } from "../tests/rule-mapping";
 import { buildStatementPack } from "../src/domain/statement-pack";
 import { buildStatementsDocx } from "../src/server/statements-docx";
 
