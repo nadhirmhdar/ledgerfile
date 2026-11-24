@@ -165,7 +165,7 @@ html[data-direction="b"] {
   --color-neutral: #697684;
   --color-neutral-soft: #eef1f4;
   --color-neutral-strong: #37444f;
-  --spacing: 0.28rem;
+  --spacing: 0.27rem;
   --text-xs--line-height: 1.1rem;
   --text-sm--line-height: 1.4rem;
   --text-base--line-height: 1.6rem;
@@ -235,5 +235,10 @@ html[data-direction="b"] [aria-current="page"] { font-weight: 600; }
 html[data-direction="c"] :focus-visible { outline-width: 3px; }
 html[data-direction="c"] thead { background-color: var(--color-surface-muted); border-bottom: 2px solid var(--color-ink); color: var(--color-ink); }
 html[data-direction="c"] h1, html[data-direction="c"] h2 { letter-spacing: -0.015em; }
-html[data-direction="c"] nav [aria-current="page"] { border-left-width: 4px; }
-html[data-direction="c"] header { border-bottom: 2px solid var(--color-ink); }
+@media (min-width: 1024px) {
+  html[data-direction="c"] nav[aria-label="Engagement sections"] [aria-current="page"] { border-left-width: 4px; }
+}
+html[data-direction="c"] body > header { border-bottom: 2px solid var(--color-ink); }
+/* A larger spacing base widens fixed-width controls; keep the mapping select inside its table cell. */
+html[data-direction="a"] table select,
+html[data-direction="b"] table select { width: 20rem; }
