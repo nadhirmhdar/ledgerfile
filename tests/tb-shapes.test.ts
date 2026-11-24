@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { parseCsv, parseTrialBalance, type TbAccount } from "../src/domain/tb-parse";
-import { preferRecognition, recogniseWorkbook, type Confidence, type Recognition } from "../src/domain/tb-recognise";
+import { readsDiffer, recogniseWorkbook, type Confidence, type Recognition } from "../src/domain/tb-recognise";
 
 // One invented fixture per export shape, in tests/fixtures/tb-shapes. Each starts with a line saying how its shape was established. Every figure and name
 // is invented, and the same ledger (cash 5,000, sales 20,000 and so on) is written in each shape, so a reading that took the period's movement, or an
@@ -11,11 +11,17 @@ import { preferRecognition, recogniseWorkbook, type Confidence, type Recognition
 const dir = path.join(__dirname, "fixtures", "tb-shapes");
 const load = (name: string) => parseCsv(fs.readFileSync(path.join(dir, `${name}.csv`), "utf8"));
 
-/** What the upload does with a sheet, in the order it does it (see uploadTrialBalanceAction): plain detection, unless the recogniser reads other closing balances; then the recogniser. */
-function read(grid: string[][]): { via: "plain" | "recogniser" | "ask"; accounts: TbAccount[]; balanced: boolean; recognition: Recognition | null } {
+/**
+ * What the upload does with a sheet, in the order it does it (see uploadTrialBalanceAction): plain detection; but when the recogniser also reads balanced accounts
+ * with different closing balances the two readings disagree, so it asks ("disagree": the accounts shown are the recogniser's proposal, not imported). Then the recogniser.
+ */
+function read(grid: string[][]): { via: "plain" | "recogniser" | "disagree" | "ask"; accounts: TbAccount[]; balanced: boolean; recognition: Recognition | null } {
   const plain = parseTrialBalance(grid);
   const recognition = recogniseWorkbook([{ name: "Sheet1", rows: grid }]);
-  if (plain.errors.length === 0 && plain.balanced && !preferRecognition(plain.accounts, recognition)) return { via: "plain", accounts: plain.accounts, balanced: true, recognition };
+  if (plain.errors.length === 0 && plain.balanced) {
+    if (readsDiffer(plain.accounts, recognition)) return { via: "disagree", accounts: recognition.accounts, balanced: true, recognition };
+    return { via: "plain", accounts: plain.accounts, balanced: true, recognition };
+  }
   if (recognition && recognition.confidence.level !== "low") return { via: "recogniser", accounts: recognition.accounts, balanced: recognition.balanced, recognition };
   return { via: "ask", accounts: [], balanced: false, recognition };
 }
@@ -23,7 +29,7 @@ function read(grid: string[][]): { via: "plain" | "recogniser" | "ask"; accounts
 interface Shape {
   system: string;
   file: string;
-  via: "plain" | "recogniser";
+  via: "plain" | "recogniser" | "disagree";
   level: Confidence;
   /** Rows left out, with the sheet's row number (1-based, counting the source line) and why. */
   skipped?: number;
@@ -39,12 +45,12 @@ const SHAPES: Shape[] = [
   { system: "Xero", file: "xero", via: "recogniser", level: "medium", skipped: 1, roles: { 0: "codename", 3: "debit", 4: "credit" }, ignored: [1, 2] },
   { system: "Sage 50 (UK)", file: "sage-50-uk", via: "plain", level: "high", skipped: 1 },
   { system: "Sage 300", file: "sage-300", via: "recogniser", level: "high", roles: { 0: "code", 1: "name", 5: "balance" }, ignored: [2, 3, 4] },
-  { system: "SAP Business One", file: "sap-business-one", via: "recogniser", level: "high", roles: { 0: "code", 1: "name", 7: "balance" }, ignored: [2, 3, 4, 5, 6] },
-  { system: "Odoo", file: "odoo", via: "recogniser", level: "medium", skipped: 1, roles: { 0: "codename", 4: "balance" }, ignored: [1, 2, 3] },
+  { system: "SAP Business One", file: "sap-business-one", via: "disagree", level: "high", roles: { 0: "code", 1: "name", 7: "balance" }, ignored: [2, 3, 4, 5, 6] },
+  { system: "Odoo", file: "odoo", via: "disagree", level: "medium", skipped: 1, roles: { 0: "codename", 4: "balance" }, ignored: [1, 2, 3] },
   { system: "Dynamics 365 Business Central", file: "business-central", via: "recogniser", level: "medium", roles: { 0: "code", 1: "name", 4: "debit", 5: "credit" }, ignored: [2, 3] },
   { system: "Dynamics NAV", file: "dynamics-nav", via: "recogniser", level: "high", roles: { 0: "code", 1: "name", 4: "debit", 5: "credit" }, ignored: [2, 3] },
-  { system: "Dynamics GP", file: "dynamics-gp", via: "recogniser", level: "high", roles: { 0: "code", 1: "name", 6: "balance" }, ignored: [2, 3, 4, 5] },
-  { system: "Dynamics AX / Finance and Operations", file: "dynamics-ax-fo", via: "recogniser", level: "high", roles: { 0: "code", 1: "name", 5: "balance" }, ignored: [2, 3, 4] },
+  { system: "Dynamics GP", file: "dynamics-gp", via: "disagree", level: "high", roles: { 0: "code", 1: "name", 6: "balance" }, ignored: [2, 3, 4, 5] },
+  { system: "Dynamics AX / Finance and Operations", file: "dynamics-ax-fo", via: "disagree", level: "high", roles: { 0: "code", 1: "name", 5: "balance" }, ignored: [2, 3, 4] },
   { system: "NetSuite", file: "netsuite", via: "plain", level: "medium", skipped: 3 },
   { system: "Focus", file: "focus", via: "plain", level: "high", skipped: 1 },
   { system: "MYOB", file: "myob", via: "recogniser", level: "high", skipped: 1, roles: { 0: "code", 1: "name", 2: "debit", 3: "credit" } },
@@ -52,7 +58,7 @@ const SHAPES: Shape[] = [
   { system: "FreshBooks", file: "freshbooks", via: "plain", level: "high", skipped: 1 },
   { system: "Busy", file: "busy", via: "recogniser", level: "medium", skipped: 1, roles: { 0: "name", 4: "balance" }, ignored: [1, 2, 3] },
   { system: "Peachtree", file: "peachtree", via: "recogniser", level: "high", skipped: 1, roles: { 0: "code", 1: "name", 2: "debit", 3: "credit" } },
-  { system: "ERPNext", file: "erpnext", via: "recogniser", level: "medium", skipped: 1, roles: { 0: "codename", 5: "debit", 6: "credit" }, ignored: [1, 2, 3, 4] },
+  { system: "ERPNext", file: "erpnext", via: "disagree", level: "medium", skipped: 1, roles: { 0: "codename", 5: "debit", 6: "credit" }, ignored: [1, 2, 3, 4] },
   { system: "Generic layout", file: "generic", via: "plain", level: "high", skipped: 0 },
 ];
 
@@ -67,7 +73,7 @@ describe("each system's export shape", () => {
   });
 
   for (const shape of SHAPES) {
-    it(`${shape.system}: reads the closing balances, balances, and says ${shape.via === "plain" ? "plain detection" : "the recogniser"} read it`, () => {
+    it(`${shape.system}: reads the closing balances, balances, and says ${shape.via === "plain" ? "plain detection read it" : shape.via === "recogniser" ? "the recogniser read it" : "the two readings disagree, so it asks"}`, () => {
       const result = read(load(shape.file));
       expect(result.via).toBe(shape.via);
       expect(result.balanced).toBe(true);
@@ -149,12 +155,12 @@ describe("what the shapes showed about the recogniser", () => {
   it("prefers the recogniser only when it reads different closing balances and is not unsure", () => {
     const plain: TbAccount[] = [{ code: "1", name: "Cash", closingMinor: 100, priorMinor: null }, { code: "2", name: "Capital", closingMinor: -100, priorMinor: null }];
     const same = recogniseWorkbook([{ name: "s", rows: [["Code", "Name", "Debit", "Credit"], ["1", "Cash", "1.00", ""], ["2", "Capital", "", "1.00"]] }]);
-    expect(preferRecognition(plain, same)).toBe(false);
+    expect(readsDiffer(plain, same)).toBe(false);
     const other = recogniseWorkbook([{ name: "s", rows: [["Code", "Name", "Debit", "Credit"], ["1", "Cash", "5.00", ""], ["2", "Capital", "", "5.00"]] }]);
-    expect(preferRecognition(plain, other)).toBe(true);
-    expect(preferRecognition(plain, null)).toBe(false);
+    expect(readsDiffer(plain, other)).toBe(true);
+    expect(readsDiffer(plain, null)).toBe(false);
     const unsure = recogniseWorkbook([{ name: "s", rows: [["Code", "Name", "Debit", "Credit"], ["1", "Cash", "5.00", ""], ["2", "Capital", "", "4.00"]] }]);
     expect(unsure!.confidence.level).toBe("low");
-    expect(preferRecognition(plain, unsure)).toBe(false);
+    expect(readsDiffer(plain, unsure)).toBe(false);
   });
 });

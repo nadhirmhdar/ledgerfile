@@ -472,7 +472,11 @@ function recogniseSheet(rows: Cell[][], index: number, name: string, sheetsSeen:
   const level: Confidence = low.length > 0 ? "low" : medium.length > 0 ? "medium" : "high";
 
   const prefillColumns: Partial<Record<Role, number>> = {};
-  for (const [c, role] of Object.entries(roles)) if (["code", "name", "debit", "credit", "balance", "prior"].includes(role)) prefillColumns[role as Role] = Number(c);
+  // The chooser has no "code and name in one column" role: that column is shown as the name.
+  for (const [c, role] of Object.entries(roles)) {
+    if (["code", "name", "debit", "credit", "balance", "prior"].includes(role)) prefillColumns[role as Role] = Number(c);
+    else if (role === "codename") prefillColumns.name = Number(c);
+  }
   return {
     sheetIndex: index,
     sheetName: name,
@@ -509,12 +513,13 @@ export function recogniseWorkbook(sheets: Sheet[]): Recognition | null {
 const closings = (accounts: TbAccount[]): number[] => accounts.map((a) => a.closingMinor).sort((a, b) => a - b);
 
 /**
- * Whether to read a sheet with the recogniser although plain detection read it and balanced. Plain detection takes the first Debit and Credit columns
- * it finds, so an export with opening, movement and closing sets (or a year-to-date pair) is read from the period's movement, which also balances. When the
- * recogniser reads different closing balances, and is not unsure, its reading is the right one. A file both read the same way is left as plain detection read it.
+ * Whether plain detection and the recogniser both read a sheet into balanced accounts but with different closing balances. Plain detection takes the first
+ * Debit and Credit columns it finds, so an export with opening, movement and closing sets (or a year-to-date pair) can be read from the period's movement,
+ * which balances too. Two balanced readings that disagree mean we do not know which columns are the closing balance, so neither is imported: the caller
+ * asks. A file both read the same way is not a disagreement.
  */
-export function preferRecognition(plain: TbAccount[], found: Recognition | null): found is Recognition {
-  if (!found || found.confidence.level === "low") return false;
+export function readsDiffer(plain: TbAccount[], found: Recognition | null): found is Recognition {
+  if (!found || !found.balanced) return false;
   const a = closings(plain);
   const b = closings(found.accounts);
   return a.length !== b.length || a.some((x, i) => x !== b[i]);

@@ -7,7 +7,7 @@ What LedgerFile reads when a firm uploads a trial balance exported from an accou
 1. What the person chose, then the headings remembered for the client, then plain detection (the heading words it has always known), then the recogniser (`src/domain/tb-recognise.ts`), then the chooser.
 2. The recogniser reads every sheet, the heading (one or two rows), the role of each column, and the rows below: it skips headings, group lines, totals and subtotals, and takes the closing balance, never opening or movement.
 3. It is high, medium or low in confidence. Low means ask: the chooser opens filled in, and nothing is imported.
-4. Plain detection is overruled only when it reads a file that balances but the recogniser, not unsure, reads different closing balances (the case of an export with opening, movement and closing columns, where the movement columns balance too).
+4. When plain detection reads a file into balanced accounts and the recogniser also reads balanced accounts with *different* closing balances (the case of an export with opening, movement and closing columns, where the movement columns balance too), neither reading is imported: we do not know which columns are the closing balance. The chooser opens on that sheet, filled in with the recogniser's columns, with the message "This file can be read two ways that give different closing balances...". What the person confirms is remembered for the client, so next year's file does not ask again. A file both read the same way, and anything a person chose, is untouched.
 
 ## The shapes
 
@@ -54,7 +54,7 @@ Fixed in this slice, each with a test:
 - An opening balance with a Balance column and a Debit and Credit pair (SAP Business One, Dynamics AX) was read from the Debit and Credit; those are now movement.
 - "Balance Debit" and "Balance Credit" (NAV), "Debit Amt" (Peachtree), "Debits" and "Credits" (MYOB), "N/C" (Sage), "Account ID", "Main account", "Name of Account", and the middle dot between a code and a name (QuickBooks Desktop) were not known.
 - Adjusting columns (Sage Intacct) are never guessed: they make the reading low confidence, so the chooser opens.
-- **Plain detection misread exports with opening, movement and closing columns** (Dynamics GP and AX, Odoo, SAP Business One, ERPNext): it took the Debit and Credit columns, which are the period's movement and balance too, so the file imported with the wrong figures and no warning. The upload now prefers the recogniser's reading when it is not unsure and reads different closing balances. Files both read the same way are untouched.
+- **Plain detection can misread exports with opening, movement and closing columns** (Dynamics GP and AX, Odoo, SAP Business One, ERPNext): it takes the Debit and Credit columns, which are the period's movement and balance too, so the file would import with the wrong figures and no warning. When the recogniser reads different closing balances, the upload now asks (see above) instead of importing either reading.
 
 ## Not covered
 
