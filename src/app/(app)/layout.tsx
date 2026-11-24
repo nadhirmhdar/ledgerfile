@@ -22,16 +22,16 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       >
         Skip to main content
       </a>
-      <header className="border-b border-border bg-surface shadow-card">
+      <header className="bg-brand-deep text-white">
         <div className="mx-auto flex w-full max-w-7xl items-stretch justify-between gap-2 px-4 sm:gap-3 sm:px-6">
           <div className="flex min-w-0 items-stretch gap-2 sm:gap-8">
-            <Link href="/" aria-label="LedgerFile, engagements" className="flex items-center rounded-sm">
-              <Wordmark />
+            <Link href="/" aria-label="LedgerFile, engagements" className="flex items-center rounded-sm focus-visible:outline-accent-bright">
+              <Wordmark onDark />
             </Link>
             <TopNav admin={canManageFirm(session.role)} />
           </div>
           <details className="group relative self-center">
-            <summary aria-label={session.name} className="inline-flex min-h-10 min-w-10 shrink-0 cursor-pointer justify-center list-none items-center gap-2 rounded-md px-2 text-sm font-medium text-ink hover:bg-surface-muted [&::-webkit-details-marker]:hidden">
+            <summary aria-label={session.name} className="inline-flex min-h-10 min-w-10 shrink-0 cursor-pointer justify-center list-none items-center gap-2 rounded-md px-2 text-sm font-medium text-white transition-colors hover:bg-white/10 focus-visible:outline-accent-bright [&::-webkit-details-marker]:hidden">
               <UserIcon />
               <span className="hidden max-w-40 truncate sm:inline">{session.name}</span>
               <ChevronDownIcon className="hidden transition-transform group-open:rotate-180 sm:block" />

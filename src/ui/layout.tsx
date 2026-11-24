@@ -24,7 +24,7 @@ export function Card({
   raised?: boolean;
 }) {
   return (
-    <div className={`rounded-lg border bg-surface ${raised ? "border-border shadow-raised" : "border-border shadow-card"} ${className}`}>
+    <div className={`rounded-lg border bg-surface ${raised ? "border-border border-t-[3px] border-t-accent shadow-raised" : "border-border shadow-card"} ${className}`}>
       {(title || actions) && (
         <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border px-4 py-3 sm:px-6 sm:py-4">
           <div>
@@ -91,7 +91,7 @@ export function PageHeader({
   const parents = (breadcrumb ?? []).filter((b) => b.href);
   const here = (breadcrumb ?? []).filter((b) => !b.href);
   return (
-    <header className="rounded-lg border border-border bg-surface px-4 py-5 shadow-card sm:px-6 sm:py-6">
+    <header className="rounded-lg border border-accent-edge/60 bg-gradient-to-r from-accent-wash via-accent-wash to-surface px-4 py-5 shadow-card sm:px-6 sm:py-6">
       {breadcrumb && breadcrumb.length > 0 && (
         <nav aria-label="Breadcrumb" className="mb-3">
           <ol className="flex flex-wrap items-center gap-x-1 gap-y-1 text-sm text-ink-muted">
@@ -119,7 +119,7 @@ export function PageHeader({
         <h1 className="min-w-0 text-2xl font-semibold text-ink">{title}</h1>
         {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
       </div>
-      {meta && <dl className="mt-4 flex flex-wrap items-end gap-x-10 gap-y-3 border-t border-border pt-4 text-sm text-ink-muted [&>[aria-hidden=true]]:hidden">{meta}</dl>}
+      {meta && <dl className="mt-4 flex flex-wrap items-end gap-x-10 gap-y-3 border-t border-accent-edge/60 pt-4 text-sm text-ink-muted [&>[aria-hidden=true]]:hidden">{meta}</dl>}
       {note && <p className="mt-3 text-sm text-ink-muted">{note}</p>}
       {subtitle && <p className={`${meta || note ? "mt-3" : "mt-4"} text-base text-ink`}>{subtitle}</p>}
     </header>
@@ -198,10 +198,10 @@ export function Stat({ label, value, hint, href, attention }: { label: string; v
       {hint && <div className="mt-1 text-small text-ink-muted">{hint}</div>}
     </>
   );
-  const bar = attention === "danger" ? "border-l-[3px] border-l-danger" : attention === "warning" ? "border-l-[3px] border-l-warning" : "";
-  const cls = `block h-full rounded-lg border border-border bg-surface px-4 py-3 shadow-card ${bar}`;
+  const tone = attention === "danger" ? "border-l-[3px] border-l-danger bg-danger-soft" : attention === "warning" ? "border-l-[3px] border-l-warning bg-warning-soft" : "bg-surface";
+  const cls = `block h-full rounded-lg border border-border px-4 py-3 shadow-card ${tone}`;
   return href ? (
-    <Link href={href} className={`${cls} transition-colors hover:border-accent-edge hover:bg-surface-muted/50`}>
+    <Link href={href} className={`${cls} transition-colors hover:border-accent-edge`}>
       {body}
     </Link>
   ) : (

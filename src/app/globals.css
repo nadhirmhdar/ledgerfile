@@ -7,9 +7,15 @@
  *
  * Role names: the brief's "text" and "text-muted" roles are `ink` and `ink-muted`, so the utilities read text-ink and text-ink-muted.
  *
+ * The brand surfaces (the sign-in panel and the top bar) are `brand-deep` with a cobalt glow, and the page and surfaces are a touch cooler to match.
+ * `accent-bright` is the companion that works on brand-deep only: it fails on a light surface (1.9:1), so it is never used there.
+ *
  * Contrast (WCAG 2.x, measured from the hex values; text needs 4.5:1, large text and UI parts need 3:1):
- *   ink on page 17.3, on surface 19.1        ink-muted on page 6.6, on surface 7.3, on surface-muted 6.3
- *   ink-subtle on surface 5.7, on page 5.2, on surface-muted 4.9 (placeholders, hints and the table heading)
+ *   ink on page 17.3, on surface 19.1        ink-muted on page 6.7, on surface 7.3, on surface-muted 6.4
+ *   ink-subtle on surface 5.7, on page 5.2, on surface-muted 5.0, on accent-wash 5.0 (placeholders, hints and the table heading)
+ *   ink on accent-wash 16.7, ink-muted on accent-wash 6.4, accent on accent-wash 8.9 (the page header band)
+ *   on brand-deep: white 17.1, nav text #c9d4ee 11.5, sub text #aebbdc 8.9, accent-bright 8.9; brand-deep on accent-bright 8.9
+ *   white on the cobalt stage circle 10.2, white on the success stage circle 6.1
  *   surface on accent 10.2, on accent-hover 13.5   accent on surface 10.2, on accent-soft 8.5, on page 9.2, on surface-muted 8.7
  *   border-input (the edge of a field) on surface 3.4, border-strong (hover edge of a field and of a secondary button) on surface 7.6
  *   border-control (the resting edge of a secondary button, which has its words as well) on surface 2.0
@@ -22,11 +28,11 @@
  * `border-input`, a button has a fill or the words, and a status never relies on its tint.
  */
 @theme {
-  --color-page: #f5f4f0;
+  --color-page: #f3f5f9;
   --color-surface: #ffffff;
-  --color-surface-muted: #efeee9;
-  --color-track: #d6d5cd;
-  --color-border: #e3e2db;
+  --color-surface-muted: #edf0f6;
+  --color-track: #d3d8e3;
+  --color-border: #dfe3ec;
   --color-border-control: #b9b8af;
   --color-border-input: #858b92;
   --color-border-strong: #4d555e;
@@ -38,6 +44,12 @@
   --color-accent-hover: #0f2870;
   --color-accent-soft: #e4ebfb;
   --color-accent-edge: #b8c7ee;
+  --color-accent-wash: #eaf0fd;
+  --color-accent-bright: #6cc4ff;
+  --color-brand-deep: #0b1a3d;
+  --color-brand-glow: rgb(23 56 154 / 0.55);
+  --color-nav-text: #c9d4ee;
+  --color-brand-sub: #aebbdc;
 
   --color-success: #16703f;
   --color-success-soft: #e6f4ea;
@@ -89,10 +101,10 @@
   --font-weight-semibold: 600;
   --font-weight-bold: 700;
 
-  /* Controls 6 px, cards 8 px, chips fully rounded: the radius says what a thing is. */
+  /* Controls 6 px, cards 12 px, chips fully rounded: the radius says what a thing is. */
   --radius-sm: 0.25rem;
   --radius-md: 0.375rem;
-  --radius-lg: 0.5rem;
+  --radius-lg: 0.75rem;
 
   --shadow-card: 0 1px 2px rgb(11 16 22 / 0.05);
   --shadow-raised: 0 2px 4px rgb(11 16 22 / 0.06), 0 14px 32px -10px rgb(11 16 22 / 0.2);

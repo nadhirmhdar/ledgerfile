@@ -78,12 +78,17 @@ export interface Step {
 
 /** Numbered stages in work order, each with its status, how far it has got, and a link to where the work is. */
 export function StepList({ steps }: { steps: Step[] }) {
+  // The current stage is the first one not done: it gets a ring.
+  const current = steps.findIndex((s) => s.status !== "done");
   return (
     <ol className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-surface shadow-card">
       {steps.map((s, i) => (
         <li key={s.key} className="relative grid grid-cols-[2rem_1fr] gap-x-4 gap-y-1 px-4 py-4 transition-colors hover:bg-surface-muted/60 sm:px-6">
-          <span aria-hidden="true" className="flex size-8 items-center justify-center rounded-full bg-surface-muted text-sm font-semibold text-ink-muted">
-            {i + 1}
+          <span
+            aria-hidden="true"
+            className={`flex size-8 items-center justify-center rounded-full text-sm font-semibold text-white ${s.status === "done" ? "bg-success" : "bg-accent"} ${i === current ? "ring-2 ring-accent ring-offset-2 ring-offset-surface" : ""}`}
+          >
+            {s.status === "done" ? <CheckIcon /> : i + 1}
           </span>
           <div className="min-w-0">
             <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">

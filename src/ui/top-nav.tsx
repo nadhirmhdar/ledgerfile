@@ -23,8 +23,8 @@ export function TopNav({ admin = false }: { admin?: boolean }) {
             key={item.href}
             href={item.href}
             aria-current={current ? "page" : undefined}
-            className={`-mb-px inline-flex min-h-14 items-center border-b-2 px-1.5 text-sm font-medium transition-colors sm:px-3 ${
-              current ? "border-accent text-ink" : "border-transparent text-ink-muted hover:text-ink"
+            className={`-mb-px inline-flex min-h-14 items-center border-b-[3px] px-1.5 text-sm font-medium transition-colors focus-visible:outline-accent-bright sm:px-3 ${
+              current ? "border-accent-bright text-white" : "border-transparent text-nav-text hover:text-white"
             }`}
           >
             {item.label}

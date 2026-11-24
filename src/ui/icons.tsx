@@ -116,10 +116,10 @@ export const SearchIcon = (p: IconProps) => (
   </Svg>
 );
 /** The LedgerFile mark: a ledger page with a column rule and ruled lines, drawn here (no logo file). Takes its colour from the text. */
-export const LedgerMark = (p: IconProps) => (
+export const LedgerMark = ({ inner = "#fff", ...p }: IconProps & { inner?: string }) => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="22" height="22" fill="none" aria-hidden="true" focusable="false" {...p}>
     <rect x="3" y="2.5" width="18" height="19" rx="3" fill="currentColor" />
-    <path d="M8.5 2.5v19" stroke="#fff" strokeOpacity="0.55" strokeWidth="1.5" />
-    <path d="M12 8h5M12 12h5M12 16h3" stroke="#fff" strokeWidth="1.75" strokeLinecap="round" />
+    <path d="M8.5 2.5v19" stroke={inner} strokeOpacity="0.55" strokeWidth="1.5" />
+    <path d="M12 8h5M12 12h5M12 16h3" stroke={inner} strokeWidth="1.75" strokeLinecap="round" />
   </svg>
 );
