@@ -23,8 +23,8 @@ const partner = user(4, "partner");
 const partnerY = user(3, "partner", Y);
 
 /** A sheet the automatic detection cannot read, then the same client's next year: other year in a heading, a new column, columns moved. */
-const ODD_2024 = "Ledger head,Dr Closing,Cr Closing,PY 2023\nCash at bank,1000.00,,900.00\nShare capital,,1000.00,-900.00\n";
-const ODD_2025 = "Note,PY 2024,Cr Closing,LEDGER HEAD,Dr Closing\nx,800.00,,Cash at bank,1200.00\ny,-800.00,1200.00,Share capital,\n";
+const ODD_2024 = "Head,Closing amt Dr,Closing amt Cr,Yr 2023\nCash at bank,1000.00,,900.00\nShare capital,,1000.00,-900.00\n";
+const ODD_2025 = "Note,Yr 2024,Closing amt Cr,HEAD,Closing amt Dr\nx,800.00,,Cash at bank,1200.00\ny,-800.00,1200.00,Share capital,\n";
 const STANDARD = "Account Code,Account Name,Debit,Credit\n1000,Bank,500.00,\n3000,Capital,,500.00\n";
 const CHOICE = { headerRow: "0", role_0: "name", role_1: "debit", role_2: "credit", role_3: "prior" };
 
@@ -106,13 +106,13 @@ describe("a sheet the automatic detection cannot read", () => {
     expect(state.message).toContain("Imported 2 accounts");
     expect(state.message).toContain("Columns you chose.");
     expect(await accounts(e2024)).toBe(2);
-    expect(await layoutOf(clientA)).toMatchObject({ headings: { name: "Ledger head", debit: "Dr Closing", credit: "Cr Closing", prior: "PY 2023" } });
+    expect(await layoutOf(clientA)).toMatchObject({ headings: { name: "Head", debit: "Closing amt Dr", credit: "Closing amt Cr", prior: "Yr 2023" } });
     expect(await importLayout(e2024)).toMatchObject({ source: "chosen" });
     expect((await logs("save_tb_layout")).map((l) => [l.entity_id, l.user_id])).toEqual([[clientA, preparer.userId]]);
   });
 
   it("never trusts the browser: a chosen layout that does not balance is refused, with the chooser again", async () => {
-    const state = await upload(eB, "Ledger head,Dr Closing,Cr Closing\nCash,1000.00,\nCapital,,900.00\n", { headerRow: "0", role_0: "name", role_1: "debit", role_2: "credit" });
+    const state = await upload(eB, "Head,Closing amt Dr,Closing amt Cr\nCash,1000.00,\nCapital,,900.00\n", { headerRow: "0", role_0: "name", role_1: "debit", role_2: "credit" });
     expect(state.ok).toBe(false);
     expect(state.message).toContain("does not balance");
     expect(state.preview).toBeDefined();

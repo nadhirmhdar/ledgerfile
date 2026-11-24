@@ -16,14 +16,16 @@ function plain(value: ExcelJS.CellValue): unknown {
   return null;
 }
 
-/** Read the first worksheet of an .xlsx file, or a .csv file, into a grid of cells. */
-export async function readGrid(fileName: string, data: ArrayBuffer, maxRows: number = MAX_ROWS): Promise<unknown[][]> {
+const MAX_SHEETS = 10;
+
+/** Read every worksheet of an .xlsx file (up to ten), or a .csv file (one sheet), each as a grid of cells. Old .xls files are refused. */
+export async function readSheets(fileName: string, data: ArrayBuffer, maxRows: number = MAX_ROWS): Promise<{ name: string; rows: unknown[][] }[]> {
   if (data.byteLength === 0) throw new Error("The file is empty.");
   if (data.byteLength > maxUploadBytes()) throw new Error(uploadTooLargeMessage());
   const lower = fileName.toLowerCase();
 
   if (lower.endsWith(".csv")) {
-    return parseCsv(new TextDecoder("utf-8").decode(data)).slice(0, maxRows);
+    return [{ name: "Sheet1", rows: parseCsv(new TextDecoder("utf-8").decode(data)).slice(0, maxRows) }];
   }
   if (lower.endsWith(".xls")) {
     throw new Error("Old-format .xls files are not supported. Save the file as .xlsx or .csv and upload it again.");
@@ -38,17 +40,23 @@ export async function readGrid(fileName: string, data: ArrayBuffer, maxRows: num
   } catch {
     throw new Error("The file could not be read as an Excel workbook.");
   }
-  const sheet = workbook.worksheets[0];
-  if (!sheet) throw new Error("The workbook has no worksheets.");
+  if (workbook.worksheets.length === 0) throw new Error("The workbook has no worksheets.");
 
-  const grid: unknown[][] = [];
-  const columns = Math.min(sheet.columnCount, 50);
-  const last = Math.min(sheet.rowCount, maxRows);
-  for (let r = 1; r <= last; r++) {
-    const row = sheet.getRow(r);
-    const cells: unknown[] = [];
-    for (let c = 1; c <= columns; c++) cells.push(plain(row.getCell(c).value));
-    grid.push(cells);
-  }
-  return grid;
+  return workbook.worksheets.slice(0, MAX_SHEETS).map((sheet) => {
+    const grid: unknown[][] = [];
+    const columns = Math.min(sheet.columnCount, 50);
+    const last = Math.min(sheet.rowCount, maxRows);
+    for (let r = 1; r <= last; r++) {
+      const row = sheet.getRow(r);
+      const cells: unknown[] = [];
+      for (let c = 1; c <= columns; c++) cells.push(plain(row.getCell(c).value));
+      grid.push(cells);
+    }
+    return { name: sheet.name, rows: grid };
+  });
+}
+
+/** Read the first worksheet of an .xlsx file, or a .csv file, into a grid of cells. */
+export async function readGrid(fileName: string, data: ArrayBuffer, maxRows: number = MAX_ROWS): Promise<unknown[][]> {
+  return (await readSheets(fileName, data, maxRows))[0].rows;
 }

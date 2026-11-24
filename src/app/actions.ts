@@ -6,7 +6,8 @@ import { getDb, withFirm } from "@/server/db";
 import { getSession } from "@/server/session";
 import * as repo from "@/server/repo";
 import * as assistant from "@/server/mapping-assistant";
-import { readGrid } from "@/server/excel";
+import { readSheets } from "@/server/excel";
+import { recogniseWorkbook } from "@/domain/tb-recognise";
 import { buildPreview, chosenFromEntries, type Preview as TbPreview, readTrialBalance, ROLE_LABEL, savedFrom, SOURCE_SENTENCE, type Layout } from "@/domain/tb-layout";
 import * as tbLayout from "@/server/tb-layout";
 import { formatAmount, parseAmount } from "@/domain/money";
@@ -24,6 +25,8 @@ export interface FormState {
 
 export interface UploadPreview extends TbPreview {
   fileName: string;
+  /** Which sheet of the workbook the rows are from (0-based), sent back with the choice. */
+  sheet: number;
   /** The roles already chosen, by column, so the chooser shows them again after a refusal. */
   selected: Record<number, string>;
 }
@@ -74,9 +77,9 @@ export async function uploadTrialBalanceAction(_prev: FormState, form: FormData)
   if (!UUID.test(engagementId)) return { ok: false, message: "Engagement not found." };
   if (!(file instanceof File) || file.size === 0) return { ok: false, message: "Choose a trial balance file to upload." };
 
-  let grid: unknown[][];
+  let sheets: { name: string; rows: unknown[][] }[];
   try {
-    grid = await readGrid(file.name, await file.arrayBuffer());
+    sheets = await readSheets(file.name, await file.arrayBuffer());
   } catch (e) {
     return { ok: false, message: e instanceof Error ? e.message : "The file could not be read." };
   }
@@ -85,9 +88,12 @@ export async function uploadTrialBalanceAction(_prev: FormState, form: FormData)
   const entries: Record<string, string> = {};
   for (const [key, value] of form.entries()) if (typeof value === "string") entries[key] = value;
   const chosenEntries = "headerRow" in entries ? chosenFromEntries(entries) : null;
+  // The sheet a choice was made on; anything else is the first sheet, as it has always been.
+  const sheetIndex = chosenEntries && /^\d{1,2}$/.test(entries.sheet ?? "") && sheets[Number(entries.sheet)] ? Number(entries.sheet) : 0;
+  const grid = sheets[sheetIndex].rows;
   const selectedOf = (layout: Layout | null): Record<number, string> => Object.fromEntries(Object.entries(layout?.columns ?? {}).map(([role, col]) => [col as number, role]));
   const sheet = buildPreview(grid);
-  const preview = (layout: Layout | null): UploadPreview => ({ ...sheet, headerRow: layout && Number.isInteger(layout.headerRow) ? layout.headerRow : sheet.headerRow, fileName: file.name, selected: selectedOf(layout) });
+  const preview = (layout: Layout | null): UploadPreview => ({ ...sheet, headerRow: layout && Number.isInteger(layout.headerRow) ? layout.headerRow : sheet.headerRow, fileName: file.name, sheet: sheetIndex, selected: selectedOf(layout) });
   if (chosenEntries && chosenEntries.clashes.length > 0) {
     return { ok: false, message: `Each role can be one column only: ${chosenEntries.clashes.map((r) => ROLE_LABEL[r]).join(", ")} was chosen more than once.`, preview: preview(chosenEntries.layout) };
   }
@@ -95,11 +101,45 @@ export async function uploadTrialBalanceAction(_prev: FormState, form: FormData)
   const db = await getDb();
   const remembered = chosenEntries ? null : (await withFirm(db, session.firmId, (tx) => tbLayout.getRemembered(tx, engagementId)))?.layout ?? null;
   const reading = readTrialBalance(grid, { chosen: chosenEntries?.layout ?? null, remembered, ask: entries.chooseColumns === "1" });
+  // The shape of the export, read when plain detection could not read the sheet or read it and the accounts did not balance. Nothing it already reads
+  // and balances comes here. Not sure enough (low confidence) means ask: the chooser, with what it found filled in, and nothing imported.
+  const recognise = async (): Promise<FormState | null> => {
+    const found = recogniseWorkbook(sheets);
+    if (!found) return null;
+    if (found.confidence.level === "low") {
+      const rows = sheets[found.sheetIndex].rows;
+      const pre = { ...buildPreview(rows), headerRow: found.prefill.headerRow, fileName: file.name, sheet: found.sheetIndex, selected: selectedOf(found.prefill) };
+      return { ok: false, message: `The columns could not be read with confidence. Nothing was imported. ${found.confidence.reasons.join(" ")}`, preview: pre };
+    }
+    try {
+      const r = await withFirm(db, session.firmId, (tx) =>
+        repo.importTrialBalance(tx, session, engagementId, file.name, found.accounts, { source: "recognised", sheet: found.sheetName, header: found.header, roles: found.roles, confidence: found.confidence.level, skippedRows: found.skipped.length }),
+      );
+      revalidatePath(`/engagements/${engagementId}`);
+      return {
+        ok: true,
+        message: `Imported ${r.imported} accounts: ${r.carriedForward} mapped from earlier work, ${r.suggested} suggested for review, ${r.unmapped} left unmapped. ${SOURCE_SENTENCE.recognised}, ${found.confidence.level} confidence.`,
+        details: [...found.confidence.reasons, ...found.skipped.map((k) => `Row ${k.row} was left out: ${k.reason.toLowerCase()}.`)].slice(0, 20),
+      };
+    } catch (e) {
+      return { ok: false, message: e instanceof Error ? e.message : "The import failed." };
+    }
+  };
+  const mayRecognise = !chosenEntries && entries.chooseColumns !== "1";
+  if (reading.kind === "choose" && mayRecognise) {
+    const state = await recognise();
+    if (state) return state;
+  }
   if (reading.kind === "choose") {
     return { ok: false, message: reading.reason, preview: preview(chosenEntries?.layout ?? null) };
   }
 
   const { result: parsed, source, layout } = reading;
+  if (mayRecognise && (parsed.errors.length > 0 || !parsed.balanced)) {
+    const state = await recognise();
+    // A reading that is not sure leaves today's message in place rather than replacing it.
+    if (state?.ok) return state;
+  }
   const again = source === "chosen" ? { preview: preview(layout) } : {};
   if (parsed.errors.length > 0) {
     return { ok: false, message: "The trial balance was not imported.", details: parsed.errors.slice(0, 20), ...again };
