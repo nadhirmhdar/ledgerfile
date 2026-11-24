@@ -11,11 +11,12 @@ export type Role = "code" | "name" | "debit" | "credit" | "balance" | "prior";
 export const ROLES: Role[] = ["code", "name", "debit", "credit", "balance", "prior"];
 export const ROLE_LABEL: Record<Role, string> = { code: "Account code", name: "Account name", debit: "Debit", credit: "Credit", balance: "Balance", prior: "Prior year" };
 
-export type LayoutSource = "remembered" | "detected" | "chosen";
+export type LayoutSource = "remembered" | "detected" | "chosen" | "recognised";
 export const SOURCE_SENTENCE: Record<LayoutSource, string> = {
   remembered: "Columns as remembered for this client",
   detected: "Columns detected",
   chosen: "Columns you chose",
+  recognised: "Columns recognised from the layout of the sheet",
 };
 
 export interface Layout {

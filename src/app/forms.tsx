@@ -90,6 +90,7 @@ export function UploadForm({ engagementId, hasAccounts }: { engagementId: string
         <div>
           <p className="text-sm font-medium text-ink">Say which column is which in {preview.fileName}</p>
           <p className="mt-1 text-sm text-ink-muted">Choose the heading row, then a role for each column you want. Leave the others as Ignore. You need an account code or name, and a Debit and a Credit column or one Balance column.</p>
+          <input type="hidden" name="sheet" value={preview.sheet} />
           <div className="mt-3 flex flex-wrap items-end gap-3">
             <label className="flex flex-col gap-1 text-sm font-medium text-ink">
               Heading row
