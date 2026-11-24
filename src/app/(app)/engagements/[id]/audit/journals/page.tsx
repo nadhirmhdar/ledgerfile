@@ -80,7 +80,7 @@ export default async function JournalTestingPage({ params, searchParams }: { par
       />
       <EngagementNav id={id} current="journaltesting" status={engagement.status} archived={engagement.archivedAt !== null} />
 
-      <div className="mt-6 min-w-0 space-y-6">
+      <div className="mt-6 min-w-0 space-y-8">
         <p className="max-w-3xl text-sm text-ink-muted">
           Import the client&apos;s journal listing for the period, check it is complete, and select entries to test for management override of controls. A flag is a reason to look at an entry, not a finding.
         </p>

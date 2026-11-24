@@ -52,7 +52,7 @@ export default async function LettersPage({ params }: { params: Promise<{ id: st
       />
       <EngagementNav id={id} current="letters" status={engagement.status} archived={engagement.archivedAt !== null} />
 
-      <div className="mt-6 min-w-0 space-y-6">
+      <div className="mt-6 min-w-0 space-y-8">
         {!context ? (
           <Callout variant="info">
             Letters are for audited engagements. Turn the audit on from the{" "}

@@ -69,7 +69,7 @@ export default async function PlanningSettingsPage() {
         }
         subtitle={edit ? "The firm's guide ranges and thresholds for materiality and the planning assistant." : "The firm's guide ranges and thresholds. A partner or the administrator changes them."}
       />
-      <div className="mt-6 space-y-4">
+      <div className="mt-6 space-y-8">
         <Callout variant="draft" title="Unreviewed draft defaults">
           {SETTINGS_DRAFT}
         </Callout>

@@ -125,7 +125,7 @@ export default async function IndexPage({ params, searchParams }: { params: Prom
       />
       <EngagementNav id={id} current="index" status={engagement.status} archived={engagement.archivedAt !== null} />
 
-      <div className="mt-6 space-y-6">
+      <div className="mt-6 space-y-8">
         {!index.auditOn && (
           <Callout variant="info" title="The audit is off for this engagement">
             Only the papers that do not depend on it are listed.

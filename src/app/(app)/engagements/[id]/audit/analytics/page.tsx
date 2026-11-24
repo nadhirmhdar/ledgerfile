@@ -82,7 +82,7 @@ export default async function AnalyticsPage({ params, searchParams }: { params: 
       />
       <EngagementNav id={id} current="analytics" status={engagement.status} archived={engagement.archivedAt !== null} />
 
-      <div className="mt-6 min-w-0 space-y-6">
+      <div className="mt-6 min-w-0 space-y-8">
         <p className="max-w-3xl text-sm text-ink-muted">
           Year-on-year movement of every line in the statements, from the adjusted trial balance. Borrowings are shown as one line here, so each row matches its lead sheet. Use it at planning to decide where to look, and again at
           completion to check the finished statements still make sense.

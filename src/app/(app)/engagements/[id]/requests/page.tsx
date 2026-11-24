@@ -100,7 +100,7 @@ export default async function RequestsPage({ params, searchParams }: { params: P
       />
       <EngagementNav id={id} current="requests" status={engagement.status} archived={engagement.archivedAt !== null} />
 
-      <div className="mt-6 space-y-6">
+      <div className="mt-6 space-y-8">
         {heading.scope && <p className="text-sm text-ink-muted">{heading.scope}</p>}
         <ul className="grid grid-cols-2 gap-3 sm:grid-cols-4" aria-label="Summary">
           <li>

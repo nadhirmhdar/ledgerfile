@@ -204,7 +204,7 @@ export default async function StatementsPage({ params, searchParams }: { params:
       />
       <EngagementNav id={id} current="statements" status={engagement.status} archived={engagement.archivedAt !== null} />
 
-      <div className="mt-6 space-y-5">
+      <div className="mt-6 space-y-8">
         {pack.clean ? (
           <div className="flex flex-wrap items-start gap-3">
             <span className="mt-4 shrink-0 text-success-strong">

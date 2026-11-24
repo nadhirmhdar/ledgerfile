@@ -77,7 +77,7 @@ export default async function FirmMethodologyPage() {
         }
         subtitle={mayEdit ? "The audit procedures your firm loads into its programmes. Reword them, hide the ones you do not use, or go back to the library's wording." : "The audit procedures your firm loads into its programmes. A partner changes them."}
       />
-      <div className="mt-6 space-y-4">
+      <div className="mt-6 space-y-8">
         <Callout variant="draft" title={DRAFT_LABEL_TITLE}>
           {DRAFT_LABEL} ({LIBRARY_STATUS})
         </Callout>

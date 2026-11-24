@@ -95,7 +95,7 @@ export default async function SchedulePage({ params }: { params: Promise<{ id: s
       />
       <EngagementNav id={id} current="audit" status={engagement.status} archived={engagement.archivedAt !== null} />
 
-      <div className="mt-6 min-w-0 space-y-6">
+      <div className="mt-6 min-w-0 space-y-8">
         {!schedule.areaInScope && (
           <Callout variant="warning">This area is no longer in scope on this year&apos;s trial balance. The schedule was brought forward anyway; check whether it is still needed.</Callout>
         )}

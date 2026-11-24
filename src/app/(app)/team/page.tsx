@@ -42,7 +42,7 @@ export default async function TeamPage() {
         }
       />
 
-      <div className="mt-6 space-y-6">
+      <div className="mt-6 space-y-8">
         {!admin && <p className="text-sm text-ink-muted">Only an administrator can add or manage people.</p>}
 
         <Disclosure summary="What each role can do">
