@@ -7,7 +7,7 @@ import { getSession } from "@/server/session";
 import * as repo from "@/server/repo";
 import * as assistant from "@/server/mapping-assistant";
 import { readSheets } from "@/server/excel";
-import { recogniseWorkbook } from "@/domain/tb-recognise";
+import { preferRecognition, recogniseWorkbook } from "@/domain/tb-recognise";
 import { buildPreview, chosenFromEntries, type Preview as TbPreview, readTrialBalance, ROLE_LABEL, savedFrom, SOURCE_SENTENCE, type Layout } from "@/domain/tb-layout";
 import * as tbLayout from "@/server/tb-layout";
 import { formatAmount, parseAmount } from "@/domain/money";
@@ -135,7 +135,10 @@ export async function uploadTrialBalanceAction(_prev: FormState, form: FormData)
   }
 
   const { result: parsed, source, layout } = reading;
-  if (mayRecognise && (parsed.errors.length > 0 || !parsed.balanced)) {
+  // Plain detection read the sheet and it balances, but an export with opening, movement and closing sets (or a year-to-date pair) balances in its movement
+  // columns too. When the recogniser, and not unsure, reads different closing balances, its reading is the right one.
+  const misread = mayRecognise && parsed.errors.length === 0 && parsed.balanced && preferRecognition(parsed.accounts, recogniseWorkbook(sheets));
+  if (mayRecognise && (parsed.errors.length > 0 || !parsed.balanced || misread)) {
     const state = await recognise();
     // A reading that is not sure leaves today's message in place rather than replacing it.
     if (state?.ok) return state;

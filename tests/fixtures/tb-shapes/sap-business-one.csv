@@ -1,0 +1,12 @@
+"Shape source: from vendor documentation for the balance (debit minus credit plus the opening balance, with the opening balance column optional): https://help.sap.com/saphelp_sbo92/helpdata/en/45/1a32dcb3ca29efe10000000a114a6b/content.htm ; the other column headings are from a third-party tutorial and UNVERIFIED."
+Invented Co (sample)
+Trial Balance
+Posting Date 01/01/2025 to 31/12/2025
+Code,Name,O.B.,Debit,Credit,Accu.Debit,Accu.Credit,Balance
+_SYS00000000001,Cash,"4,000.00","3,000.00","2,000.00","3,000.00","2,000.00","5,000.00"
+_SYS00000000002,Customers,"9,000.00","6,000.00","3,000.00","6,000.00","3,000.00","12,000.00"
+_SYS00000000003,Suppliers,"-6,000.00","1,000.00","2,000.00","1,000.00","2,000.00","-7,000.00"
+_SYS00000000004,Share Capital,"-10,000.00",0.00,0.00,0.00,0.00,"-10,000.00"
+_SYS00000000005,Sales,"-18,000.00",0.00,"2,000.00",0.00,"2,000.00","-20,000.00"
+_SYS00000000006,Rent,"7,000.00","1,000.00",0.00,"1,000.00",0.00,"8,000.00"
+_SYS00000000007,Salaries,"14,000.00",0.00,"2,000.00",0.00,"2,000.00","12,000.00"

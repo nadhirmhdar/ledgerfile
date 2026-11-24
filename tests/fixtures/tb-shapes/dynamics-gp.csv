@@ -1,0 +1,12 @@
+"Shape source: from memory, UNVERIFIED. Invented accounts and figures in the shape the system is remembered to export."
+Invented Co (sample)
+Trial Balance Summary
+"Year 2025, Period 12"
+Account Number,Account Description,Beginning Balance,Debit,Credit,Net Change,Ending Balance
+000-1100-00,Cash,"4,000.00","3,000.00","2,000.00","1,000.00","5,000.00"
+000-1200-00,Accounts Receivable,"9,000.00","6,000.00","3,000.00","3,000.00","12,000.00"
+000-2000-00,Accounts Payable,"-6,000.00","1,000.00","2,000.00","-1,000.00","-7,000.00"
+000-3000-00,Common Stock,"-10,000.00",0.00,0.00,0.00,"-10,000.00"
+000-4000-00,Sales,"-18,000.00",0.00,"2,000.00","-2,000.00","-20,000.00"
+000-6100-00,Rent Expense,"7,000.00","1,000.00",0.00,"1,000.00","8,000.00"
+000-6200-00,Salaries Expense,"14,000.00",0.00,"2,000.00","-2,000.00","12,000.00"

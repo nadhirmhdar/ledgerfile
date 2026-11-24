@@ -1,0 +1,13 @@
+"Shape source: from memory, UNVERIFIED. Invented accounts and figures in the shape the system is remembered to export."
+Trial Balance
+Invented Co (sample)
+From 2025-01-01 to 2025-12-31
+Account,Opening (Dr),Opening (Cr),Debit,Credit,Closing (Dr),Closing (Cr)
+1000 - Cash - IC,"4,000.00",,"3,000.00","2,000.00","5,000.00",
+1100 - Debtors - IC,"9,000.00",,"6,000.00","3,000.00","12,000.00",
+2100 - Creditors - IC,,"6,000.00","1,000.00","2,000.00",,"7,000.00"
+3000 - Share Capital - IC,,"10,000.00",,,,"10,000.00"
+4000 - Sales - IC,,"18,000.00",,"2,000.00",,"20,000.00"
+5100 - Rent - IC,"7,000.00",,"1,000.00",,"8,000.00",
+5200 - Salaries - IC,"14,000.00",,,"2,000.00","12,000.00",
+Total,"34,000.00","34,000.00","11,000.00","11,000.00","37,000.00","37,000.00"

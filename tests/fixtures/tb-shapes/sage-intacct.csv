@@ -1,0 +1,11 @@
+"Shape source: from vendor documentation (describes the report's columns in prose; the exact heading strings are not shown there, so they are UNVERIFIED): https://www.intacct.com/ia/docs/en_AU/help_action/Reporting/General_Ledger_reports/Trial_balance/about-trial-balance-rpt.htm"
+Invented Co (sample)
+Trial Balance
+Account No,Account Title,Debit,Credit,Adj Debit,Adj Credit
+1010,Cash,"5,000.00",,,
+1200,Trade Receivables,"11,000.00",,"1,000.00",
+2000,Trade Payables,,"7,000.00",,
+3000,Share Capital,,"10,000.00",,
+4000,Sales,,"20,000.00",,
+6100,Rent,"8,000.00",,,
+6200,Salaries,"12,000.00",,,"1,000.00"

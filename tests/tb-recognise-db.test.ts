@@ -199,3 +199,20 @@ describe("indentation kept as an Excel indent", () => {
     expect(state.details).toEqual(expect.arrayContaining(["Row 3 was left out: a group line (it equals the lines indented below it).", "Row 6 was left out: a group line (it equals the lines indented below it)."]));
   });
 });
+
+describe("an export with opening, movement and closing columns", () => {
+  it("is imported from the closing balances, not the period's movement that plain detection would have taken", async () => {
+    const fs = await import("node:fs");
+    const path = await import("node:path");
+    const erpnext = fs.readFileSync(path.join(__dirname, "fixtures", "tb-shapes", "erpnext.csv"), "utf8");
+    const e = await engagement();
+    const state = await upload(e.id, file("tb.csv", erpnext));
+    expect(state.ok).toBe(true);
+    expect(state.message).toContain("Columns recognised from the layout of the sheet");
+    const rows = await accounts(e.id);
+    expect(rows).toHaveLength(7);
+    expect(rows.find((a) => a.name.startsWith("Cash"))!.closing_minor).toBe("500000");
+    expect(rows.find((a) => a.name.startsWith("Sales"))!.closing_minor).toBe("-2000000");
+    expect(await remembered(e.client)).toBeNull();
+  });
+});
