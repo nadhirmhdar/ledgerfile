@@ -7,7 +7,8 @@ import { getSession } from "@/server/session";
 import * as repo from "@/server/repo";
 import * as assistant from "@/server/mapping-assistant";
 import { readGrid } from "@/server/excel";
-import { parseTrialBalance } from "@/domain/tb-parse";
+import { buildPreview, chosenFromEntries, type Preview as TbPreview, readTrialBalance, ROLE_LABEL, savedFrom, SOURCE_SENTENCE, type Layout } from "@/domain/tb-layout";
+import * as tbLayout from "@/server/tb-layout";
 import { formatAmount, parseAmount } from "@/domain/money";
 import * as journals from "@/server/journals";
 import type { JournalLineInput } from "@/domain/journal";
@@ -17,6 +18,14 @@ export interface FormState {
   ok: boolean;
   message: string;
   details?: string[];
+  /** Set when the columns could not be read, or the user asked to choose them: the first rows of the sheet, to say which column is which. */
+  preview?: UploadPreview;
+}
+
+export interface UploadPreview extends TbPreview {
+  fileName: string;
+  /** The roles already chosen, by column, so the chooser shows them again after a refusal. */
+  selected: Record<number, string>;
 }
 
 /** Log a refused change without failing the request. */
@@ -72,30 +81,62 @@ export async function uploadTrialBalanceAction(_prev: FormState, form: FormData)
     return { ok: false, message: e instanceof Error ? e.message : "The file could not be read." };
   }
 
-  const parsed = parseTrialBalance(grid);
+  // Everything is read again here: the browser's preview is only a way to say which column is which, never what the file holds.
+  const entries: Record<string, string> = {};
+  for (const [key, value] of form.entries()) if (typeof value === "string") entries[key] = value;
+  const chosenEntries = "headerRow" in entries ? chosenFromEntries(entries) : null;
+  const selectedOf = (layout: Layout | null): Record<number, string> => Object.fromEntries(Object.entries(layout?.columns ?? {}).map(([role, col]) => [col as number, role]));
+  const sheet = buildPreview(grid);
+  const preview = (layout: Layout | null): UploadPreview => ({ ...sheet, headerRow: layout && Number.isInteger(layout.headerRow) ? layout.headerRow : sheet.headerRow, fileName: file.name, selected: selectedOf(layout) });
+  if (chosenEntries && chosenEntries.clashes.length > 0) {
+    return { ok: false, message: `Each role can be one column only: ${chosenEntries.clashes.map((r) => ROLE_LABEL[r]).join(", ")} was chosen more than once.`, preview: preview(chosenEntries.layout) };
+  }
+
+  const db = await getDb();
+  const remembered = chosenEntries ? null : (await withFirm(db, session.firmId, (tx) => tbLayout.getRemembered(tx, engagementId)))?.layout ?? null;
+  const reading = readTrialBalance(grid, { chosen: chosenEntries?.layout ?? null, remembered, ask: entries.chooseColumns === "1" });
+  if (reading.kind === "choose") {
+    return { ok: false, message: reading.reason, preview: preview(chosenEntries?.layout ?? null) };
+  }
+
+  const { result: parsed, source, layout } = reading;
+  const again = source === "chosen" ? { preview: preview(layout) } : {};
   if (parsed.errors.length > 0) {
-    return { ok: false, message: "The trial balance was not imported.", details: parsed.errors.slice(0, 20) };
+    return { ok: false, message: "The trial balance was not imported.", details: parsed.errors.slice(0, 20), ...again };
   }
   if (!parsed.balanced) {
     return {
       ok: false,
       message: `The trial balance does not balance: debits and credits differ by ${formatAmount(Math.abs(parsed.differenceMinor))}. Nothing was imported.`,
+      ...again,
     };
   }
 
   try {
-    const r = await withFirm(await getDb(), session.firmId, (tx) =>
-      repo.importTrialBalance(tx, session, engagementId, file.name, parsed.accounts),
-    );
+    const saved = savedFrom(grid, layout);
+    const r = await withFirm(db, session.firmId, async (tx) => {
+      const imported = await repo.importTrialBalance(tx, session, engagementId, file.name, parsed.accounts, { source, ...saved });
+      await tbLayout.rememberLayout(tx, session, engagementId, saved);
+      return imported;
+    });
     revalidatePath(`/engagements/${engagementId}`);
     return {
       ok: true,
-      message: `Imported ${r.imported} accounts: ${r.carriedForward} mapped from earlier work, ${r.suggested} suggested for review, ${r.unmapped} left unmapped.`,
+      message: `Imported ${r.imported} accounts: ${r.carriedForward} mapped from earlier work, ${r.suggested} suggested for review, ${r.unmapped} left unmapped. ${SOURCE_SENTENCE[source]}.`,
       details: parsed.warnings.slice(0, 20),
     };
   } catch (e) {
     return { ok: false, message: e instanceof Error ? e.message : "The import failed." };
   }
+}
+
+/** Forget the columns remembered for the engagement's client. */
+export async function forgetTbLayoutAction(form: FormData): Promise<void> {
+  const engagementId = String(form.get("engagementId") ?? "");
+  if (!UUID.test(engagementId)) return;
+  const session = await getSession();
+  await withFirm(await getDb(), session.firmId, (tx) => tbLayout.forgetLayout(tx, session, engagementId)).catch(refused);
+  revalidatePath(`/engagements/${engagementId}`);
 }
 
 export async function setBorrowingsCurrentAction(_prev: FormState, form: FormData): Promise<FormState> {

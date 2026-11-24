@@ -162,6 +162,8 @@ export async function importTrialBalance(
   engagementId: string,
   fileName: string,
   accounts: TbAccount[],
+  /** How the columns were found and which they were (domain/tb-layout.ts), kept with the import. */
+  layout?: unknown,
 ): Promise<{ imported: number; carriedForward: number; suggested: number; unmapped: number }> {
   const engagement = await getEngagement(tx, engagementId);
   if (!engagement) throw new Error("Engagement not found.");
@@ -182,8 +184,8 @@ export async function importTrialBalance(
   await clearSignOffs(tx, s, engagementId, "all", "trial balance replaced");
   await tx.query("delete from accounts where engagement_id = $1", [engagementId]);
   const imp = await tx.query<{ id: string }>(
-    "insert into tb_imports (firm_id, engagement_id, file_name, row_count) values ($1, $2, $3, $4) returning id",
-    [s.firmId, engagementId, fileName, accounts.length],
+    "insert into tb_imports (firm_id, engagement_id, file_name, row_count, layout) values ($1, $2, $3, $4, $5) returning id",
+    [s.firmId, engagementId, fileName, accounts.length, layout === undefined ? null : JSON.stringify(layout)],
   );
 
   const idByCode = new Map<string, string>();
