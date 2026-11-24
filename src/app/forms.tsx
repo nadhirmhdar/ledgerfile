@@ -6,6 +6,7 @@ import { Field, Input, Select } from "@/ui/form";
 import { plainCount } from "@/ui/text";
 import { ROLES, ROLE_LABEL } from "@/domain/tb-layout";
 import { formatAmount } from "@/domain/money";
+import { periodForYearEnd, yearEndText } from "@/domain/client-details";
 import { TEMPLATE_LINK_TEXT, TEMPLATE_URL } from "@/domain/tb-template";
 import { createClientAction, createEngagementAction, setMappingAction, uploadTrialBalanceAction, type FormState } from "./actions";
 
@@ -51,13 +52,26 @@ export function NewClientForm() {
   );
 }
 
-export function NewEngagementForm({ clients }: { clients: { id: string; name: string }[] }) {
+export function NewEngagementForm({ clients }: { clients: { id: string; name: string; yearEnd?: string | null }[] }) {
   const [state, action, pending] = useActionState(createEngagementAction, initial);
+  const [start, setStart] = useState("");
+  const [end, setEnd] = useState("");
+  const [suggested, setSuggested] = useState<string | null>(null);
+  // Choosing a client with a year-end suggests the period: the year-end just past, and the day after the one a year earlier. Both dates stay editable.
+  const choose = (id: string) => {
+    const client = clients.find((c) => c.id === id);
+    const period = client?.yearEnd ? periodForYearEnd(client.yearEnd, new Date().toISOString().slice(0, 10)) : null;
+    if (period) {
+      setStart(period.start);
+      setEnd(period.end);
+      setSuggested(`Suggested from the client's year-end of ${yearEndText(client!.yearEnd!)}. Change the dates if this engagement is different.`);
+    } else setSuggested(null);
+  };
   return (
     <form action={action}>
       <div className="flex flex-wrap items-end gap-3">
         <Field label="Client" className="w-full sm:w-72">
-          <Select name="clientId" required defaultValue="">
+          <Select name="clientId" required defaultValue="" onChange={(e) => choose(e.currentTarget.value)}>
             <option value="" disabled>Choose a client</option>
             {clients.map((c) => (
               <option key={c.id} value={c.id}>{c.name}</option>
@@ -65,13 +79,14 @@ export function NewEngagementForm({ clients }: { clients: { id: string; name: st
           </Select>
         </Field>
         <Field label="Period start" className="w-full sm:w-44">
-          <Input type="date" name="periodStart" required />
+          <Input type="date" name="periodStart" required value={start} onChange={(e) => setStart(e.currentTarget.value)} />
         </Field>
         <Field label="Period end" className="w-full sm:w-44">
-          <Input type="date" name="periodEnd" required />
+          <Input type="date" name="periodEnd" required value={end} onChange={(e) => setEnd(e.currentTarget.value)} />
         </Field>
         <button className={buttonClass("primary")} disabled={pending}>Create engagement</button>
       </div>
+      {suggested && <p className="mt-2 text-sm text-ink-muted">{suggested}</p>}
       <Feedback state={state} />
     </form>
   );

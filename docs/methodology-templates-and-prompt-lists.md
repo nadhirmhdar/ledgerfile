@@ -23,6 +23,8 @@ Fields in {braces} are filled by the product from the engagement record. Paragra
 
 To: {Addressee: owners, board or manager}, {Client legal name}
 
+{Client address: the lines held on the client's record, when there are any}
+
 **Audit of the financial statements for the year ending {period end}**
 
 You have asked us to audit the financial statements of {Client legal name} ("the Company") for the year ending {period end}. This letter sets out what the engagement covers and what each of us is responsible for. Please read it and sign the copy to confirm your agreement.

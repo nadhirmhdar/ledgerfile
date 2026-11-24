@@ -60,6 +60,7 @@ describe("letters for an engagement", () => {
       periodEnd: "2025-12-31",
       framework: "IFRS for SMEs",
       firmName: "Al Noor Auditing",
+      clientAddress: null,
       has: { inventory: false, receivables: true, tax: false },
       uncorrected: [],
       exceedsMateriality: false,

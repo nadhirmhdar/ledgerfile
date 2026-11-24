@@ -5,7 +5,7 @@ import { getDb, withFirm } from "@/server/db";
 import { getSession } from "@/server/session";
 import { readGrid } from "@/server/excel";
 import { importClients, previewClientImport } from "@/server/client-import";
-import { gridFromPastedNames, MAX_IMPORT_ROWS, type ImportPreview } from "@/domain/client-import";
+import { gridFromPastedNames, MAX_IMPORT_ROWS, type ImportEntry, type ImportPreview } from "@/domain/client-import";
 import type { FormState } from "./actions";
 
 export interface PreviewResult {
@@ -46,7 +46,7 @@ export async function previewClientImportAction(form: FormData): Promise<Preview
 }
 
 /** Add the previewed names. The server classifies them again against the clients as they are now. */
-export async function importClientsAction(names: string[]): Promise<FormState> {
+export async function importClientsAction(names: (string | ImportEntry)[]): Promise<FormState> {
   const session = await getSession();
   try {
     const result = await withFirm(await getDb(), session.firmId, (tx) => importClients(tx, session, names));

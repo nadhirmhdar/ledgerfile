@@ -2,6 +2,7 @@ import type { Tx } from "./db";
 import type { TbAccount } from "../domain/tb-parse";
 import { cleanName, nameKey } from "../domain/client-import";
 import type { MappingSource } from "../domain/mapping";
+import { EMPTY_DETAILS, type ClientDetails } from "../domain/client-details";
 import { assist, sameAccountName } from "../domain/mapping-assistant";
 import { learnedExamples } from "./mapping-examples";
 import { GROUP_BY_CODE } from "../domain/groups";
@@ -20,6 +21,8 @@ export interface ClientRow {
   id: string;
   name: string;
   framework: string;
+  /** The financial year-end as 'MM-DD', when the client has one: used to suggest the period of a new engagement. */
+  yearEnd: string | null;
 }
 
 export interface EngagementRow {
@@ -76,7 +79,7 @@ export async function clearSignOffs(tx: Tx, s: Session, engagementId: string, gr
 }
 
 export async function listClients(tx: Tx): Promise<ClientRow[]> {
-  return (await tx.query<ClientRow>("select id, name, framework from clients order by name")).rows;
+  return (await tx.query<ClientRow>('select id, name, framework, year_end as "yearEnd" from clients order by name')).rows;
 }
 
 /**
@@ -102,10 +105,15 @@ export async function createClient(tx: Tx, s: Session, name: string): Promise<st
 }
 
 /** Insert a client with no duplicate check, for the import, which has already taken the lock and classified every name against the clients as they are. */
-export async function insertClient(tx: Tx, s: Session, name: string): Promise<string> {
+export async function insertClient(tx: Tx, s: Session, name: string, details?: ClientDetails): Promise<string> {
   name = cleanName(name);
-  const { rows } = await tx.query<{ id: string }>("insert into clients (firm_id, name) values ($1, $2) returning id", [s.firmId, name]);
-  await audit(tx, s, "create", "client", rows[0].id, { name });
+  const d = details ?? EMPTY_DETAILS;
+  const { rows } = await tx.query<{ id: string }>(
+    `insert into clients (firm_id, name, licence_number, licensing_authority, tax_registration_number, year_end, address, contact_name, contact_email)
+     values ($1, $2, $3, $4, $5, $6, $7, $8, $9) returning id`,
+    [s.firmId, name, d.licenceNumber, d.licensingAuthority, d.taxRegistrationNumber, d.yearEnd, d.address, d.contactName, d.contactEmail],
+  );
+  await audit(tx, s, "create", "client", rows[0].id, { name, ...(details ? { details: Object.fromEntries(Object.entries(details).filter(([, v]) => v !== null)) } : {}) });
   return rows[0].id;
 }
 
