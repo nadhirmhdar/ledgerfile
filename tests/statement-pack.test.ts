@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { buildStatementPack, roundAccounts, type PackAccount } from "../src/domain/statement-pack";
 import { parseTrialBalance } from "../src/domain/tb-parse";
-import { proposeMappings } from "../src/domain/mapping";
+import { proposeMappings } from "./rule-mapping";
 import { readGrid } from "../src/server/excel";
 
 let n = 0;

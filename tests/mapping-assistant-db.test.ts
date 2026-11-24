@@ -10,11 +10,13 @@ import { CLIENT_A, CLIENT_B, type Row } from "./mapping-assistant-fixture";
 const X = "aaaaaaaa-3737-4000-8000-000000000001";
 const Y = "bbbbbbbb-3737-4000-8000-000000000001";
 const Z = "cccccccc-3737-4000-8000-000000000001";
+const W = "dddddddd-3737-4000-8000-000000000001";
 const user = (n: number, role: repo.Session["role"], firmId: string): repo.Session => ({ firmId, userId: `${firmId.slice(0, 8)}-3737-4000-8000-00000000001${n}`, role });
 const prep = user(1, "preparer", X);
 const partnerX = user(2, "partner", X);
 const partnerY = user(3, "partner", Y);
 const partnerZ = user(4, "partner", Z);
+const partnerW = user(5, "partner", W);
 
 let db: Db;
 type T = Parameters<Parameters<typeof withFirm>[2]>[0];
@@ -41,8 +43,8 @@ let engB: string;
 
 beforeAll(async () => {
   db = await openDatabase();
-  for (const firm of [X, Y, Z]) await db.query("insert into firms (id, name) values ($1, 'Firm')", [firm]);
-  for (const u of [prep, partnerX, partnerY, partnerZ]) {
+  for (const firm of [X, Y, Z, W]) await db.query("insert into firms (id, name) values ($1, 'Firm')", [firm]);
+  for (const u of [prep, partnerX, partnerY, partnerZ, partnerW]) {
     await db.query("insert into users (id, firm_id, email, name, role) values ($1, $2, $3, $4, $5)", [u.userId, u.firmId, `${u.userId}@x.test`, `${u.role} ${u.userId.slice(-1)}`, u.role]);
   }
   await engagement(partnerX, "Client A", CLIENT_A, true, ["2024-01-01", "2024-12-31"]);
@@ -193,5 +195,51 @@ describe("what is recorded", () => {
     await as(partnerZ, (tx) => repo.importTrialBalance(tx, partnerZ, id, "tb2.xlsx", [{ code: "2", name: "Petty cash", closingMinor: 1, priorMinor: null }, { code: "3", name: "Share capital", closingMinor: -1, priorMinor: null }]));
     expect(await mappings(id)).toEqual(before);
     expect(before.find((m) => m.source === "assistant")!.reason).toBeTruthy();
+  });
+});
+
+describe("uploading a trial balance", () => {
+  it("carries last year's approved mappings forward, places the rest with the assistant (unapproved, with reasons), and leaves the others unmapped", async () => {
+    // The firm has learned that "Gadget deposits" is a receivable, from another client.
+    await engagement(partnerW, "Learning client", [["1", "Gadget deposits", 5, "TRADEREC"]], true, ["2023-01-01", "2023-12-31"]);
+    // This client was finished last year, with two accounts approved.
+    const last = await engagement(partnerW, "Roll client", [["1000", "Quasar vault holdings", 9, "INVEST"], ["2000", "Petty cash", 1, "CASH"]], true, ["2024-01-01", "2024-12-31"]);
+    expect(last).toBeTruthy();
+    const next = await as(partnerW, async (tx) => {
+      const client = (await tx.query<{ id: string }>("select id from clients where name = 'Roll client'")).rows[0].id;
+      const id = await repo.createEngagement(tx, partnerW, client, "2025-01-01", "2025-12-31");
+      const result = await repo.importTrialBalance(tx, partnerW, id, "tb2025.xlsx", [
+        { code: "1000", name: "Quasar vault holdings", closingMinor: 9, priorMinor: 9 }, // last year's code: carried forward
+        { code: "2000", name: "Petty cash", closingMinor: 1, priorMinor: 1 }, // carried forward
+        { code: "3000", name: "Gadget deposits", closingMinor: 5, priorMinor: null }, // learned from another client
+        { code: "3100", name: "Share capital", closingMinor: -5, priorMinor: null }, // wording
+        { code: "9000", name: "Suspense account", closingMinor: 1, priorMinor: null }, // nothing to go on
+      ]);
+      return { id, result };
+    });
+    expect(next.result).toEqual({ imported: 5, carriedForward: 2, suggested: 2, unmapped: 1 });
+    const rows = await mappings(next.id);
+    expect(rows.filter((m) => m.approved).map((m) => [m.code, m.source])).toEqual([["1000", "prior_year"], ["2000", "prior_year"]]);
+    const suggested = rows.filter((m) => !m.approved);
+    expect(suggested.map((m) => [m.code, m.group_code, m.source])).toEqual([["3000", "TRADEREC", "assistant"], ["3100", "CAPITAL", "assistant"]]);
+    for (const m of suggested) {
+      expect(m.reason!.length, m.code).toBeGreaterThan(10);
+      expect(m.approved_by).toBeNull();
+    }
+    expect(suggested[0].reason).toContain("Your firm mapped 1 account with this name to Trade and other receivables");
+    expect(rows.find((m) => m.code === "9000")).toBeUndefined();
+    expect((await as(partnerW, (tx) => assistant.couldNotPlace(tx, partnerW, next.id))).map((u) => u.code)).toEqual(["9000"]);
+    // Nothing the rule-based suggester used to make is left: no account has source 'rule'.
+    expect(rows.some((m) => m.source === "rule")).toBe(false);
+
+    // Importing the same file again keeps every mapping as it was.
+    await as(partnerW, (tx) => repo.importTrialBalance(tx, partnerW, next.id, "tb2025.xlsx", [
+      { code: "1000", name: "Quasar vault holdings", closingMinor: 9, priorMinor: 9 },
+      { code: "2000", name: "Petty cash", closingMinor: 1, priorMinor: 1 },
+      { code: "3000", name: "Gadget deposits", closingMinor: 5, priorMinor: null },
+      { code: "3100", name: "Share capital", closingMinor: -5, priorMinor: null },
+      { code: "9000", name: "Suspense account", closingMinor: 1, priorMinor: null },
+    ]));
+    expect(await mappings(next.id)).toEqual(rows);
   });
 });

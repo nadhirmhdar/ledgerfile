@@ -1,7 +1,9 @@
 import type { Tx } from "./db";
 import type { TbAccount } from "../domain/tb-parse";
 import { cleanName, nameKey } from "../domain/client-import";
-import { proposeMappings, type MappingSource } from "../domain/mapping";
+import type { MappingSource } from "../domain/mapping";
+import { assist } from "../domain/mapping-assistant";
+import { learnedExamples } from "./mapping-examples";
 import { GROUP_BY_CODE } from "../domain/groups";
 import type { MappedAccount } from "../domain/leadsheet";
 import type { Role } from "../domain/signoff";
@@ -174,6 +176,9 @@ export async function importTrialBalance(
   // Only mappings a person approved last year carry forward; unreviewed suggestions do not.
   const priorYear = engagement.priorEngagementId ? await mappingsByCode(tx, engagement.priorEngagementId, true) : new Map();
 
+  // What the firm has already accepted, read before the old accounts go: the assistant learns from it.
+  const examples = await learnedExamples(tx, s.firmId);
+
   await clearSignOffs(tx, s, engagementId, "all", "trial balance replaced");
   await tx.query("delete from accounts where engagement_id = $1", [engagementId]);
   const imp = await tx.query<{ id: string }>(
@@ -191,11 +196,12 @@ export async function importTrialBalance(
     idByCode.set(a.code, rows[0].id);
   }
 
+  // Order of preference for an account with no mapping yet: last year's approved mapping for the same code, then the assistant.
   const toPropose = accounts.filter((a) => !existing.has(a.code));
-  const { suggestions, unmapped } = proposeMappings(
-    toPropose,
-    new Map([...priorYear].map(([code, m]) => [code, m.groupCode])),
-  );
+  const carry = toPropose.filter((a) => GROUP_BY_CODE.has(priorYear.get(a.code)?.groupCode ?? ""));
+  const carryCodes = new Set(carry.map((a) => a.code));
+  const rest = toPropose.filter((a) => !carryCodes.has(a.code));
+  const placements = assist({ accounts: rest, examples });
 
   const insert = (accountId: string, groupCode: string, source: string, confidence: number, approved: boolean, kept?: { reason: string | null; approvedBy: string | null; approvedAt: string | null }) =>
     tx.query("insert into mappings (firm_id, account_id, group_code, source, confidence, approved, reason, approved_by, approved_at) values ($1, $2, $3, $4, $5, $6, $7, $8, $9)", [
@@ -218,19 +224,22 @@ export async function importTrialBalance(
       kept++;
     }
   }
-  let carried = 0;
-  for (const sug of suggestions) {
-    if (!GROUP_BY_CODE.has(sug.groupCode)) continue;
-    // Prior-year mappings were approved last year, so they arrive approved; rule suggestions need review.
-    await insert(idByCode.get(sug.accountCode)!, sug.groupCode, sug.source, sug.confidence, sug.source === "prior_year");
-    if (sug.source === "prior_year") carried++;
+  // Prior-year mappings were a person's choice last year, so they arrive approved. The assistant's suggestions arrive unapproved, with their reason;
+  // an account it cannot place stays unmapped (the page lists it under "Could not place").
+  for (const a of carry) await insert(idByCode.get(a.code)!, priorYear.get(a.code)!.groupCode, "prior_year", 1, true);
+  const carried = carry.length;
+  let suggested = 0;
+  for (const p of placements) {
+    if (p.kind !== "suggest") continue;
+    await insert(idByCode.get(p.accountCode)!, p.groupCode, "assistant", p.score, false, { reason: p.reason, approvedBy: null, approvedAt: null });
+    suggested++;
   }
 
   const result = {
     imported: accounts.length,
     carriedForward: carried + kept,
-    suggested: suggestions.length - carried,
-    unmapped: unmapped.length,
+    suggested,
+    unmapped: rest.length - suggested,
   };
   await audit(tx, s, "import", "trial_balance", engagementId, { fileName, ...result });
   return result;

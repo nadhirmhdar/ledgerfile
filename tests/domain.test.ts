@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { formatAmount, parseAmount } from "../src/domain/money";
 import { parseCsv, parseTrialBalance } from "../src/domain/tb-parse";
-import { proposeMappings, suggestByRule } from "../src/domain/mapping";
+import { proposeMappings, suggestByRule } from "./rule-mapping";
 import { buildLeadSheets } from "../src/domain/leadsheet";
 import { GROUPS } from "../src/domain/groups";
 

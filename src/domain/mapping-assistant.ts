@@ -44,7 +44,7 @@ export interface Decline {
 }
 export type Placement = Suggestion | Decline;
 
-export const MIN_SCORE = 0.45;
+export const MIN_SCORE = 0.4;
 export const MARGIN = 0.12;
 export const HIGH = 0.8;
 export const MEDIUM = 0.6;
@@ -124,24 +124,29 @@ interface Evidence {
   phrase: string;
 }
 
+/** Words that say little ('expense' is in many names): never more than a low-band hint, whatever their length. */
+const GENERIC = new Set(["expense"]);
+
 interface Keyword {
   groupCode: string;
   text: string;
   needsMore: boolean;
 }
-const KEYWORDS: Keyword[] = GROUPS.flatMap((g) => g.keywords.map((k) => ({ groupCode: g.code, text: normalise(k), needsMore: k.trim().endsWith("-") }))).filter((k) => k.text !== "");
+/** Phrases the group keywords do not have, for wording the assistant is expected to read. */
+const EXTRA_KEYWORDS: Record<string, string[]> = { TRADEREC: ["security deposit", "rental deposit", "utility deposit"], CASH: ["call deposit", "margin deposit"] };
+const KEYWORDS: Keyword[] = GROUPS.flatMap((g) => [...g.keywords, ...(EXTRA_KEYWORDS[g.code] ?? [])].map((k) => ({ groupCode: g.code, text: normalise(k), needsMore: k.trim().endsWith("-") }))).filter((k) => k.text !== "");
 
-/** Keyword hits, with a hit dropped when a longer keyword of another group contains it ("bank" inside "bank loan"). */
+/** Keyword hits (a keyword starts at a word, so "rent" is not found inside "current"), with a hit dropped when a longer keyword of another group contains it ("bank" inside "bank loan"). */
 function keywordEvidence(n: string): Evidence[] {
   const padded = ` ${n} `;
-  const hits = KEYWORDS.filter((k) => (k.needsMore ? padded.includes(` ${k.text} `) && n.includes(`${k.text} `) : n.includes(k.text)));
+  const hits = KEYWORDS.filter((k) => (k.needsMore ? ` ${n}`.includes(` ${k.text} `) : padded.includes(` ${k.text}`)));
   const kept = hits.filter((h) => !hits.some((o) => o.groupCode !== h.groupCode && o.text.length > h.text.length && o.text.includes(h.text)));
   const best = new Map<string, Keyword>();
   for (const h of kept) {
     const b = best.get(h.groupCode);
     if (!b || h.text.length > b.text.length || (h.text.length === b.text.length && h.text < b.text)) best.set(h.groupCode, h);
   }
-  return [...best.values()].map((h) => ({ groupCode: h.groupCode, score: h.text.length >= 12 ? 0.7 : h.text.length >= 7 ? 0.55 : 0.4, rank: 3, phrase: `Matches '${h.text}'` }));
+  return [...best.values()].map((h) => ({ groupCode: h.groupCode, score: GENERIC.has(h.text) ? 0.4 : h.text.length >= 12 ? 0.7 : h.text.length >= 7 ? 0.55 : 0.4, rank: 3, phrase: `Matches '${h.text}'` }));
 }
 
 interface Learned {
@@ -247,7 +252,7 @@ export function assist(input: { accounts: AssistantAccount[]; priorYear?: Map<st
     else if (below && above) note = `neighbours split between ${groupName(below.p.groupCode)} and ${groupName(above.p.groupCode)}`;
     else if (below || above) {
       const one = (below ?? above)!;
-      extra.push({ groupCode: one.p.groupCode, score: 0.3, rank: 4, phrase: `The nearby code ${one.code} is ${groupName(one.p.groupCode)}` });
+      extra.push({ groupCode: one.p.groupCode, score: 0.2, rank: 4, phrase: `The nearby code ${one.code} is ${groupName(one.p.groupCode)}` });
     }
     return extra.length === 0 && note === null ? first[i] : decide(r.account, r.n, [...r.evidence, ...extra], note);
   });

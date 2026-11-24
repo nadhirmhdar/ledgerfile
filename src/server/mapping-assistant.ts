@@ -1,23 +1,13 @@
 import type { Tx } from "./db";
 import { audit, clearSignOffs, getEngagement, listAccounts, type Session } from "./repo";
-import { assist, HIGH, type LearnedExample, type Placement } from "../domain/mapping-assistant";
+import { assist, HIGH, type Placement } from "../domain/mapping-assistant";
+import { learnedExamples } from "./mapping-examples";
 
 /**
  * The mapping assistant on an engagement. It runs entirely here: no outside model, service or network. It learns from the firm's own approved mappings
  * (any engagement, any client, any year) read through the signed-in firm's row-level security, so one firm's choices never reach another's suggestions.
  * It only suggests: a person accepts each suggestion (one at a time, or every high-confidence one), and the person and the time are recorded.
  */
-
-/** The firm's approved mappings, in a fixed order so the same data always gives the same suggestions. */
-async function examples(tx: Tx, firmId: string): Promise<LearnedExample[]> {
-  const { rows } = await tx.query<{ code: string; name: string; closing: string; groupCode: string }>(
-    `select a.code, a.name, a.closing_minor::text as closing, m.group_code as "groupCode"
-     from mappings m join accounts a on a.id = m.account_id
-     where m.approved and m.firm_id = $1 order by a.code, a.name, m.group_code`,
-    [firmId],
-  );
-  return rows.map((r) => ({ code: r.code, name: r.name, closingMinor: Number(r.closing), groupCode: r.groupCode }));
-}
 
 async function open(tx: Tx, engagementId: string) {
   const engagement = await getEngagement(tx, engagementId);
@@ -35,7 +25,7 @@ async function place(tx: Tx, firmId: string, engagementId: string, priorEngageme
   const placements = assist({
     accounts: accounts.map((a) => ({ code: a.code, name: a.name, closingMinor: a.closingMinor + a.adjustmentMinor })),
     priorYear: new Map(prior.map((p) => [p.code, p.groupCode])),
-    examples: await examples(tx, firmId),
+    examples: await learnedExamples(tx, firmId),
   });
   return accounts.map((a, i) => ({ account: a, placement: placements[i] as Placement }));
 }
