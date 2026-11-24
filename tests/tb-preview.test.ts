@@ -331,6 +331,18 @@ describe("when two names are the same account (the owner's rule)", () => {
     expect(sameAccountName("Trade Receivables - AED", "Trade receivables")).toBe(true);
     expect(sameAccountName("A/C Receivable", "Accounts receivable")).toBe(true);
   });
+  it("is the same when only a qualifier is added: a currency, a status, a place", () => {
+    expect(sameAccountName("Trade receivables", "Trade receivables - AED")).toBe(true);
+    expect(sameAccountName("Cash at bank", "Cash at bank - closed account")).toBe(true);
+    expect(sameAccountName("Bank - Dubai main", "Bank")).toBe(true);
+  });
+  it("is not the same when the extra word changes what the account is", () => {
+    expect(sameAccountName("Salaries", "Salaries payable")).toBe(false);
+    expect(sameAccountName("Rent", "Prepaid rent")).toBe(false);
+    expect(sameAccountName("Vehicles", "Accumulated depreciation vehicles")).toBe(false);
+    expect(sameAccountName("Interest", "Interest income")).toBe(false);
+    expect(sameAccountName("Loan", "Loan write off")).toBe(false);
+  });
   it("is not the same when they are different accounts", () => {
     expect(sameAccountName("Accrued expenses", "Invented trade payables")).toBe(false);
     expect(sameAccountName("Trade payables", "Trade receivables")).toBe(false);

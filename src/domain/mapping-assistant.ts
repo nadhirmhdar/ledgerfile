@@ -259,10 +259,21 @@ export function assist(input: { accounts: AssistantAccount[]; priorYear?: Map<st
 }
 
 /**
+ * Words that change what an account is. A name that only adds a qualifier (a currency, "main", "closed", a place, a number) is still the same account, but one
+ * that adds one of these is a different one: "Salaries" is an expense and "Salaries payable" a liability. One list, the owner's to change. Plural forms are
+ * listed because the assistant's normalise() spells out some abbreviations but does not reduce plurals.
+ */
+export const NATURE_WORDS: ReadonlySet<string> = new Set([
+  "payable", "payables", "receivable", "receivables", "accrued", "accrual", "accruals", "prepaid", "prepayment", "prepayments", "accumulated", "depreciation", "amortisation",
+  "provision", "provisions", "allowance", "allowances", "impairment", "expense", "expenses", "income", "revenue", "advance", "advances", "deposit", "deposits", "loan", "loans",
+  "borrowing", "borrowings", "reserve", "reserves", "tax", "taxes", "vat", "payroll", "gratuity", "interest", "discount", "discounts", "return", "returns", "write", "off", "disposal", "disposals",
+]);
+
+/**
  * Is a name the same account as another? Used when a trial balance is imported again and a code arrives with a different name. Both names are
  * normalised (case, spacing, punctuation and abbreviations); they are the same if those are equal, or if all the content words of one are among the
- * content words of the other, so "Trade receivables" and "Trade Receivables - AED" are one account and "Accrued expenses" and "Trade payables" are not.
- * The rule is the owner's to change.
+ * content words of the other AND none of the extra words is one that changes the account's nature (NATURE_WORDS). So "Trade receivables" and "Trade
+ * Receivables - AED" are one account, while "Salaries" and "Salaries payable", or "Rent" and "Prepaid rent", are not. The rule is the owner's to change.
  */
 export function sameAccountName(a: string, b: string): boolean {
   const na = normalise(a);
@@ -271,7 +282,7 @@ export function sameAccountName(a: string, b: string): boolean {
   const ta = contentTokens(na);
   const tb = contentTokens(nb);
   if (ta.length === 0 || tb.length === 0) return false;
-  const inB = new Set(tb);
-  const inA = new Set(ta);
-  return ta.every((t) => inB.has(t)) || tb.every((t) => inA.has(t));
+  // One name's words all appear in the other's, and the words the other adds are only qualifiers.
+  const within = (small: string[], bigger: string[]) => small.every((t) => bigger.includes(t)) && bigger.filter((t) => !small.includes(t)).every((t) => !NATURE_WORDS.has(t));
+  return within(ta, tb) || within(tb, ta);
 }
