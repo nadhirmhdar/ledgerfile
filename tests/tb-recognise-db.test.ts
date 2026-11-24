@@ -171,10 +171,10 @@ describe("what was already read is read as before", () => {
     expect(await remembered(e.client)).not.toBeNull();
   });
 
-  it("still refuses an old .xls file with the plain message", async () => {
+  it("still refuses an old .xls file with the plain message, which now also offers the template", async () => {
     const e = await engagement();
     const state = await upload(e.id, file("tb.xls", "x"));
-    expect(state).toMatchObject({ ok: false, message: "Old-format .xls files are not supported. Save the file as .xlsx or .csv and upload it again." });
+    expect(state).toMatchObject({ ok: false, message: "Old-format .xls files are not supported. Save the file as .xlsx or .csv and upload it again. Or start from our template: Download our template." });
   });
 });
 

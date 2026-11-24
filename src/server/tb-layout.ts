@@ -52,10 +52,10 @@ export async function forgetLayout(tx: Tx, s: Session, engagementId: string): Pr
 }
 
 /** How the latest import on the engagement found its columns, for the page. */
-export async function latestImportSource(tx: Tx, engagementId: string): Promise<"remembered" | "detected" | "chosen" | "recognised" | null> {
+export async function latestImportSource(tx: Tx, engagementId: string): Promise<"remembered" | "detected" | "chosen" | "recognised" | "template" | null> {
   const engagement = await getEngagement(tx, engagementId);
   if (!engagement) return null;
   const { rows } = await tx.query<{ source: string | null }>("select layout->>'source' as source from tb_imports where engagement_id = $1 order by imported_at desc, id desc limit 1", [engagementId]);
   const source = rows[0]?.source;
-  return source === "remembered" || source === "detected" || source === "chosen" || source === "recognised" ? source : null;
+  return source === "remembered" || source === "detected" || source === "chosen" || source === "recognised" || source === "template" ? source : null;
 }

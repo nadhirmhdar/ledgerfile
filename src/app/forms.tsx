@@ -5,9 +5,20 @@ import { buttonClass } from "@/ui/button";
 import { Field, Input, Select } from "@/ui/form";
 import { plainCount } from "@/ui/text";
 import { ROLES, ROLE_LABEL } from "@/domain/tb-layout";
+import { TEMPLATE_LINK_TEXT, TEMPLATE_URL } from "@/domain/tb-template";
 import { createClientAction, createEngagementAction, setMappingAction, uploadTrialBalanceAction, type FormState } from "./actions";
 
 const initial: FormState = { ok: true, message: "" };
+
+/** The LedgerFile trial balance template: an .xlsx with fixed headings that is always read with certainty. */
+function TemplateLink() {
+  return (
+    <a href={TEMPLATE_URL} download className="font-medium text-accent underline-offset-2 hover:underline">
+      {TEMPLATE_LINK_TEXT}
+    </a>
+  );
+}
+
 function Feedback({ state }: { state: FormState }) {
   if (!state.message) return null;
   return (
@@ -154,6 +165,7 @@ export function UploadForm({ engagementId, hasAccounts }: { engagementId: string
             >
               Choose another file
             </button>
+            <TemplateLink />
           </div>
         </div>
       ) : (
@@ -187,9 +199,17 @@ export function UploadForm({ engagementId, hasAccounts }: { engagementId: string
           <p className="mt-2 text-sm text-ink-muted">
             Needs a column for account code or name, and either Debit and Credit columns or one Balance column. A Prior Year column is optional. If the columns are not found, or you want to say which is which, choose them: they are remembered for this client.
           </p>
+          <p className="mt-2 text-sm text-ink-muted">
+            Or fill in our own format, which is always read as it is: <TemplateLink />. Its example rows are ignored when you upload.
+          </p>
         </>
       )}
       <Feedback state={state} />
+      {!state.ok && state.message && (
+        <p className="mt-2 text-sm">
+          <TemplateLink />
+        </p>
+      )}
     </form>
   );
 }
