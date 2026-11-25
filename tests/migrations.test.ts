@@ -19,7 +19,7 @@ describe("migrations", () => {
   it("a database that is behind fails clearly and is not migrated", async () => {
     const db = await openDatabase();
     await db.query("delete from schema_migrations where name = $1", [LATEST_MIGRATION]);
-    await expect(assertSchemaCurrent(db)).rejects.toThrow(/needs 0030_client_details\.sql\. Run `npm run db:migrate`/);
+    await expect(assertSchemaCurrent(db)).rejects.toThrow(/needs 0032_note_texts\.sql\. Run `npm run db:migrate`/);
     const { rows } = await db.query("select 1 from schema_migrations where name = $1", [LATEST_MIGRATION]);
     expect(rows).toHaveLength(0);
     await db.close();

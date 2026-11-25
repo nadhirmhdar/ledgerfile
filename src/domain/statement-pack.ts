@@ -1,5 +1,6 @@
 import { GROUPS, GROUP_BY_CODE } from "./groups";
 import { applicablePolicies, POLICY_REVIEW_NOTICE } from "./policies";
+import { BASIS_KEY, GENERAL_KEY, groupKey, POLICIES_KEY, policyKey } from "./note-texts";
 import { buildStatements, type Check, type StatementAccount, type StatementLine, type Statements } from "./statements";
 
 /**
@@ -31,8 +32,14 @@ export interface Note {
   title: string;
   /** Narrative paragraphs. Text in [square brackets] is for the preparer to complete. */
   paragraphs: string[];
-  /** Titled passages within the note, used for the individual accounting policies. */
-  subsections?: { title: string; text: string }[];
+  /** The key of the narrative passage (general, basis, policies or group:<CODE>), which a person can edit. The figures and the number never are. */
+  key?: string;
+  /** The generated words of the narrative, whatever is shown. */
+  generated?: string[];
+  /** A person's text is shown in place of the generated words. */
+  overridden?: boolean;
+  /** Titled passages within the note, used for the individual accounting policies. `text` is the paragraphs joined, for anything that shows one block. */
+  subsections?: { key: string; title: string; text: string; paragraphs: string[]; generated: string[]; overridden: boolean }[];
   table?: { rows: { label: string; current: number; prior: number | null }[]; totalCurrent: number; totalPrior: number };
   groupCode?: string;
 }
@@ -115,7 +122,14 @@ const FRAMEWORK_NOTES = 3;
 
 export function buildStatementPack(
   input: PackAccount[],
-  options: { unitMinor?: number; framework?: string; currency?: string; borrowingsCurrent?: { current: number; prior: number } } = {},
+  options: {
+    unitMinor?: number;
+    framework?: string;
+    currency?: string;
+    borrowingsCurrent?: { current: number; prior: number };
+    /** A person's wording by passage key (note_texts). A passage with an entry shows these paragraphs in place of the generated ones; the figures and the note numbers stay generated. */
+    noteTexts?: Record<string, string[]>;
+  } = {},
 ): StatementPack {
   const { accounts, rounding } = roundAccounts(input, options.unitMinor ?? 1);
   const unit = options.unitMinor ?? 1;
@@ -214,26 +228,32 @@ export function buildStatementPack(
   }
 
   // --- Notes ---
+  const texts = options.noteTexts ?? {};
+  /** A passage's words: the person's where there is an entry, else the generated ones. */
+  const passage = (key: string, generated: string[]) => ({ key, generated, overridden: texts[key] !== undefined, paragraphs: texts[key] ?? generated });
   const notes: Note[] = [
     {
       number: 1,
       title: "General information",
-      paragraphs: ["[Legal form, country of incorporation, registered address, licence number and principal activities of the entity.]"],
+      ...passage(GENERAL_KEY, ["[Legal form, country of incorporation, registered address, licence number and principal activities of the entity.]"]),
     },
     {
       number: 2,
       title: "Basis of preparation",
-      paragraphs: [
+      ...passage(BASIS_KEY, [
         `These financial statements have been prepared in accordance with ${framework}. They are presented in ${options.currency ?? "[currency]"}${
           rounding.unitMinor > 1 ? ", rounded to the nearest whole unit" : ""
         }, and have been prepared on the going-concern basis under the historical cost convention [amend if any item is measured on another basis].`,
-      ],
+      ]),
     },
     {
       number: 3,
       title: "Significant accounting policies",
-      paragraphs: [POLICY_REVIEW_NOTICE],
-      subsections: applicablePolicies(new Set(GROUPS.map((g) => g.code).filter(used))).map((p) => ({ title: p.title, text: p.text })),
+      ...passage(POLICIES_KEY, [POLICY_REVIEW_NOTICE]),
+      subsections: applicablePolicies(new Set(GROUPS.map((g) => g.code).filter(used))).map((p) => {
+        const s = passage(policyKey(p.title), [p.text]);
+        return { key: s.key, title: p.title, text: s.paragraphs.join("\n\n"), paragraphs: s.paragraphs, generated: s.generated, overridden: s.overridden };
+      }),
     },
   ];
   const noteByGroup: Record<string, number> = {};
@@ -252,7 +272,7 @@ export function buildStatementPack(
     notes.push({
       number: next,
       title: group.name,
-      paragraphs: [],
+      ...passage(groupKey(group.code), []),
       groupCode: group.code,
       table: { rows, totalCurrent: rows.reduce((s, r) => s + r.current, 0), totalPrior: rows.reduce((s, r) => s + (r.prior ?? 0), 0) },
     });
