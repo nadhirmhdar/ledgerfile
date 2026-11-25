@@ -121,8 +121,15 @@ export function roundAccounts(accounts: PackAccount[], unitMinor: number): { acc
 export const PROFIT_CHECK_LABEL = "Profit for the year agrees across the statements";
 export const NOTE_TOTALS_CHECK_LABEL = "Every note total agrees to its line on the statements";
 export const PLACEHOLDERS_CHECK_LABEL = "No placeholders left in the notes";
-/** The two checks that are errors and also stop a lock. The placeholder check is a warning and never does. */
-export const CONSISTENCY_CHECK_LABELS = [PROFIT_CHECK_LABEL, NOTE_TOTALS_CHECK_LABEL];
+export const CASH_FLOW_CHECK_LABEL = "Cash flow statement agrees to the movement in cash";
+export const EQUITY_CHECK_LABEL = "Statement of changes in equity agrees to total equity";
+/**
+ * The pack's own error checks, which stop a lock as the statements' base checks do: the cash flow and the equity statement agree, profit agrees across
+ * the statements, and every note agrees to its line. The placeholder check is a warning and never does.
+ */
+export const PACK_BLOCKING_CHECK_LABELS = [CASH_FLOW_CHECK_LABEL, EQUITY_CHECK_LABEL, PROFIT_CHECK_LABEL, NOTE_TOTALS_CHECK_LABEL];
+/** The labels of the pack checks that fail and stop a lock. */
+export const packBlockers = (checks: Check[]): string[] => checks.filter((c) => !c.passed && PACK_BLOCKING_CHECK_LABELS.includes(c.label)).map((c) => c.label);
 
 const MAX_NOTES_LISTED = 5;
 const shown = (minor: number, unitMinor: number) =>
@@ -374,7 +381,7 @@ export function buildStatementPack(
   if (cashFlow) {
     const diff = cashFlow.netChange - (cashFlow.closing - cashFlow.opening);
     checks.push({
-      label: "Cash flow statement agrees to the movement in cash",
+      label: CASH_FLOW_CHECK_LABEL,
       passed: diff === 0,
       detail: diff === 0 ? undefined : "The derived cash flows do not explain the change in cash; check that every account is mapped and both years balance.",
     });
@@ -382,7 +389,7 @@ export function buildStatementPack(
   if (equity) {
     const closing = equity.rows[3].total;
     const sfpEquity = base.financialPosition.flatMap((s) => s.lines).find((l) => l.key === "TOTAL_EQUITY")?.current ?? 0;
-    checks.push({ label: "Statement of changes in equity agrees to total equity", passed: closing === sfpEquity });
+    checks.push({ label: EQUITY_CHECK_LABEL, passed: closing === sfpEquity });
   }
 
   checks.push(...consistencyChecks({ base, equity, cashFlow, notes, unitMinor: unit }), placeholderCheck(notes));

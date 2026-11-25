@@ -3,7 +3,10 @@ import { readFileSync } from "node:fs";
 import {
   buildStatementPack,
   consistencyChecks,
-  CONSISTENCY_CHECK_LABELS,
+  CASH_FLOW_CHECK_LABEL,
+  EQUITY_CHECK_LABEL,
+  PACK_BLOCKING_CHECK_LABELS,
+  packBlockers,
   NOTE_TOTALS_CHECK_LABEL,
   PLACEHOLDERS_CHECK_LABEL,
   PROFIT_CHECK_LABEL,
@@ -236,7 +239,12 @@ describe("no placeholders left in the notes", () => {
   });
 
   it("is not one of the checks that stop a lock", () => {
-    expect(CONSISTENCY_CHECK_LABELS).toEqual([PROFIT_CHECK_LABEL, NOTE_TOTALS_CHECK_LABEL]);
+    expect(PACK_BLOCKING_CHECK_LABELS).toEqual([CASH_FLOW_CHECK_LABEL, EQUITY_CHECK_LABEL, PROFIT_CHECK_LABEL, NOTE_TOTALS_CHECK_LABEL]);
+    expect(packBlockers(buildStatementPack(books()).checks)).toEqual([]);
+    for (const label of PACK_BLOCKING_CHECK_LABELS) {
+      const checks = buildStatementPack(books()).checks.map((c) => (c.label === label ? { ...c, passed: false } : c));
+      expect(packBlockers(checks), label).toEqual([label]);
+    }
     const pack = buildStatementPack(books());
     const ready = lockReadiness({ statementsClean: pack.clean, failedChecks: [], leadSheets: [], openPoints: 0 });
     expect(ready.blockers.some((b) => b.includes("placeholder"))).toBe(false);
