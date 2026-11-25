@@ -125,7 +125,7 @@ describe("check A: the comparatives", () => {
     const { current } = await pair(withPrior({ "1000": 1400000, "4000": -900000 }));
     const [a, b] = (await checksOf(current)).checks;
     expect(a.passed).toBe(false);
-    expect(a.detail).toContain("this year's comparative 9,000.00, last year 10,000.00, difference minus 1,000.00");
+    expect(a.items!.join("\n")).toContain("this year's comparative 9,000.00, last year 10,000.00, difference minus 1,000.00");
     expect(a.severity).toBe("warning");
     expect(b.passed).toBe(true);
   });
@@ -134,8 +134,8 @@ describe("check A: the comparatives", () => {
     const { current } = await pair(withPrior({ "1000": 1600000, "3000": -600000, "3100": -400000, "4000": -1100000, "6000": 400000 }));
     const a = (await checksOf(current)).checks[0];
     expect(a.passed).toBe(false);
-    expect(a.detail!.split("; ").length).toBe(5 + 1);
-    expect(a.detail).toMatch(/; and \d+ more\.$/);
+    expect(a.items!).toHaveLength(5 + 1);
+    expect(a.items![5]).toMatch(/^and \d+ more$/);
   });
 });
 

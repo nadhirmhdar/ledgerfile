@@ -38,6 +38,8 @@ export interface Check {
   label: string;
   passed: boolean;
   detail?: string;
+  /** What the check found, one line each, when there are several. Shown as a list under the detail. */
+  items?: string[];
   severity?: Severity;
 }
 

@@ -35,6 +35,9 @@ export const priorBasis = (signed: boolean): string => (signed ? "last year's si
 
 export const NOT_LINKED = "Not linked to last year's file, so the prior-year checks do not run.";
 export const MAX_LISTED = 5;
+/** This year's trial balance has no comparative column at all, so every difference would only repeat that. */
+export const NO_COMPARATIVES =
+  "This year's trial balance has no comparative figures, so the statements show no comparatives. Last year's file has them: bring them in with the trial balance (the Prior Year column) when it is imported.";
 
 const fmt = (minor: number): string => (Math.abs(minor) / 100).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const signed = (minor: number): string => `${minor < 0 ? "minus " : ""}${fmt(minor)}`;
@@ -85,10 +88,12 @@ export function priorYearChecks(input: PriorYearInput): Check[] {
     .slice(0, MAX_LISTED)
     .map((d) => `${d.label}: this year's comparative ${signed(d.comparative)}, last year ${signed(d.lastYear)}, difference ${signed(d.difference)}`);
   const more = differing.length - listed.length;
+  const noComparatives = !input.current.hasComparatives && differing.length > 0;
   const a: Check = {
     label: `Comparative figures agree to ${basis}`,
     passed: differing.length === 0,
-    detail: differing.length === 0 ? undefined : `${listed.join("; ")}${more > 0 ? `; and ${more} more` : ""}.`,
+    detail: differing.length === 0 ? undefined : noComparatives ? NO_COMPARATIVES : `${differing.length} ${differing.length === 1 ? "figure differs" : "figures differ"}:`,
+    items: differing.length === 0 || noComparatives ? undefined : [...listed, ...(more > 0 ? [`and ${more} more`] : [])],
     severity: "warning",
   };
 

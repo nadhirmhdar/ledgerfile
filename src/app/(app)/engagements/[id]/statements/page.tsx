@@ -241,7 +241,7 @@ export default async function StatementsPage({ params, searchParams }: { params:
           </Callout>
         )}
 
-        {priorYearResult && <PriorYearChecks result={priorYearResult} />}
+        {priorYearResult && <PriorYearChecks result={priorYearResult} engagementId={id} />}
 
         <div>
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
