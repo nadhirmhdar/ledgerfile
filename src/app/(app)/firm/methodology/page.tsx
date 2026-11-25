@@ -2,6 +2,9 @@ import Link from "next/link";
 import { getDb, withFirm } from "@/server/db";
 import { getSession } from "@/server/session";
 import { listFirmMethodology } from "@/server/firm-methodology";
+import { getAdoption } from "@/server/methodology-adoption";
+import { adoptionLine } from "@/domain/methodology-adoption";
+import { AdoptionSection } from "@/ui/adoption-section";
 import { LIBRARY_STATUS, ASSERTIONS } from "@/domain/audit";
 import { ActionForm } from "@/app/action-form";
 import { addProcedureAction, editOwnProcedureAction, editProcedureAction, hideProcedureAction, resetProcedureAction, restoreOwnProcedureAction, retireOwnProcedureAction, showProcedureAction } from "@/app/methodology-actions";
@@ -62,7 +65,7 @@ function OwnFields({ choices, start }: { choices: string[]; start?: OwnProcedure
 
 export default async function FirmMethodologyPage() {
   const session = await getSession();
-  const areas = await withFirm(await getDb(), session.firmId, (tx) => listFirmMethodology(tx));
+  const { areas, adoption } = await withFirm(await getDb(), session.firmId, async (tx) => ({ areas: await listFirmMethodology(tx), adoption: await getAdoption(tx) }));
   const mayEdit = canEditMethodology(session.role);
 
   return (
@@ -78,8 +81,11 @@ export default async function FirmMethodologyPage() {
         subtitle={mayEdit ? "The audit procedures your firm loads into its programmes. Reword them, hide the ones you do not use, or go back to the library's wording." : "The audit procedures your firm loads into its programmes. A partner changes them."}
       />
       <div className="mt-6 space-y-8">
+        <AdoptionSection state={adoption.state} history={adoption.history} changeCount={adoption.now.changeCount} version={adoption.now.version} mayEdit={mayEdit} />
         <Callout variant="draft" title={DRAFT_LABEL_TITLE}>
           {DRAFT_LABEL} ({LIBRARY_STATUS})
+          {/* The label above is the standing rule and is not changed by an adoption. This line only states the firm's own record. */}
+          <span className="mt-1 block font-medium">{adoptionLine(adoption.state)}</span>
         </Callout>
         <p className="text-sm text-ink-muted">{CHANGES_APPLY}</p>
 

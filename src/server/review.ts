@@ -1,6 +1,8 @@
 import type { Tx } from "./db";
 import { audit, getEngagement, isSolePractitioner, listAccounts } from "./repo";
 import { getAuditOverview } from "./audit";
+import { getAdoption } from "./methodology-adoption";
+import { lockAdoption } from "../domain/methodology-adoption";
 import { buildLeadSheets } from "../domain/leadsheet";
 import { buildStatements } from "../domain/statements";
 import { GROUP_BY_CODE } from "../domain/groups";
@@ -231,7 +233,8 @@ export async function lockEngagement(tx: Tx, actor: Actor, engagementId: string)
   const overview = await getOverview(tx, engagementId);
   if (!overview!.readiness.ready) throw new Error(`The engagement is not ready to lock. ${overview!.readiness.blockers.join(" ")}`);
   await tx.query("update engagements set status = 'locked', locked_by = $2, locked_at = now() where id = $1", [engagementId, actor.userId]);
-  await audit(tx, actor, "lock", "engagement", engagementId);
+  // Which adoption of the methodology was current when the file was locked, or "none". Recorded only: it changes nothing about locking.
+  await audit(tx, actor, "lock", "engagement", engagementId, { methodologyAdoption: lockAdoption((await getAdoption(tx)).state) });
 }
 
 export async function unlockEngagement(tx: Tx, actor: Actor, engagementId: string, reason: string): Promise<void> {

@@ -71,7 +71,7 @@ function buildChecklists(): Checklist[] {
     .sort((a, b) => STAGE_ORDER.indexOf(a.stage) - STAGE_ORDER.indexOf(b.stage) || Number(a.code.slice(1)) - Number(b.code.slice(1)));
 }
 
-export function buildLibrary(): { status: string; areas: Area[]; checklists: Checklist[] } {
+export function buildLibrary(): { version: string; status: string; areas: Area[]; checklists: Checklist[] } {
   const areas = new Map<string, Area>();
   for (const file of SOURCES) {
     let area: Area | null = null;
@@ -116,6 +116,8 @@ export function buildLibrary(): { status: string; areas: Area[]; checklists: Che
   if (duplicate) throw new Error(`Procedure ${duplicate} appears twice.`);
 
   return {
+    // The library's own version, which the firm's adoption record names. Change it when the content changes.
+    version: "0.1",
     // Shown wherever the content is used, until a qualified person has reviewed and approved it.
     status: "AI draft v0.1: not reviewed, not approved for use on any engagement",
     areas: list,
