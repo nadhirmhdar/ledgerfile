@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Thread } from "@/ui/review-thread";
 import { notFound } from "next/navigation";
 import { getDb, withFirm } from "@/server/db";
 import { getSession } from "@/server/session";
@@ -318,8 +319,11 @@ export default async function ReviewPage({ params }: { params: Promise<{ id: str
                   <li key={p.id}>
                     <Card>
                       <div className="flex flex-wrap items-start justify-between gap-2">
-                        <p className="text-sm text-ink-muted">
-                          {p.targetName} · raised by {p.authorName} on {p.createdAt}
+                        <p className="flex flex-wrap gap-x-3 text-sm text-ink-muted">
+                          <span>{p.targetName}</span>
+                          <span>
+                            raised by {p.authorName} on {p.createdAt}
+                          </span>
                         </p>
                         <Badge tone="warning">Open</Badge>
                       </div>
@@ -357,8 +361,12 @@ export default async function ReviewPage({ params }: { params: Promise<{ id: str
                 <ul className="mt-3 space-y-2">
                   {clearedPoints.map((p) => (
                     <li key={p.id} className="rounded-md border border-border bg-surface-muted p-3 text-sm">
-                      <p className="text-ink-muted">
-                        {p.targetName} · raised by {p.authorName} on {p.createdAt} · cleared by {p.clearedByName}
+                      <p className="flex flex-wrap gap-x-3 text-ink-muted">
+                        <span>{p.targetName}</span>
+                        <span>
+                          raised by {p.authorName} on {p.createdAt}
+                        </span>
+                        <span>cleared by {p.clearedByName}</span>
                       </p>
                       <p className="mt-1">{p.body}</p>
                       <Thread thread={p.thread} />
@@ -371,23 +379,5 @@ export default async function ReviewPage({ params }: { params: Promise<{ id: str
         </Section>
       </div>
     </div>
-  );
-}
-
-/** A review point's replies, oldest first: who, when, and the words. An older single response shows as the first reply, with no date. */
-function Thread({ thread }: { thread: review.ThreadReply[] }) {
-  if (thread.length === 0) return null;
-  return (
-    <ol aria-label="Replies" className="mt-3 space-y-2">
-      {thread.map((r) => (
-        <li key={r.id} className="min-w-0 border-l-2 border-border-strong pl-3 text-sm">
-          <p className="text-ink-muted">
-            {r.authorName}
-            {r.writtenAt ? ` · ${r.writtenAt}` : " · earlier response, date not recorded"}
-          </p>
-          <p className="break-words">{r.body}</p>
-        </li>
-      ))}
-    </ol>
   );
 }
