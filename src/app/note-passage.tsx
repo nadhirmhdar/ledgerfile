@@ -5,6 +5,7 @@ import { buttonClass } from "@/ui/button";
 import { Badge } from "@/ui/badge";
 import { Callout } from "@/ui/feedback";
 import { splitBrackets } from "@/ui/statements-view";
+import { firmDefaultLabel } from "@/domain/statement-defaults";
 import { DRAFT_PASSAGE_LABEL, MAX_PARAGRAPH_LENGTH, MAX_PARAGRAPHS } from "@/domain/note-texts";
 import { POLICY_REVIEW_NOTICE } from "@/domain/policies";
 import { generatedNoteAction, restoreNoteAction, saveNoteAction } from "./note-actions";
@@ -28,7 +29,7 @@ export interface PassageData {
   /** A person's text is shown. */
   overridden: boolean;
   /** Who and when, for the current person's version. */
-  current: { version: number; by: string; at: string } | null;
+  current: { version: number; by: string; at: string; /** The wording was copied from the firm's statement defaults when the file was created. */ fromDefault?: boolean } | null;
   history: PassageVersion[];
   /** The person may edit and the file is open. */
   canEdit: boolean;
@@ -89,7 +90,9 @@ export function NotePassage(p: PassageData) {
     setMode("edit");
   };
 
-  const label = p.overridden && p.current ? (
+  const label = p.overridden && p.current?.fromDefault ? (
+    <span className="text-small font-medium text-ink-subtle">{firmDefaultLabel(p.current.at.slice(0, 10))}</span>
+  ) : p.overridden && p.current ? (
     <span className="text-small text-ink-subtle">
       Edited by {p.current.by} on {p.current.at}
     </span>

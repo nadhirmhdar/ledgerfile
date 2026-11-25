@@ -8,6 +8,7 @@ import { learnedExamples } from "./mapping-examples";
 import { GROUP_BY_CODE } from "../domain/groups";
 import type { MappedAccount } from "../domain/leadsheet";
 import type { Role } from "../domain/signoff";
+import { applyFirmDefaults } from "./statement-defaults";
 import { canCreateClient, canCreateEngagement, CLIENT_REFUSAL, ENGAGEMENT_REFUSAL } from "../domain/permissions";
 
 export interface Session {
@@ -39,6 +40,10 @@ export interface EngagementRow {
   /** The day the file was archived (the permanent lock), or null. An archived file is also locked. */
   archivedAt: string | null;
   archivedByName: string | null;
+  /** The presentation currency of this engagement's statements (a snapshot of the firm's default, or set on the file), or null. */
+  currency: string | null;
+  /** The default rounding of this engagement's statements: "exact", "whole", or null (exact). */
+  statementUnit: "exact" | "whole" | null;
 }
 
 export interface AccountRow extends MappedAccount {
@@ -140,7 +145,7 @@ const ENGAGEMENT_SELECT = `
          to_char(e.period_start, 'YYYY-MM-DD') as "periodStart", to_char(e.period_end, 'YYYY-MM-DD') as "periodEnd",
          e.status, e.prior_engagement_id as "priorEngagementId",
          e.borrowings_current_minor::float8 as "borrowingsCurrentMinor", e.borrowings_current_prior_minor::float8 as "borrowingsCurrentPriorMinor",
-         to_char(e.archived_at at time zone 'UTC', 'YYYY-MM-DD') as "archivedAt", au.name as "archivedByName"
+         to_char(e.archived_at at time zone 'UTC', 'YYYY-MM-DD') as "archivedAt", au.name as "archivedByName", e.currency, e.statement_unit as "statementUnit"
   from engagements e join clients c on c.id = e.client_id left join users au on au.id = e.archived_by`;
 
 export async function listEngagements(tx: Tx): Promise<EngagementRow[]> {
@@ -168,6 +173,8 @@ export async function createEngagement(tx: Tx, s: Session, clientId: string, per
     [s.firmId, clientId, periodStart, periodEnd, prior.rows[0]?.id ?? null],
   );
   await audit(tx, s, "create", "engagement", rows[0].id, { clientId, periodStart, periodEnd });
+  // The firm's statement defaults, copied onto this new engagement only.
+  await applyFirmDefaults(tx, s, rows[0].id);
   return rows[0].id;
 }
 

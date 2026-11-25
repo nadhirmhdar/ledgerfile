@@ -73,6 +73,8 @@ export interface NoteVersion {
   by: string;
   /** Date and time, UTC, as shown. */
   at: string;
+  /** "firm_default" for wording copied from the firm's statement defaults when the engagement was created; null for a person's own text. */
+  source?: "person" | "firm_default" | null;
 }
 
 /** The overrides the statement pack takes: the paragraphs of every passage whose current version is a person's text. */

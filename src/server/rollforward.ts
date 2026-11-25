@@ -1,6 +1,7 @@
 import type { Tx } from "./db";
 import { audit, lockEngagements, overlapRefusal, type Session } from "./repo";
 import { setAuditEnabled } from "./audit";
+import { applyFirmDefaults } from "./statement-defaults";
 import { canCreateEngagement, ENGAGEMENT_REFUSAL } from "../domain/permissions";
 import { todayIso } from "../domain/client-requests";
 import { isRealDate, nextPeriod } from "../domain/client-details";
@@ -149,6 +150,8 @@ export async function rollForward(tx: Tx, s: Session, items: RollItem[], today: 
     );
     const id = rows[0].id;
     await audit(tx, s, "create", "engagement", id, { clientId: item.clientId, periodStart: item.start, periodEnd: item.end, priorEngagementId: prior.id, bulk: true });
+    // The firm's statement defaults, as for any new engagement. Last year's edited notes are not copied.
+    await applyFirmDefaults(tx, s, id);
     // The audit on: turned on the usual way, so its checklist steps are loaded. Nothing else of last year's audit is carried.
     if (prior.auditEnabled) await setAuditEnabled(tx, { ...s, role: who.rows[0].role }, id, true);
     created.push({ engagementId: id, clientId: item.clientId, clientName: prior.clientName, start: item.start, end: item.end });
