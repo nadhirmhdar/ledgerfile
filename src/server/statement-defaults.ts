@@ -1,6 +1,6 @@
 import type { Tx } from "./db";
 import { canLock, type Role } from "../domain/signoff";
-import { cutForLog, describeKey, isKnownKey, policyKey } from "../domain/note-texts";
+import { cutForLog, describeKey, isKnownKey, policyKey, STANDARD_NOTES } from "../domain/note-texts";
 import { POLICIES } from "../domain/policies";
 import { checkCurrency, checkDefaultText, isUnit, NOT_PARTNER_DEFAULTS, paragraphsToText, type Unit } from "../domain/statement-defaults";
 
@@ -11,8 +11,8 @@ import { checkCurrency, checkDefaultText, isUnit, NOT_PARTNER_DEFAULTS, paragrap
  * it is open.
  */
 
-/** The passages a firm can set a default for: the three framework notes, the policies' introduction and each policy. */
-export const DEFAULT_KEYS: string[] = ["general", "basis", "policies", ...POLICIES.map((p) => policyKey(p.title))];
+/** The passages a firm can set a default for: the three framework notes, the policies' introduction, each policy, and the five standard notes after the group notes. */
+export const DEFAULT_KEYS: string[] = ["general", "basis", "policies", ...POLICIES.map((p) => policyKey(p.title)), ...STANDARD_NOTES.map((n) => n.key)];
 
 export interface FirmDefaults {
   currency: string | null;

@@ -5,7 +5,8 @@ import { POLICIES } from "./policies";
  * The wording of the notes to the financial statements that a person can edit. Pure.
  *
  * A passage is named by a key that does not depend on the note numbers (which are generated): general, basis, policies (the introduction to the
- * accounting policies), policy:<slug of the policy title> and group:<GROUP CODE> (a narrative above a group note's table). Figures, tables, totals and
+ * accounting policies), policy:<slug of the policy title>, group:<GROUP CODE> (a narrative above a group note's table) and the five standard notes
+ * that follow the group notes: related, tax, commitments, events and going_concern. Figures, tables, totals and
  * the note numbers are never editable. A saved passage replaces the generated words for that passage only; "going back" is a version marked generated,
  * which the statements treat as no edit at all.
  */
@@ -16,6 +17,21 @@ export const MAX_PARAGRAPH_LENGTH = 4000;
 export const GENERAL_KEY = "general";
 export const BASIS_KEY = "basis";
 export const POLICIES_KEY = "policies";
+export const RELATED_KEY = "related";
+export const TAX_KEY = "tax";
+export const COMMITMENTS_KEY = "commitments";
+export const EVENTS_KEY = "events";
+export const GOING_CONCERN_KEY = "going_concern";
+
+/** The standard notes after the group notes, in the order they are numbered, with their titles. Related parties and income tax appear only when their groups have balances. */
+export const STANDARD_NOTES: { key: string; title: string; groups: string[] }[] = [
+  { key: RELATED_KEY, title: "Related parties", groups: ["RPREC", "RPPAY"] },
+  { key: TAX_KEY, title: "Income tax", groups: ["TAXEXP", "TAXLIAB"] },
+  { key: COMMITMENTS_KEY, title: "Commitments and contingencies", groups: [] },
+  { key: EVENTS_KEY, title: "Events after the reporting period", groups: [] },
+  { key: GOING_CONCERN_KEY, title: "Going concern", groups: [] },
+];
+const STANDARD_BY_KEY = new Map(STANDARD_NOTES.map((n) => [n.key, n]));
 
 export const policySlug = (title: string): string =>
   title
@@ -30,7 +46,7 @@ const POLICY_BY_KEY = new Map(POLICIES.map((p) => [policyKey(p.title), p]));
 
 /** Whether the key names a passage that exists in the notes' design (whether or not it applies to this engagement today). */
 export function isKnownKey(key: string): boolean {
-  if (key === GENERAL_KEY || key === BASIS_KEY || key === POLICIES_KEY) return true;
+  if (key === GENERAL_KEY || key === BASIS_KEY || key === POLICIES_KEY || STANDARD_BY_KEY.has(key)) return true;
   if (key.startsWith("policy:")) return POLICY_BY_KEY.has(key);
   if (key.startsWith("group:")) return GROUP_BY_CODE.has(key.slice("group:".length));
   return false;
@@ -41,6 +57,7 @@ export function describeKey(key: string): string {
   if (key === GENERAL_KEY) return "General information";
   if (key === BASIS_KEY) return "Basis of preparation";
   if (key === POLICIES_KEY) return "Introduction to the accounting policies";
+  if (STANDARD_BY_KEY.has(key)) return STANDARD_BY_KEY.get(key)!.title;
   if (key.startsWith("policy:")) return `Policy: ${POLICY_BY_KEY.get(key)?.title ?? key.slice("policy:".length)}`;
   if (key.startsWith("group:")) return `Narrative above the table: ${GROUP_BY_CODE.get(key.slice("group:".length))?.name ?? key.slice("group:".length)}`;
   return key;
