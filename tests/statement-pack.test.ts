@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { buildStatementPack, roundAccounts, type PackAccount } from "../src/domain/statement-pack";
+import { severityOf } from "../src/domain/statements";
 import { parseTrialBalance } from "../src/domain/tb-parse";
 import { proposeMappings } from "./rule-mapping";
 import { readGrid } from "../src/server/excel";
@@ -115,7 +116,8 @@ describe("cash flows with every group in use", () => {
     const cash = acct("CASH", "bank", -all.reduce((s, a) => s + a.closingMinor, 0), -all.reduce((s, a) => s + (a.priorMinor ?? 0), 0));
     const pack = buildStatementPack([...all, cash]);
 
-    expect(pack.checks.filter((c) => !c.passed)).toEqual([]);
+    // The placeholder check is a warning, and the generated notes still carry placeholders; every error check passes.
+    expect(pack.checks.filter((c) => !c.passed && severityOf(c) === "error")).toEqual([]);
     const keys = pack.cashFlow!.sections.flatMap((s) => s.lines).map((l) => l.key);
     for (const key of ["CF_INV", "CF_REC", "CF_PAY", "CF_EOSB", "CF_TAX", "CF_CAPEX", "CF_INVEST", "CF_BORROW", "CF_INTEREST", "CF_EQUITY"]) {
       expect(keys, key).toContain(key);
@@ -124,7 +126,7 @@ describe("cash flows with every group in use", () => {
     expect(pack.equity!.columns.map((c) => c.key)).toEqual(["CAPITAL", "RESERVES", "RETAINED", "OWNERCA"]);
 
     const rounded = buildStatementPack([...[...all, cash].map((a): PackAccount => ({ ...a, closingMinor: a.closingMinor + 37, priorMinor: (a.priorMinor ?? 0) + 37 })), acct("CASH", "plug", -24 * 37, -24 * 37)], { unitMinor: 100 });
-    expect(rounded.checks.filter((c) => !c.passed)).toEqual([]);
+    expect(rounded.checks.filter((c) => !c.passed && severityOf(c) === "error")).toEqual([]);
   });
 });
 
@@ -210,7 +212,9 @@ describe("the sample client", () => {
 
     for (const unitMinor of [1, 100]) {
       const pack = buildStatementPack(accounts, { unitMinor });
-      expect(pack.checks.filter((c) => !c.passed)).toEqual([]);
+      expect(pack.checks.filter((c) => !c.passed && severityOf(c) === "error")).toEqual([]);
+      expect(pack.checks.filter((c) => !c.passed).map((c) => c.label)).toEqual(["No placeholders left in the notes"]);
+      expect(pack.clean).toBe(true);
       expect(pack.cashFlow!.netChange).toBe(pack.cashFlow!.closing - pack.cashFlow!.opening);
       expect(pack.equity!.rows[3].total).toBeGreaterThan(0);
     }
