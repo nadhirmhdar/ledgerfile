@@ -5,6 +5,7 @@ import { getDb, withFirm, type Tx } from "@/server/db";
 import { getSession } from "@/server/session";
 import type { Session } from "@/server/repo";
 import * as methodology from "@/server/firm-methodology";
+import { adoptMethodology, withdrawAdoption } from "@/server/methodology-adoption";
 import type { FormState } from "./actions";
 
 const field = (form: FormData, name: string) => String(form.get(name) ?? "");
@@ -58,4 +59,33 @@ export async function retireOwnProcedureAction(_prev: FormState, form: FormData)
 
 export async function restoreOwnProcedureAction(_prev: FormState, form: FormData): Promise<FormState> {
   return run(form, "Restored.", (tx, s, id) => methodology.restoreOwnProcedure(tx, s, id));
+}
+
+/** Record the firm's adoption of the methodology. The role is read again from the database and the confirmation is checked again on the server. */
+export async function adoptMethodologyAction(_prev: FormState, form: FormData): Promise<FormState> {
+  const session = await getSession();
+  try {
+    await withFirm(await getDb(), session.firmId, (tx) => adoptMethodology(tx, session, { confirmed: field(form, "confirm") === "yes", note: field(form, "note") }));
+  } catch (e) {
+    const known = e instanceof Error && !("code" in e);
+    if (!known) console.error("adoption failed:", e instanceof Error ? e.message : "unknown error");
+    return { ok: false, message: known ? e.message : "The adoption was not recorded." };
+  }
+  revalidatePath("/firm/methodology");
+  revalidatePath("/engagements", "layout");
+  return { ok: true, message: "Adoption recorded." };
+}
+
+export async function withdrawAdoptionAction(_prev: FormState, form: FormData): Promise<FormState> {
+  const session = await getSession();
+  try {
+    await withFirm(await getDb(), session.firmId, (tx) => withdrawAdoption(tx, session, field(form, "reason")));
+  } catch (e) {
+    const known = e instanceof Error && !("code" in e);
+    if (!known) console.error("withdrawal failed:", e instanceof Error ? e.message : "unknown error");
+    return { ok: false, message: known ? e.message : "The adoption was not withdrawn." };
+  }
+  revalidatePath("/firm/methodology");
+  revalidatePath("/engagements", "layout");
+  return { ok: true, message: "Adoption withdrawn." };
 }

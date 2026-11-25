@@ -26,6 +26,8 @@ import { Table, TCell, THead, TRow } from "@/ui/table";
 import { approvalView, checklistPill, mayDo, planningSentence, planningSteps, programmeProgress, riskSummary, stepTone, waitingFor } from "@/ui/audit-view";
 import { ExpandRow } from "@/ui/area-row";
 import { count, plainCount } from "@/ui/text";
+import { getAdoption } from "@/server/methodology-adoption";
+import { adoptionLine } from "@/domain/methodology-adoption";
 import { EngagementNav } from "../nav";
 
 export const dynamic = "force-dynamic";
@@ -35,12 +37,13 @@ export default async function AuditPage({ params }: { params: Promise<{ id: stri
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
 
   const session = await getSession();
-  const { engagement, overview, planned, revenue, significance } = await withFirm(await getDb(), session.firmId, async (tx) => ({
+  const { engagement, overview, planned, revenue, significance, adoption } = await withFirm(await getDb(), session.firmId, async (tx) => ({
     engagement: await repo.getEngagement(tx, id),
     overview: await audit.getAuditOverview(tx, id),
     planned: await getAnsweredDerivation(tx, id),
     significance: await getAreaSignificance(tx, id, [...AREA_BY_CODE.values()]),
     revenue: await getRevenuePresumption(tx, id),
+    adoption: (await getAdoption(tx)).state,
   }));
   if (!engagement || !overview) notFound();
 
@@ -88,6 +91,7 @@ export default async function AuditPage({ params }: { params: Promise<{ id: stri
       <div className="mt-6 space-y-8">
         <Callout variant="draft" title={`Methodology content: ${LIBRARY_STATUS}`}>
           The procedures loaded here come from the draft library in the repository&apos;s docs folder. Do not rely on them for a real audit until a qualified person has reviewed and approved that library.
+          <span className="mt-1 block font-medium">{adoptionLine(adoption)}</span>
         </Callout>
 
         {overview.areas.length === 0 ? (
