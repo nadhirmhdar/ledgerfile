@@ -10,6 +10,7 @@ import { ActionForm } from "@/app/action-form";
 import { reviewAreaAction, reviewProcedureAction, updateProcedureAction } from "@/app/audit-actions";
 import { removeWorkingPaperAction } from "@/app/papers-actions";
 import * as papers from "@/server/working-papers";
+import { PaperHistory, versionLabel } from "@/ui/paper-history";
 import { listSchedules } from "@/server/test-schedules";
 import { confirmationSummary } from "@/server/confirmations";
 import { requestCounts } from "@/server/client-requests";
@@ -333,9 +334,11 @@ export default async function ProgrammePage({ params, searchParams }: { params: 
                                     <a href={`${base}/files/${w.id}`} className="font-medium text-accent hover:underline">
                                       {w.fileName}
                                     </a>
+                                    {versionLabel(w.version) && <span className="rounded-full bg-accent-soft px-2.5 py-0.5 text-xs font-medium text-accent">{versionLabel(w.version)}</span>}
                                     <span className="text-ink-muted">
                                       {w.uploadedByName} {w.uploadedAt}
                                     </span>
+                                    <PaperHistory engagementId={id} history={w.history} />
                                     {c.canRemove(w.uploadedBy) && (
                                       <ActionForm action={removeWorkingPaperAction} fields={{ paperId: w.id }}>
                                         <Button variant="danger" size="sm">

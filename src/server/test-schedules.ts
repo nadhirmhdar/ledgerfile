@@ -324,7 +324,7 @@ export async function getSchedule(tx: Tx, scheduleId: string, inScope?: Set<stri
       )
     : null;
   const rolledFrom = from?.rows[0] ?? null;
-  const files = await tx.query<{ id: string; fileName: string }>('select id, file_name as "fileName" from working_papers where engagement_id = $1 order by uploaded_at, file_name', [r.engagementId]);
+  const files = await tx.query<{ id: string; fileName: string }>('select id, file_name as "fileName" from working_papers w where engagement_id = $1 and not exists (select 1 from working_papers newer where newer.replaces_id = w.id) order by uploaded_at, file_name', [r.engagementId]);
   return {
     id: r.id,
     engagementId: r.engagementId,

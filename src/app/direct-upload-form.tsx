@@ -34,7 +34,7 @@ export function DirectUploadForm({ engagementId, fields, maxBytes, children, cla
     setPercent(0);
     setPhase("preparing");
     try {
-      const begun = await beginUploadAction({ engagementId, supports: String(data.get("supports") ?? "engagement"), fileName: file.name, sizeBytes: file.size, description: String(data.get("description") ?? "") });
+      const begun = await beginUploadAction({ engagementId, supports: String(data.get("supports") ?? "engagement"), fileName: file.name, sizeBytes: file.size, description: String(data.get("description") ?? ""), replacesId: String(data.get("replacesId") ?? "") || undefined });
       if (!begun.ok) {
         setResult({ ok: false, message: begun.message });
         return;

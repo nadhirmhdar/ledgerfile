@@ -36,6 +36,7 @@ const LABEL: Record<string, string> = {
   "working_paper:download": "Downloaded a working paper",
   "working_paper:file": "Filed a working paper",
   "working_paper:upload": "Uploaded a working paper",
+  "working_paper:upload_version": "Uploaded a new version of a working paper",
   "working_paper:remove": "Removed a working paper",
   "misstatement:add": "Recorded a misstatement",
   "journal_test:select": "Selected a journal entry for testing",
