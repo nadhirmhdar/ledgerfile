@@ -29,6 +29,7 @@ export default async function Home() {
         engagementForm={mayCreateEngagement ? clients.length === 0 ? <p className="text-sm text-ink-muted">Add a client first.</p> : <NewEngagementForm clients={clients} /> : undefined}
         clientForm={mayCreateClient ? <NewClientForm /> : undefined}
         importHref={mayCreateClient ? "/clients/import" : undefined}
+        rollForwardHref={mayCreateEngagement && engagements.length > 0 ? "/engagements/roll-forward" : undefined}
       />
 
       <section aria-label="Engagement list" className="mt-6">

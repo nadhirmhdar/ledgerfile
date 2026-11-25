@@ -8,7 +8,7 @@ import { PageHeader } from "./layout";
  * The engagements page header with its two create buttons. Each button opens its existing form in a panel under the header;
  * only one is open at a time. The forms are passed in already built, so their actions are untouched.
  */
-export function EngagementsHeader({ subtitle, engagementForm, clientForm, importHref }: { subtitle: string; engagementForm?: ReactNode; clientForm?: ReactNode; importHref?: string }) {
+export function EngagementsHeader({ subtitle, engagementForm, clientForm, importHref, rollForwardHref }: { subtitle: string; engagementForm?: ReactNode; clientForm?: ReactNode; importHref?: string; rollForwardHref?: string }) {
   const [open, setOpen] = useState<"engagement" | "client" | null>(null);
   const toggle = (which: "engagement" | "client") => setOpen((o) => (o === which ? null : which));
   return (
@@ -27,6 +27,11 @@ export function EngagementsHeader({ subtitle, engagementForm, clientForm, import
               <Button variant="secondary" aria-expanded={open === "client"} aria-controls="create-client" onClick={() => toggle("client")}>
                 New client
               </Button>
+            )}
+            {rollForwardHref && (
+              <LinkButton variant="secondary" href={rollForwardHref}>
+                Roll forward to next year
+              </LinkButton>
             )}
             {importHref && (
               <LinkButton variant="secondary" href={importHref}>
