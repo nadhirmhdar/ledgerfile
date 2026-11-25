@@ -5,11 +5,14 @@ import { getDb, withFirm } from "@/server/db";
 import { getSession } from "@/server/session";
 import * as repo from "@/server/repo";
 import { isEnabled } from "@/server/audit";
+import { currentOf, loadHistory } from "@/server/note-texts";
+import { NotePassage, type PassageData } from "@/app/note-passage";
+import { canEditNotes } from "@/domain/permissions";
+import { describeKey, keptButNotShown, overridesFrom } from "@/domain/note-texts";
 import { getPriorYearChecks } from "@/server/prior-year-checks";
 import { PriorYearChecks } from "@/ui/prior-year-view";
 import { buildStatementPack } from "@/domain/statement-pack";
 import type { StatementLine } from "@/domain/statements";
-import { POLICY_REVIEW_NOTICE } from "@/domain/policies";
 import { formatAmount, formatPresentation } from "@/domain/money";
 import { ActionForm } from "@/app/action-form";
 import { setBorrowingsCurrentAction } from "@/app/actions";
@@ -20,7 +23,7 @@ import { Callout, EmptyState } from "@/ui/feedback";
 import { CheckIcon } from "@/ui/icons";
 import { PageHeader, EngagementFacts } from "@/ui/layout";
 import { OpenOnHash } from "@/ui/open-on-hash";
-import { BORROWINGS_ANCHOR, checkDetail, checkFix, checksSentence, draftNoteNumbers, draftNoteSentence, orderChecks, placeholderCount, splitBrackets } from "@/ui/statements-view";
+import { BORROWINGS_ANCHOR, checkDetail, checkFix, checksSentence, draftNoteSentence, orderChecks, placeholderCount } from "@/ui/statements-view";
 import { SummaryChevron, summaryRow } from "@/ui/summary-cue";
 import { Table, THead } from "@/ui/table";
 import { count } from "@/ui/text";
@@ -32,23 +35,6 @@ const num = "px-2 py-1.5 sm:px-4 text-right tabular-nums whitespace-nowrap";
 const th = "px-2 py-2 font-medium sm:px-4";
 const ruleFor = (kind: string) => (kind === "total" ? "border-t border-b-2 border-ink" : kind === "subtotal" ? "border-t border-border-input" : "");
 const chip = "inline-flex min-h-10 items-center rounded-full border px-4 text-sm font-medium";
-
-/** Text with its [bracketed placeholders] marked, so the ones still to be filled in stand out. The words are unchanged. */
-function Brackets({ text }: { text: string }) {
-  return (
-    <>
-      {splitBrackets(text).map((p, i) =>
-        p.placeholder ? (
-          <mark key={i} className="rounded-sm bg-warning-soft px-1 text-warning-strong">
-            {p.text}
-          </mark>
-        ) : (
-          <span key={i}>{p.text}</span>
-        ),
-      )}
-    </>
-  );
-}
 
 /** One statement: a native <details> with a chevron, so it opens and closes with the keyboard and reads as expanded or collapsed. */
 function Statement({ id, title, sub, open, children }: { id: string; title: string; sub: string; open: boolean; children: ReactNode }) {
@@ -72,17 +58,33 @@ export default async function StatementsPage({ params, searchParams }: { params:
   const whole = (await searchParams).units === "whole";
 
   const session = await getSession();
-  const { engagement, accounts, auditOn, priorYear: priorYearResult } = await withFirm(await getDb(), session.firmId, async (tx) => ({
+  const { engagement, accounts, auditOn, history, priorYear: priorYearResult } = await withFirm(await getDb(), session.firmId, async (tx) => ({
     engagement: await repo.getEngagement(tx, id),
     accounts: await repo.listAccounts(tx, id),
     auditOn: await isEnabled(tx, id),
+    history: await loadHistory(tx, id),
     priorYear: await getPriorYearChecks(tx, session.firmId, id),
   }));
   if (!engagement) notFound();
 
+  // A person's wording for the notes, so this page, the Word file and the PDF all read the same.
+  const current = currentOf(history);
+  const noteTexts = overridesFrom(current);
+  const canEdit = canEditNotes(session.role) && engagement.status === "open";
+  const passageOf = (key: string, name: string, paragraphs: string[], generated: string[], overridden: boolean): PassageData => ({
+    engagementId: id,
+    noteKey: key,
+    name,
+    paragraphs,
+    generated,
+    overridden,
+    current: overridden && current.get(key) ? { version: current.get(key)!.version, by: current.get(key)!.by, at: current.get(key)!.at } : null,
+    history: history.get(key) ?? [],
+    canEdit,
+  });
   const pack = buildStatementPack(
     accounts.map((a) => ({ ...a, closingMinor: a.closingMinor + a.adjustmentMinor })),
-    { unitMinor: whole ? 100 : 1, borrowingsCurrent: { current: engagement.borrowingsCurrentMinor, prior: engagement.borrowingsCurrentPriorMinor } },
+    { unitMinor: whole ? 100 : 1, borrowingsCurrent: { current: engagement.borrowingsCurrentMinor, prior: engagement.borrowingsCurrentPriorMinor }, noteTexts },
   );
   const s = pack.base;
   const fmt = (n: number) => formatPresentation(n, pack.rounding.unitMinor);
@@ -93,7 +95,11 @@ export default async function StatementsPage({ params, searchParams }: { params:
   const hasBorrowings = accounts.some((a) => a.groupCode === "BORROW");
   const open = engagement.status === "open";
   const checks = orderChecks(pack.checks);
-  const draftNumbers = draftNoteNumbers(pack.notes, POLICY_REVIEW_NOTICE);
+  // The policies note is draft while its introduction or any applicable policy is still on generated wording.
+  const draftNumbers = pack.notes.filter((n) => n.key === "policies" && (!n.overridden || (n.subsections ?? []).some((x) => !x.overridden))).map((n) => n.number);
+  const shownKeys = new Set(pack.notes.flatMap((n) => [...(n.key ? [n.key] : []), ...(n.subsections ?? []).map((x) => x.key)]));
+  const kept = keptButNotShown(noteTexts, shownKeys);
+  const toCompleteTotal = placeholderCount(pack.notes.flatMap((n) => [...n.paragraphs, ...(n.subsections ?? []).flatMap((x) => x.paragraphs)]));
   const draftLine = draftNoteSentence(draftNumbers);
   const borrowingsFailed = pack.checks.some((c) => !c.passed && c.label === "Current portion of borrowings is within total borrowings");
 
@@ -449,7 +455,10 @@ export default async function StatementsPage({ params, searchParams }: { params:
             Notes to the financial statements
           </h2>
           <Callout variant="draft" className="mt-2">
-            <p>Text in [square brackets] is for you to complete in the Word document.</p>
+            <p>
+              {canEdit ? "Text in [square brackets] is for you to complete: use Edit on a passage, or complete it in the Word document." : "Text in [square brackets] is for you to complete in the Word document."}{" "}
+              {toCompleteTotal > 0 ? `${toCompleteTotal} still to complete.` : "Nothing is left to complete."}
+            </p>
             {draftLine && <p className="mt-1 font-semibold">{draftLine}</p>}
           </Callout>
           <div className="mt-3 space-y-3">
@@ -469,16 +478,8 @@ export default async function StatementsPage({ params, searchParams }: { params:
                     </span>
                   </summary>
                   <div className="space-y-3 border-t border-border px-4 py-4 text-sm">
-                    {note.paragraphs.map((p, i) =>
-                      p === POLICY_REVIEW_NOTICE ? (
-                        <Callout key={i} variant="draft">
-                          {p}
-                        </Callout>
-                      ) : (
-                        <p key={i}>
-                          <Brackets text={p} />
-                        </p>
-                      ),
+                    {note.key && (note.groupCode === undefined || note.overridden || canEdit) && (
+                      <NotePassage {...passageOf(note.key, note.groupCode ? `the narrative above the table in note ${note.number}` : `note ${note.number}`, note.paragraphs, note.generated ?? [], !!note.overridden)} />
                     )}
                     {note.subsections && note.subsections.length > 0 && (
                       <div className="space-y-2">
@@ -488,9 +489,9 @@ export default async function StatementsPage({ params, searchParams }: { params:
                               <SummaryChevron nested />
                               {sub.title}
                             </summary>
-                            <p className="border-t border-border px-3 py-3">
-                              <Brackets text={sub.text} />
-                            </p>
+                            <div className="border-t border-border px-3 py-3">
+                              <NotePassage {...passageOf(sub.key, `the ${sub.title} policy`, sub.paragraphs, sub.generated, sub.overridden)} />
+                            </div>
                           </details>
                         ))}
                       </div>
@@ -533,6 +534,19 @@ export default async function StatementsPage({ params, searchParams }: { params:
               );
             })}
           </div>
+          {kept.length > 0 && (
+            <div className="mt-4">
+              <h3 className="text-sm font-semibold">Kept but not shown</h3>
+              <p className="mt-1 text-sm text-ink-muted">
+                This wording was edited, but the passage does not apply to this engagement now (its balances are nil). It is kept, and comes back if the passage applies again.
+              </p>
+              <ul className="mt-2 list-disc space-y-1 pl-5 text-sm">
+                {kept.map((k) => (
+                  <li key={k}>{describeKey(k)}</li>
+                ))}
+              </ul>
+            </div>
+          )}
         </section>
       </div>
     </div>

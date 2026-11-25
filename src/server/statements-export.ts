@@ -7,6 +7,7 @@ import { buildStatementsDocx } from "./statements-docx";
 import { statementsDocument } from "../domain/statements-document";
 import { getFileStore } from "./file-store";
 import { loadBrandingForOutputs } from "./branding";
+import { loadNoteOverrides } from "./note-texts";
 import { hasBranding } from "../domain/branding";
 
 export type StatementsFormat = "docx" | "pdf";
@@ -17,19 +18,20 @@ export type StatementsFormat = "docx" | "pdf";
  * in format. Not found when the engagement is another firm's, or has no accounts yet.
  */
 export async function statementsDownload(session: Session, id: string, requestUrl: string, format: StatementsFormat): Promise<Response> {
-  const { engagement, accounts, branding } = await withFirm(await getDb(), session.firmId, async (tx) => {
+  const { engagement, accounts, branding, noteTexts } = await withFirm(await getDb(), session.firmId, async (tx) => {
     const engagement = await repo.getEngagement(tx, id);
     const accounts = engagement ? await repo.listAccounts(tx, id) : [];
     // The Word download's entry is unchanged; the PDF's says which format it was.
     if (engagement) await repo.audit(tx, session, "export", "financial_statements", id, format === "pdf" ? { format: "pdf" } : undefined);
-    return { engagement, accounts, branding: engagement ? await loadBrandingForOutputs(tx, getFileStore) : null };
+    // A person's wording for the notes: the same map the statements page uses, so the page, the Word file and the PDF read alike.
+    return { engagement, accounts, branding: engagement ? await loadBrandingForOutputs(tx, getFileStore) : null, noteTexts: engagement ? await loadNoteOverrides(tx, id) : {} };
   });
   if (!engagement || accounts.length === 0) return new Response("Not found", { status: 404 });
 
   const whole = new URL(requestUrl).searchParams.get("units") === "whole";
   const pack = buildStatementPack(
     accounts.map((a) => ({ ...a, closingMinor: a.closingMinor + a.adjustmentMinor })),
-    { unitMinor: whole ? 100 : 1, borrowingsCurrent: { current: engagement.borrowingsCurrentMinor, prior: engagement.borrowingsCurrentPriorMinor } },
+    { unitMinor: whole ? 100 : 1, borrowingsCurrent: { current: engagement.borrowingsCurrentMinor, prior: engagement.borrowingsCurrentPriorMinor }, noteTexts },
   );
   const input = {
     clientName: engagement.clientName,
