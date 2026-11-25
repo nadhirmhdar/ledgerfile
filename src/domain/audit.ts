@@ -55,6 +55,8 @@ export interface Area {
 }
 
 export const LIBRARY_STATUS: string = library.status;
+/** The library's own version (the `version` field of the JSON), named by the firm's adoption record. */
+export const LIBRARY_VERSION: string = library.version;
 
 const SCOPE: Record<string, { groups: string[]; always?: boolean; fixedRisk?: RiskLevel }> = {
   C1: { groups: ["PPE"] },
