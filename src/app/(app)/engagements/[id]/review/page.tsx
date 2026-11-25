@@ -194,21 +194,22 @@ export default async function ReviewPage({ params }: { params: Promise<{ id: str
               {view.lock === "lock" ? (
                 <ActionForm action={lockAction} fields={{ engagementId: id }}>
                   {explain && (
-                    <div className="mb-3 max-w-2xl space-y-2 rounded-md border border-warning/40 bg-warning/10 p-3 text-sm" data-testid="lock-reason">
-                      <p className="font-semibold">This year&apos;s comparative figures differ from last year&apos;s signed figures.</p>
-                      {explain.detail && <p className="text-ink-muted">{explain.detail}</p>}
-                      {explain.items.length > 0 && (
-                        <ul className="list-disc space-y-0.5 pl-5 text-ink-muted">
-                          {explain.items.map((item) => (
-                            <li key={item}>{item}</li>
-                          ))}
-                        </ul>
-                      )}
-                      <label className={fieldLabel}>
-                        Reason for locking anyway ({LOCK_REASON_MIN} to {LOCK_REASON_MAX} characters, recorded in the audit log)
-                        <textarea name="reason" required minLength={LOCK_REASON_MIN} maxLength={LOCK_REASON_MAX} rows={3} className={`${ctl} min-h-20`} />
-                      </label>
-                    </div>
+                    <Callout variant="warning" title="This year's comparative figures differ from last year's signed figures." className="mb-3 max-w-2xl">
+                      <div className="space-y-2">
+                        {explain.detail && <p>{explain.detail}</p>}
+                        {explain.items.length > 0 && (
+                          <ul className="list-disc space-y-0.5 pl-5">
+                            {explain.items.map((item) => (
+                              <li key={item}>{item}</li>
+                            ))}
+                          </ul>
+                        )}
+                        <label className={fieldLabel}>
+                          Reason for locking anyway ({LOCK_REASON_MIN} to {LOCK_REASON_MAX} characters, recorded in the audit log)
+                          <textarea name="reason" required minLength={LOCK_REASON_MIN} maxLength={LOCK_REASON_MAX} rows={3} className={`${ctl} min-h-20`} />
+                        </label>
+                      </div>
+                    </Callout>
                   )}
                   <Button variant="primary">Lock engagement</Button>
                 </ActionForm>
