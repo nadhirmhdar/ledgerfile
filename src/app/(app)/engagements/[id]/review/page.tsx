@@ -324,19 +324,15 @@ export default async function ReviewPage({ params }: { params: Promise<{ id: str
                         <Badge tone="warning">Open</Badge>
                       </div>
                       <p className="mt-1 font-semibold">{p.body}</p>
-                      {p.response && (
-                        <p className="mt-2 border-l-2 border-border-strong pl-3 text-sm">
-                          {p.response} <span className="text-ink-muted">— {p.responderName}</span>
-                        </p>
-                      )}
+                      <Thread thread={p.thread} />
                       {points.respond && (
                         <ActionForm action={respondReviewPointAction} fields={{ engagementId: id, pointId: p.id }} className="mt-3">
                           <div className="flex flex-wrap items-end gap-2">
-                            <label className={`${fieldLabel} min-w-56 flex-1`}>
-                              {p.response ? "Replace the response" : "Response"}
+                            <label className={`${fieldLabel} min-w-0 flex-1 basis-56`}>
+                              {p.thread.length > 0 ? "Reply" : "Response"}
                               <input name="response" required minLength={2} maxLength={2000} className={ctl} />
                             </label>
-                            <Button variant="secondary">Save response</Button>
+                            <Button variant="secondary">{p.thread.length > 0 ? "Add reply" : "Save response"}</Button>
                           </div>
                         </ActionForm>
                       )}
@@ -365,11 +361,7 @@ export default async function ReviewPage({ params }: { params: Promise<{ id: str
                         {p.targetName} · raised by {p.authorName} on {p.createdAt} · cleared by {p.clearedByName}
                       </p>
                       <p className="mt-1">{p.body}</p>
-                      {p.response && (
-                        <p className="mt-1 border-l-2 border-border-strong pl-3 text-ink-muted">
-                          {p.response} <span>— {p.responderName}</span>
-                        </p>
-                      )}
+                      <Thread thread={p.thread} />
                     </li>
                   ))}
                 </ul>
@@ -379,5 +371,23 @@ export default async function ReviewPage({ params }: { params: Promise<{ id: str
         </Section>
       </div>
     </div>
+  );
+}
+
+/** A review point's replies, oldest first: who, when, and the words. An older single response shows as the first reply, with no date. */
+function Thread({ thread }: { thread: review.ThreadReply[] }) {
+  if (thread.length === 0) return null;
+  return (
+    <ol aria-label="Replies" className="mt-3 space-y-2">
+      {thread.map((r) => (
+        <li key={r.id} className="min-w-0 border-l-2 border-border-strong pl-3 text-sm">
+          <p className="text-ink-muted">
+            {r.authorName}
+            {r.writtenAt ? ` · ${r.writtenAt}` : " · earlier response, date not recorded"}
+          </p>
+          <p className="break-words">{r.body}</p>
+        </li>
+      ))}
+    </ol>
   );
 }

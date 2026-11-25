@@ -50,6 +50,7 @@ const LABEL: Record<string, string> = {
   "lead_sheet:withdraw_sign_off": "Withdrew a lead sheet sign-off",
   "review_point:raise": "Raised a review point",
   "review_point:respond": "Responded to a review point",
+  "review_point:reply": "Replied on a review point",
   "review_point:clear": "Cleared a review point",
   "engagement:lock": "Locked the engagement",
   "engagement:unlock": "Unlocked the engagement",
