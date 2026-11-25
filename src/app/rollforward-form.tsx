@@ -7,7 +7,7 @@ import { Callout } from "@/ui/feedback";
 import { Input } from "@/ui/form";
 import { Badge } from "@/ui/badge";
 import { count } from "@/ui/text";
-import { CARRIES_NOTE, MAX_ROLL_FORWARD, ROLLED_FORWARD, STILL_OPEN, type RollRow } from "@/domain/bulk-rollforward";
+import { CARRIES_NOTE, MAX_ROLL_FORWARD, notEndedWords, ROLLED_FORWARD, STILL_OPEN, type RollRow } from "@/domain/bulk-rollforward";
 import { rollForwardAction, type RollState } from "./rollforward-actions";
 
 const initial: RollState = { ok: true, message: "" };
@@ -18,7 +18,8 @@ const initial: RollState = { ok: true, message: "" };
  */
 export function RollForwardForm({ rows }: { rows: RollRow[] }) {
   const [state, run, pending] = useActionState(rollForwardAction, initial);
-  const selectable = rows.filter((r) => !r.rolledForward);
+  const blocked = (r: RollRow) => r.rolledForward || r.notEnded;
+  const selectable = rows.filter((r) => !blocked(r));
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [dates, setDates] = useState<Record<string, { start: string; end: string }>>(() => Object.fromEntries(rows.map((r) => [r.clientId, { ...r.proposed }])));
   const problemOf = new Map((state.problems ?? []).map((p) => [p.clientId, p.message]));
@@ -100,7 +101,7 @@ export function RollForwardForm({ rows }: { rows: RollRow[] }) {
           const id = `rf-${r.clientId}`;
           const problem = problemOf.get(r.clientId);
           return (
-            <li key={r.clientId} className={`px-4 py-3 ${r.rolledForward ? "bg-surface-muted/60" : ""}`}>
+            <li key={r.clientId} className={`px-4 py-3 ${blocked(r) ? "bg-surface-muted/60" : ""}`}>
               <div className="grid gap-x-4 gap-y-2 sm:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1.6fr)] sm:items-center">
                 <div className="flex items-start gap-3">
                   <input
@@ -108,7 +109,7 @@ export function RollForwardForm({ rows }: { rows: RollRow[] }) {
                     type="checkbox"
                     className="mt-1 size-5 shrink-0 accent-accent"
                     checked={picked.has(r.clientId)}
-                    disabled={r.rolledForward}
+                    disabled={blocked(r)}
                     onChange={() => toggle(r.clientId)}
                   />
                   <label htmlFor={id} className="min-w-0 font-medium text-ink">
@@ -122,8 +123,8 @@ export function RollForwardForm({ rows }: { rows: RollRow[] }) {
                   <Badge tone={r.status === "Open" ? "info" : "slate"}>{r.status}</Badge>
                 </div>
                 <div>
-                  {r.rolledForward ? (
-                    <p className="text-sm font-medium text-ink-muted">{ROLLED_FORWARD}</p>
+                  {blocked(r) ? (
+                    <p className="text-sm font-medium text-ink-muted">{r.notEnded ? notEndedWords(r.periodEnd) : ROLLED_FORWARD}</p>
                   ) : (
                     <div className="flex flex-wrap items-center gap-2">
                       <Input
@@ -143,8 +144,8 @@ export function RollForwardForm({ rows }: { rows: RollRow[] }) {
                       />
                     </div>
                   )}
-                  {!r.rolledForward && r.status === "Open" && <p className="mt-1 text-small text-warning-strong">{STILL_OPEN}</p>}
-                  {!r.rolledForward && r.auditEnabled && <p className="mt-1 text-small text-ink-muted">The audit will be on, as in last year&apos;s file.</p>}
+                  {!blocked(r) && r.status === "Open" && <p className="mt-1 text-small text-warning-strong">{STILL_OPEN}</p>}
+                  {!blocked(r) && r.auditEnabled && <p className="mt-1 text-small text-ink-muted">The audit will be on, as in last year&apos;s file.</p>}
                 </div>
               </div>
               {problem && (

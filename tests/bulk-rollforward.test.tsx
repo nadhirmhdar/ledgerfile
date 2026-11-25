@@ -53,19 +53,21 @@ const row = (over: Partial<RollRow> & { clientName: string }): RollRow => ({
   auditEnabled: false,
   proposed: { start: "2026-01-01", end: "2026-12-31" },
   rolledForward: false,
+  notEnded: false,
   ...over,
 });
 
 describe("the list", () => {
   const html = renderToStaticMarkup(
-    <RollForwardForm rows={[row({ clientName: "Open Co", status: "Open", auditEnabled: true }), row({ clientName: "Locked Company", status: "Locked" }), row({ clientName: "Rolled Co LLC", rolledForward: true })]} />,
+    <RollForwardForm rows={[row({ clientName: "Open Co", status: "Open", auditEnabled: true }), row({ clientName: "Locked Company", status: "Locked" }), row({ clientName: "Rolled Co LLC", rolledForward: true }), row({ clientName: "New This Year LLC", periodEnd: "2026-12-31", notEnded: true })]} />,
   );
   it("offers the proposal, says when last year's file is open, and disables a client already rolled forward", () => {
     expect(html).toContain("Select all that can be rolled forward");
     expect(html).toContain("0 clients selected of 2 that can be rolled forward");
     expect(html).toContain("Last year&#x27;s file is still open");
     expect(html).toContain("Already rolled forward");
-    expect(html.match(/<input id="rf-[^>]*disabled/g)).toHaveLength(1);
+    expect(html.match(/<input id="rf-[^>]*disabled/g)).toHaveLength(2);
+    expect(html).toContain("This year&#x27;s file has not ended yet (period ends 2026-12-31)");
     expect(html).toContain('value="2026-01-01"');
     expect(html).toContain("The audit will be on");
     expect(html).toContain("All or none");

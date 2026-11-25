@@ -5,7 +5,7 @@ import { canCreateEngagement, ENGAGEMENT_REFUSAL } from "../domain/permissions";
 import { todayIso } from "../domain/client-requests";
 import { isRealDate, nextPeriod } from "../domain/client-details";
 import type { Role } from "../domain/signoff";
-import { MAX_ROLL_FORWARD, ROLLED_FORWARD, type Created, type RollProblem, type RollRow } from "../domain/bulk-rollforward";
+import { MAX_ROLL_FORWARD, notEndedWords, ROLLED_FORWARD, type Created, type RollProblem, type RollRow } from "../domain/bulk-rollforward";
 
 export { MAX_ROLL_FORWARD };
 
@@ -34,17 +34,17 @@ const LOAD = `
 
 /**
  * What each client rolls forward from. "Last year's file" is the client's latest engagement whose period has ended (on or before today). The client
- * is already rolled forward when another engagement starts after it ends, or when it has no ended engagement at all (its only engagement is the
- * current one), so a second roll-forward of the same client is never offered, and never accepted.
+ * is already rolled forward when another engagement starts after it ends. A client with no ended engagement at all (its only engagement is the current
+ * one) has not been rolled and has nothing to roll from yet: it is shown with its own words. Neither is offered, and neither is accepted.
  */
-function basisPerClient(rows: EngRow[], today: string): Map<string, { last: EngRow; rolled: boolean }> {
+function basisPerClient(rows: EngRow[], today: string): Map<string, { last: EngRow; rolled: boolean; notEnded: boolean }> {
   const byClient = new Map<string, EngRow[]>();
   for (const r of rows) byClient.set(r.clientId, [...(byClient.get(r.clientId) ?? []), r]);
-  const out = new Map<string, { last: EngRow; rolled: boolean }>();
+  const out = new Map<string, { last: EngRow; rolled: boolean; notEnded: boolean }>();
   for (const [clientId, list] of byClient) {
     const newestFirst = [...list].sort((a, b) => (a.end === b.end ? (a.start < b.start ? 1 : -1) : a.end < b.end ? 1 : -1));
     const last = newestFirst.find((e) => e.end <= today);
-    out.set(clientId, last ? { last, rolled: list.some((x) => x.start > last.end) } : { last: newestFirst[0], rolled: true });
+    out.set(clientId, last ? { last, rolled: list.some((x) => x.start > last.end), notEnded: false } : { last: newestFirst[0], rolled: false, notEnded: true });
   }
   return out;
 }
@@ -53,7 +53,7 @@ function basisPerClient(rows: EngRow[], today: string): Map<string, { last: EngR
 export async function listRollForward(tx: Tx, firmId: string, today: string = todayIso()): Promise<RollRow[]> {
   const rows = (await tx.query<EngRow>(LOAD, [firmId])).rows;
   const out: RollRow[] = [];
-  for (const { last: e, rolled } of basisPerClient(rows, today).values()) {
+  for (const { last: e, rolled, notEnded } of basisPerClient(rows, today).values()) {
     const proposed = nextPeriod(e.end);
     if (!proposed) continue;
     out.push({
@@ -66,6 +66,7 @@ export async function listRollForward(tx: Tx, firmId: string, today: string = to
       auditEnabled: e.auditEnabled,
       proposed,
       rolledForward: rolled,
+      notEnded,
     });
   }
   return out.sort((a, b) => a.clientName.localeCompare(b.clientName) || a.clientId.localeCompare(b.clientId));
@@ -123,7 +124,8 @@ export async function rollForward(tx: Tx, s: Session, items: RollItem[], today: 
     const refuse = (message: string) => problems.push({ clientId: item.clientId, clientName: name, message });
     if (!prior) refuse("This is not one of the firm's clients with an engagement to roll forward.");
     else if (seen.has(item.clientId)) refuse("This client was chosen twice.");
-    else if (b!.rolled) refuse(`${ROLLED_FORWARD}: the client already has an engagement after ${prior.end}, or none that has ended.`);
+    else if (b!.notEnded) refuse(`${notEndedWords(prior.end)}.`);
+    else if (b!.rolled) refuse(`${ROLLED_FORWARD}: the client already has an engagement after ${prior.end}.`);
     else if (!isRealDate(item.start) || !isRealDate(item.end)) refuse("Enter both dates as real dates.");
     else if (item.end <= item.start) refuse("The period end must be after the period start.");
     else {

@@ -94,6 +94,23 @@ describe("the list and the proposed periods", () => {
   });
 });
 
+describe("a client whose only engagement has not ended", () => {
+  it("says so in its own words, is not selectable, and is refused with the same words", async () => {
+    const c = await client("New This Year LLC", "2026-01-01", "2026-12-31");
+    expect(await rowOf("New This Year LLC")).toMatchObject({ rolledForward: false, notEnded: true, periodEnd: "2026-12-31" });
+    const err = await roll(partner, [{ clientId: c.clientId, start: "2027-01-01", end: "2027-12-31" }]).catch((e) => e);
+    expect(err.problems[0].message).toBe("This year's file has not ended yet (period ends 2026-12-31).");
+    expect(await count(c.clientId)).toBe(1);
+  });
+  it("keeps 'Already rolled forward' for a client that really was rolled", async () => {
+    const c = await client("Really Rolled LLC", "2024-01-01", "2024-12-31", false, [["2025-01-01", "2025-12-31"]]);
+    await roll(partner, [{ clientId: c.clientId, start: "2026-01-01", end: "2026-12-31" }]);
+    expect(await rowOf("Really Rolled LLC")).toMatchObject({ rolledForward: true, notEnded: false });
+    const err = await roll(partner, [{ clientId: c.clientId, start: "2027-01-01", end: "2027-12-31" }]).catch((e) => e);
+    expect(err.problems[0].message).toMatch(/^Already rolled forward: the client already has an engagement after /);
+  });
+});
+
 describe("creating", () => {
   it("links each new engagement to last year's file, copies the audit setting and nothing else, and logs it", async () => {
     const created = await roll(partner, [
@@ -114,7 +131,7 @@ describe("creating", () => {
     for (const t of ["client_requests", "confirmations", "test_schedules", "materiality"]) {
       expect((await db.query<{ n: number }>(`select count(*)::int as n from ${t} where engagement_id = $1`, [created[0].engagementId])).rows[0].n, t).toBe(0);
     }
-    const log = await db.query<{ action: string; entity: string; entity_id: string; detail: Record<string, unknown> }>("select action, entity, entity_id, detail from audit_log where firm_id = $1 and action in ('create', 'bulk_rollforward') and (entity_id = any($2) or action = 'bulk_rollforward') order by id", [A, created.map((c) => c.engagementId)]);
+    const log = await db.query<{ action: string; entity: string; entity_id: string; detail: Record<string, unknown> }>("select action, entity, entity_id, detail from audit_log where firm_id = $1 and action in ('create', 'bulk_rollforward') and (entity_id = any($2) or (action = 'bulk_rollforward' and detail->'clientIds' ? $3)) order by id", [A, created.map((c) => c.engagementId), cal.clientId]);
     const creates = log.rows.filter((r) => r.action === "create");
     expect(creates).toHaveLength(2);
     expect(creates.every((r) => r.detail.bulk === true && r.entity === "engagement")).toBe(true);

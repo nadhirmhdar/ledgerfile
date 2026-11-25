@@ -2,6 +2,8 @@
 
 export const MAX_ROLL_FORWARD = 200;
 export const ROLLED_FORWARD = "Already rolled forward";
+/** A client whose only engagement is the current one: nothing has been rolled, there is nothing to roll from yet. */
+export const notEndedWords = (end: string): string => `This year's file has not ended yet (period ends ${end})`;
 export const STILL_OPEN = "Last year's file is still open";
 export const CARRIES_NOTE = "Mappings carry forward when you import each trial balance. Bring forward client requests, confirmations and test schedules from each engagement.";
 
@@ -17,6 +19,8 @@ export interface RollRow {
   proposed: { start: string; end: string };
   /** Another engagement of the client starts after this one ends, so the client cannot be rolled forward again from here. */
   rolledForward: boolean;
+  /** The client has no engagement whose period has ended, so there is no last year's file yet. Not selectable, and not "rolled forward". */
+  notEnded: boolean;
 }
 
 export interface RollProblem {
