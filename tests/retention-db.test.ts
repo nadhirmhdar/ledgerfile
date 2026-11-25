@@ -13,6 +13,7 @@ import * as schedules from "../src/server/test-schedules";
 import * as analytics from "../src/server/analytics";
 import * as planning from "../src/server/planning-answers";
 import { recordOpinion } from "../src/server/opinion";
+import { saveNoteText } from "../src/server/note-texts";
 import { approveDeletion, cancelDeletion, getRetention, partnerLevel, pastRetentionSince, removePendingFiles, requestDeletion, setRetentionYears } from "../src/server/retention";
 import { localFileStore, type FileStore } from "../src/server/file-store";
 import { NAME_MISMATCH, NOT_PARTNER, NOT_SET, ONE_PARTNER, SAME_PERSON } from "../src/domain/retention";
@@ -119,6 +120,7 @@ async function populated(name: string): Promise<{ engagement: string; client: st
   await as(partner, async (tx) => {
     await analytics.saveExplanation(tx, partner, e, "REVENUE", "Revenue grew because of an invented new contract.").catch(() => undefined);
   });
+  await as(partner, (tx) => saveNoteText(tx, partner, e, "general", ["Invented general information for the retention test."]));
   await as(partner, (tx) => planning.rebutRevenuePresumption(tx, partner, e, "An invented reason for rebutting the presumption, in words."));
   await recordOpinion2(e);
   const pendingKey = `${A}/${"cccccccc-7373-4000-8000-0000000000" + String(10 + n)}`;

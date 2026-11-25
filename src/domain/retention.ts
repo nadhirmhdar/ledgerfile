@@ -46,6 +46,7 @@ const TABLE_WORDS: Record<string, string> = {
   mappings: "account mappings",
   materiality: "materiality records",
   misstatements: "misstatements",
+  note_texts: "versions of the notes wording",
   pending_uploads: "unfinished uploads",
   planning_answers: "planning answers",
   review_points: "review points",

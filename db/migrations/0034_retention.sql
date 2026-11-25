@@ -106,6 +106,7 @@ begin
     'ledger_lines', (select count(*) from ledger_lines where engagement_id = p_engagement and firm_id = v_firm),
     'materiality', (select count(*) from materiality where engagement_id = p_engagement and firm_id = v_firm),
     'misstatements', (select count(*) from misstatements where engagement_id = p_engagement and firm_id = v_firm),
+    'note_texts', (select count(*) from note_texts where engagement_id = p_engagement and firm_id = v_firm),
     'pending_uploads', (select count(*) from pending_uploads where engagement_id = p_engagement and firm_id = v_firm),
     'planning_answers', (select count(*) from planning_answers where engagement_id = p_engagement and firm_id = v_firm),
     'review_points', (select count(*) from review_points where engagement_id = p_engagement and firm_id = v_firm),
@@ -191,6 +192,7 @@ begin
   delete from audit_opinions where engagement_id = p_engagement and firm_id = v_firm; get diagnostics n = row_count; v_counts := v_counts || jsonb_build_object('audit_opinions', n);
   delete from materiality where engagement_id = p_engagement and firm_id = v_firm; get diagnostics n = row_count; v_counts := v_counts || jsonb_build_object('materiality', n);
   delete from misstatements where engagement_id = p_engagement and firm_id = v_firm; get diagnostics n = row_count; v_counts := v_counts || jsonb_build_object('misstatements', n);
+  delete from note_texts where engagement_id = p_engagement and firm_id = v_firm; get diagnostics n = row_count; v_counts := v_counts || jsonb_build_object('note_texts', n);
   delete from planning_answers where engagement_id = p_engagement and firm_id = v_firm; get diagnostics n = row_count; v_counts := v_counts || jsonb_build_object('planning_answers', n);
   delete from review_points where engagement_id = p_engagement and firm_id = v_firm; get diagnostics n = row_count; v_counts := v_counts || jsonb_build_object('review_points', n);
   delete from risk_approvals where engagement_id = p_engagement and firm_id = v_firm; get diagnostics n = row_count; v_counts := v_counts || jsonb_build_object('risk_approvals', n);
