@@ -43,9 +43,9 @@ export function MyWorkBody({ groups, mayAssign }: { groups: WorkGroup[]; mayAssi
                   {g.clientName}
                 </Link>
               </h2>
-              <p className="text-sm text-ink-muted">
-                Period ending {g.periodEnd}
-                {g.roles.length > 0 && <> · You are {g.roles.join(" and ").toLowerCase()}</>}
+              <p className="flex flex-wrap gap-x-6 gap-y-0.5 text-sm text-ink-muted">
+                <span>Period ending {g.periodEnd}</span>
+                {g.roles.length > 0 && <span>You are {g.roles.join(" and ").toLowerCase()}</span>}
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2 text-sm text-ink-muted">

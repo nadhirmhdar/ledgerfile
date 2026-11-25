@@ -116,3 +116,19 @@ export function sortGroups(groups: WorkGroup[]): WorkGroup[] {
     return a.periodEnd < b.periodEnd ? 1 : a.periodEnd > b.periodEnd ? -1 : 0;
   });
 }
+
+export interface SlotOption {
+  id: string;
+  name: string;
+  role: Role;
+  /** The saved person no longer holds the rights this place needs (their role changed). Kept so the partner sees why. */
+  stale: boolean;
+}
+
+/** The people a select for this place offers: only those the server would accept, plus the saved person even when they no longer qualify. */
+export function slotOptions(slot: Slot, people: { id: string; name: string; role: Role }[], selectedId: string | null): SlotOption[] {
+  return people.flatMap((p) => {
+    const ok = slotBlocker(slot, p.role) === null;
+    return ok || p.id === selectedId ? [{ ...p, stale: !ok }] : [];
+  });
+}

@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { dueWords, groupTotal, isRealDate, isShownDue, reportDueState, slotBlocker, sortGroups, type WorkGroup } from "../src/domain/my-work";
+import { dueWords, groupTotal, isRealDate, isShownDue, reportDueState, slotBlocker, slotOptions, sortGroups, type WorkGroup } from "../src/domain/my-work";
 import { MyWorkBody, myWorkSubtitle } from "../src/ui/my-work-view";
 import { TeamPanel } from "../src/ui/team-panel";
 
@@ -37,6 +37,31 @@ describe("the places on a team", () => {
     expect(slotBlocker("reviewer", "reviewer")).toBeNull();
     expect(slotBlocker("partner", "reviewer")).not.toBeNull();
     expect(slotBlocker("partner", "admin")).toBeNull();
+  });
+});
+
+describe("the options in each select", () => {
+  const people = [
+    { id: "p", name: "Pia", role: "preparer" as const },
+    { id: "r", name: "Rae", role: "reviewer" as const },
+    { id: "s", name: "Sol", role: "partner" as const },
+    { id: "a", name: "Ada", role: "admin" as const },
+  ];
+  it("offers only the people the server accepts for that place", () => {
+    expect(slotOptions("preparer", people, null).map((o) => o.id)).toEqual(["p", "r", "s", "a"]);
+    expect(slotOptions("reviewer", people, null).map((o) => o.id)).toEqual(["r", "s", "a"]);
+    expect(slotOptions("partner", people, null).map((o) => o.id)).toEqual(["s", "a"]);
+  });
+  it("keeps a saved person who no longer qualifies, marked, and only that person", () => {
+    const opts = slotOptions("partner", people, "r");
+    expect(opts.map((o) => o.id)).toEqual(["r", "s", "a"]);
+    expect(opts.map((o) => o.stale)).toEqual([true, false, false]);
+  });
+  it("renders the stale person with the reason in the Team form", () => {
+    const team = { preparer: null, reviewer: { id: "p", name: "Pia", role: "preparer" as const }, partner: null, reportDueOn: null };
+    const html = renderToStaticMarkup(<TeamPanel engagementId="e" team={team} people={people} canAssign today="2026-03-01" />);
+    expect(html).toContain("Pia (Preparer), no longer a reviewer");
+    expect(html.match(/Pia \(Preparer\)/g)).toHaveLength(2); // preparer select and the stale reviewer; none under partner
   });
 });
 
@@ -93,6 +118,7 @@ describe("the My work page body", () => {
     expect(html).toContain("4 things");
     expect(html).toContain("Overdue by 3 days");
     expect(html).toContain("You are preparer");
+    expect(html).not.toContain("·");
     expect(html).toContain('href="/engagements/11111111-1111-4111-8111-111111111111/audit/C5"');
     expect(html).toContain("To prepare");
     expect(html).toContain("Report due");

@@ -3,7 +3,8 @@
 import { startTransition, useActionState } from "react";
 import { buttonClass } from "@/ui/button";
 import { Field, Input, Select } from "@/ui/form";
-import { SLOT_LABEL, SLOTS, NOT_ASSIGNED, type Slot } from "@/domain/my-work";
+import { SLOT_LABEL, SLOTS, NOT_ASSIGNED, slotOptions, type Slot } from "@/domain/my-work";
+import type { Role } from "@/domain/signoff";
 import { roleLabel } from "@/ui/team-view";
 import { plainCount } from "@/ui/text";
 import { assignTeamAction } from "./team-actions";
@@ -14,7 +15,7 @@ const initial: FormState = { ok: true, message: "" };
 export interface PersonOption {
   id: string;
   name: string;
-  role: string;
+  role: Role;
 }
 
 /**
@@ -47,9 +48,9 @@ export function EngagementTeamForm({
             <Field key={slot} label={SLOT_LABEL[slot]}>
               <Select name={`${slot}Id`} defaultValue={selected[slot] ?? ""}>
                 <option value="">{NOT_ASSIGNED}</option>
-                {people.map((p) => (
+                {slotOptions(slot, people, selected[slot]).map((p) => (
                   <option key={p.id} value={p.id}>
-                    {p.name} ({roleLabel(p.role)})
+                    {p.name} ({roleLabel(p.role)}){p.stale ? `, no longer ${slot === "partner" ? "a partner" : "a reviewer"}` : ""}
                   </option>
                 ))}
               </Select>
