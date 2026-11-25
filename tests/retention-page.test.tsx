@@ -162,6 +162,9 @@ describe("the words", () => {
     expect(mine).toContain("Cancel this request");
     const other = html(view({ items: [item({ request })] }), "u2");
     expect(other).toContain("Approve and delete");
+    // The one irreversible action is the danger variant, not the cobalt primary.
+    expect(/<button[^>]*text-danger-strong[^>]*>Approve and delete</button>/.test(other)).toBe(true);
+    expect(/<button[^>]*bg-accent[^>]*>Approve and delete/.test(other)).toBe(false);
     expect(other).toContain("to delete this file");
     expect(other).toContain("12 trial balance accounts, 3 working papers (and their files)");
     expect(html(view({ partners: 1, items: [item({ request })] }), "u2")).not.toContain("Approve and delete");

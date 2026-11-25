@@ -54,7 +54,7 @@ function Item({ item, me, partners }: { item: RetentionItem; me: string; partner
                 <Field label={`Type the client's name, ${item.clientName}, to delete this file`} hint="Exactly as shown. This cannot be undone.">
                   <Input name="typedName" autoComplete="off" required />
                 </Field>
-                <Button variant="primary">Approve and delete</Button>
+                <Button variant="danger">Approve and delete</Button>
               </div>
             </ActionForm>
           )}
