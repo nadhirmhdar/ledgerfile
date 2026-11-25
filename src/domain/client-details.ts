@@ -166,3 +166,30 @@ export function parseYearEndText(value: unknown): string | null {
   const checked = checkYearEnd(`${month}-${day}`);
   return checked.ok ? checked.value : null;
 }
+
+const parseIso = (v: string): Date | null => {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v);
+  if (!m) return null;
+  const d = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])));
+  return iso(d) === v ? d : null;
+};
+
+/** A real calendar date written YYYY-MM-DD. */
+export const isRealDate = (v: string): boolean => parseIso(v) !== null;
+
+/**
+ * The period to propose after one that ended on `prevEnd`: it starts the day after, and ends one year later less a day. That lands on the last day of a
+ * month whenever the previous period did (28 February before a leap year gives 29 February, 29 February gives 28 February), and a first period that was
+ * not twelve months long is followed by a full year. A suggestion only: the dates can be changed.
+ */
+export function nextPeriod(prevEnd: string): { start: string; end: string } | null {
+  const last = parseIso(prevEnd);
+  if (!last) return null;
+  const start = new Date(last.getTime() + 86_400_000);
+  // The same day a year on; 29 February in a year with none rolls into March, and the day before it is then 28 February.
+  const end = new Date(Date.UTC(start.getUTCFullYear() + 1, start.getUTCMonth(), start.getUTCDate()) - 86_400_000);
+  return { start: iso(start), end: iso(end) };
+}
+
+/** Whether two periods share a day. Both ends are included, so a period that starts the day another ends overlaps it. */
+export const periodsOverlap = (a: { start: string; end: string }, b: { start: string; end: string }): boolean => a.start <= b.end && b.start <= a.end;
