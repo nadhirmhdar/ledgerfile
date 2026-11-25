@@ -102,7 +102,10 @@ export function statementsDocument(input: StatementsDocumentInput): StatementBlo
   for (const note of pack.notes) {
     blocks.push({ kind: "heading", text: `${note.number}. ${note.title}`, level: 3 });
     for (const p of note.paragraphs) blocks.push({ kind: "para", text: p });
-    for (const sub of note.subsections ?? []) blocks.push({ kind: "para", text: sub.title, bold: true }, { kind: "para", text: sub.text });
+    for (const sub of note.subsections ?? []) {
+      blocks.push({ kind: "para", text: sub.title, bold: true });
+      for (const p of sub.paragraphs) blocks.push({ kind: "para", text: p });
+    }
     if (note.table) {
       blocks.push({
         kind: "figures",

@@ -15,6 +15,9 @@ export const canCreateClient = (role: Role) => canLock(role);
 export const canCreateEngagement = (role: Role) => canReview(role);
 export const canDeleteJournal = (role: Role, isAuthor: boolean) => isAuthor || canReview(role);
 
+/** Preparing work, and so editing the wording of the notes, is open to every role: a preparer and anyone above. Everyone in the firm does the day-to-day work. */
+export const canEditNotes = (role: Role) => ((["preparer", "reviewer", "partner", "admin"] as Role[]).includes(role));
+
 export const CLIENT_REFUSAL = "Only a partner can add a client.";
 export const ENGAGEMENT_REFUSAL = "Only a reviewer or partner can create an engagement.";
 export const JOURNAL_DELETE_REFUSAL = "Only the person who posted this entry, or a reviewer or partner, can delete it.";
