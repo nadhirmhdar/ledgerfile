@@ -2,6 +2,8 @@ import Link from "next/link";
 import { getDb, withFirm } from "@/server/db";
 import { getSession } from "@/server/session";
 import { getBranding } from "@/server/branding";
+import { loadFirmDefaults } from "@/server/statement-defaults";
+import { StatementDefaultsSection } from "@/ui/statement-defaults-section";
 import { getRetentionYears } from "@/server/retention";
 import { setRetentionAction } from "@/app/retention-actions";
 import { canLock } from "@/domain/signoff";
@@ -18,7 +20,7 @@ export const dynamic = "force-dynamic";
 
 export default async function FirmPage() {
   const session = await getSession();
-  const { view, retentionYears } = await withFirm(await getDb(), session.firmId, async (tx) => ({ view: await getBranding(tx), retentionYears: await getRetentionYears(tx) }));
+  const { view, defaults, retentionYears } = await withFirm(await getDb(), session.firmId, async (tx) => ({ view: await getBranding(tx), defaults: await loadFirmDefaults(tx), retentionYears: await getRetentionYears(tx) }));
   if (!view) notFound();
   const admin = session.role === "admin";
 
@@ -76,6 +78,7 @@ export default async function FirmPage() {
             </p>
           )}
         </Card>
+        <StatementDefaultsSection defaults={defaults} mayEdit={canLock(session.role)} />
         {!admin && <Callout variant="info">Only an administrator can change the firm&apos;s details. What is saved is shown below.</Callout>}
 
         <Card title="Details" description="Printed under the firm's name on the engagement letter, and in the signature of the auditor's report.">

@@ -5,6 +5,9 @@ import { getDb, withFirm } from "@/server/db";
 import { getSession } from "@/server/session";
 import * as repo from "@/server/repo";
 import { isEnabled } from "@/server/audit";
+import { setEngagementCurrencyAction } from "@/app/statement-defaults-actions";
+import { canLock } from "@/domain/signoff";
+import { Field, Input } from "@/ui/form";
 import { currentOf, loadHistory } from "@/server/note-texts";
 import { NotePassage, type PassageData } from "@/app/note-passage";
 import { canEditNotes } from "@/domain/permissions";
@@ -55,7 +58,7 @@ function Statement({ id, title, sub, open, children }: { id: string; title: stri
 export default async function StatementsPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ units?: string }> }) {
   const { id } = await params;
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
-  const whole = (await searchParams).units === "whole";
+  const unitsParam = (await searchParams).units;
 
   const session = await getSession();
   const { engagement, accounts, auditOn, history, priorYear: priorYearResult } = await withFirm(await getDb(), session.firmId, async (tx) => ({
@@ -66,6 +69,8 @@ export default async function StatementsPage({ params, searchParams }: { params:
     priorYear: await getPriorYearChecks(tx, session.firmId, id),
   }));
   if (!engagement) notFound();
+  // The engagement's own rounding is the default view; the toggle (an explicit ?units=) still overrides it for this view.
+  const whole = unitsParam === "whole" ? true : unitsParam === "exact" ? false : engagement.statementUnit === "whole";
 
   // A person's wording for the notes, so this page, the Word file and the PDF all read the same.
   const current = currentOf(history);
@@ -78,20 +83,20 @@ export default async function StatementsPage({ params, searchParams }: { params:
     paragraphs,
     generated,
     overridden,
-    current: overridden && current.get(key) ? { version: current.get(key)!.version, by: current.get(key)!.by, at: current.get(key)!.at } : null,
+    current: overridden && current.get(key) ? { version: current.get(key)!.version, by: current.get(key)!.by, at: current.get(key)!.at, fromDefault: current.get(key)!.source === "firm_default" } : null,
     history: history.get(key) ?? [],
     canEdit,
   });
   const pack = buildStatementPack(
     accounts.map((a) => ({ ...a, closingMinor: a.closingMinor + a.adjustmentMinor })),
-    { unitMinor: whole ? 100 : 1, borrowingsCurrent: { current: engagement.borrowingsCurrentMinor, prior: engagement.borrowingsCurrentPriorMinor }, noteTexts },
+    { unitMinor: whole ? 100 : 1, currency: engagement.currency ?? undefined, borrowingsCurrent: { current: engagement.borrowingsCurrentMinor, prior: engagement.borrowingsCurrentPriorMinor }, noteTexts },
   );
   const s = pack.base;
   const fmt = (n: number) => formatPresentation(n, pack.rounding.unitMinor);
   const year = engagement.periodEnd.slice(0, 4);
   const priorYear = String(Number(year) - 1);
   const base = `/engagements/${id}`;
-  const query = whole ? "?units=whole" : "";
+  const query = `?units=${whole ? "whole" : "exact"}`;
   const hasBorrowings = accounts.some((a) => a.groupCode === "BORROW");
   const open = engagement.status === "open";
   const checks = orderChecks(pack.checks);
@@ -206,6 +211,23 @@ export default async function StatementsPage({ params, searchParams }: { params:
       <EngagementNav id={id} current="statements" status={engagement.status} archived={engagement.archivedAt !== null} />
 
       <div className="mt-6 space-y-8">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+          <p>
+            <span className="text-ink-muted">Presentation currency:</span> <span className="font-medium">{engagement.currency ?? "not set ([currency] is shown to complete)"}</span>
+          </p>
+          {canLock(session.role) && open && (
+            <Disclosure summary="Change the currency">
+              <ActionForm action={setEngagementCurrencyAction} fields={{ engagementId: id }}>
+                <div className="flex flex-wrap items-end gap-3">
+                  <Field label="Currency" hint="Three letters, such as AED. Blank for none." className="w-48">
+                    <Input name="currency" defaultValue={engagement.currency ?? ""} maxLength={3} />
+                  </Field>
+                  <Button variant="secondary">Save the currency</Button>
+                </div>
+              </ActionForm>
+            </Disclosure>
+          )}
+        </div>
         {pack.clean ? (
           <div className="flex flex-wrap items-start gap-3">
             <span className="mt-4 shrink-0 text-success-strong">
@@ -256,7 +278,7 @@ export default async function StatementsPage({ params, searchParams }: { params:
               <ul className="flex flex-wrap gap-2">
                 <li>
                   <Link
-                    href={`${base}/statements`}
+                    href={`${base}/statements?units=exact`}
                     aria-current={whole ? undefined : "true"}
                     className={`${chip} ${whole ? "border-border-input bg-surface text-ink hover:bg-surface-muted" : "border-accent bg-accent text-surface"}`}
                   >

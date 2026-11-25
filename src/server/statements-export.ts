@@ -28,10 +28,12 @@ export async function statementsDownload(session: Session, id: string, requestUr
   });
   if (!engagement || accounts.length === 0) return new Response("Not found", { status: 404 });
 
-  const whole = new URL(requestUrl).searchParams.get("units") === "whole";
+  // The engagement's own rounding is the default; an explicit ?units= (the page's toggle) overrides it.
+  const units = new URL(requestUrl).searchParams.get("units");
+  const whole = units === "whole" ? true : units === "exact" ? false : engagement.statementUnit === "whole";
   const pack = buildStatementPack(
     accounts.map((a) => ({ ...a, closingMinor: a.closingMinor + a.adjustmentMinor })),
-    { unitMinor: whole ? 100 : 1, borrowingsCurrent: { current: engagement.borrowingsCurrentMinor, prior: engagement.borrowingsCurrentPriorMinor }, noteTexts },
+    { unitMinor: whole ? 100 : 1, currency: engagement.currency ?? undefined, borrowingsCurrent: { current: engagement.borrowingsCurrentMinor, prior: engagement.borrowingsCurrentPriorMinor }, noteTexts },
   );
   const input = {
     clientName: engagement.clientName,

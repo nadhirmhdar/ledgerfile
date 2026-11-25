@@ -20,6 +20,7 @@ interface VersionRow {
   generated: boolean;
   by: string;
   at: string;
+  source: "person" | "firm_default" | null;
 }
 
 const toVersion = (r: VersionRow): NoteVersion => ({
@@ -28,10 +29,11 @@ const toVersion = (r: VersionRow): NoteVersion => ({
   generated: r.generated,
   by: r.by,
   at: r.at,
+  source: r.source,
 });
 
 const SELECT = `
-  select n.note_key as key, n.version, n.paragraphs, n.is_generated as generated, u.name as by, to_char(n.written_at at time zone 'UTC', 'YYYY-MM-DD HH24:MI') as at
+  select n.note_key as key, n.version, n.paragraphs, n.is_generated as generated, n.source, u.name as by, to_char(n.written_at at time zone 'UTC', 'YYYY-MM-DD HH24:MI') as at
   from note_texts n join users u on u.id = n.written_by`;
 
 /** Every version of every passage of an engagement, oldest first within a passage. One query. */
