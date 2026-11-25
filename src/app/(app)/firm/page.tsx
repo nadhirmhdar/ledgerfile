@@ -4,6 +4,8 @@ import { getSession } from "@/server/session";
 import { getBranding } from "@/server/branding";
 import { loadFirmDefaults } from "@/server/statement-defaults";
 import { StatementDefaultsSection } from "@/ui/statement-defaults-section";
+import { getRetentionYears } from "@/server/retention";
+import { setRetentionAction } from "@/app/retention-actions";
 import { canLock } from "@/domain/signoff";
 import { ActionForm } from "@/app/action-form";
 import { removeLogoAction, saveBrandingAction, uploadLogoAction } from "@/app/branding-actions";
@@ -18,7 +20,7 @@ export const dynamic = "force-dynamic";
 
 export default async function FirmPage() {
   const session = await getSession();
-  const { view, defaults } = await withFirm(await getDb(), session.firmId, async (tx) => ({ view: await getBranding(tx), defaults: await loadFirmDefaults(tx) }));
+  const { view, defaults, retentionYears } = await withFirm(await getDb(), session.firmId, async (tx) => ({ view: await getBranding(tx), defaults: await loadFirmDefaults(tx), retentionYears: await getRetentionYears(tx) }));
   if (!view) notFound();
   const admin = session.role === "admin";
 
@@ -49,6 +51,33 @@ export default async function FirmPage() {
             .
           </Callout>
         )}
+        <Card
+          title="Retention"
+          description="How long the firm keeps archived files. The firm sets its own period: the application has no default and states no legal period."
+        >
+          <p className="text-sm">
+            {retentionYears === null
+              ? "No retention period is set, so no file is ever past it and nothing can be deleted."
+              : `Archived files are kept for ${retentionYears === 1 ? "1 year" : `${retentionYears} years`}, counted from the day each was archived.`}
+          </p>
+          {admin && (
+            <ActionForm action={setRetentionAction} fields={{}} className="mt-3">
+              <div className="flex flex-wrap items-end gap-3">
+                <Field label="Retention period in years" hint="1 to 30. Leave blank for none." className="w-56">
+                  <Input name="years" inputMode="numeric" defaultValue={retentionYears ?? ""} maxLength={2} />
+                </Field>
+                <Button variant="secondary">Save the period</Button>
+              </div>
+            </ActionForm>
+          )}
+          {canLock(session.role) && (
+            <p className="mt-3 text-sm">
+              <Link href="/firm/retention" className="font-medium text-accent underline underline-offset-2">
+                Archived files and deletion
+              </Link>
+            </p>
+          )}
+        </Card>
         <StatementDefaultsSection defaults={defaults} mayEdit={canLock(session.role)} />
         {!admin && <Callout variant="info">Only an administrator can change the firm&apos;s details. What is saved is shown below.</Callout>}
 
