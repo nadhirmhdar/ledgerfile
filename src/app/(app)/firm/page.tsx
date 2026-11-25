@@ -37,6 +37,15 @@ export default async function FirmPage() {
           </Link>
           .
         </Callout>
+        {admin && (
+          <Callout variant="info" title="Audit log">
+            Every change made in the firm, who made it and when, can be filtered and downloaded on the{" "}
+            <Link href="/firm/audit-log" className="font-medium underline">
+              Audit log page
+            </Link>
+            .
+          </Callout>
+        )}
         {!admin && <Callout variant="info">Only an administrator can change the firm&apos;s details. What is saved is shown below.</Callout>}
 
         <Card title="Details" description="Printed under the firm's name on the engagement letter, and in the signature of the auditor's report.">
