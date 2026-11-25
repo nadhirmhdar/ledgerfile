@@ -11,6 +11,8 @@ import { getEngagementTeam, listAssignable } from "@/server/engagement-team";
 import { todayIso } from "@/domain/client-requests";
 import { canLock } from "@/domain/signoff";
 import { buildWorkingPaperIndex } from "@/server/wp-index";
+import { getPriorYearChecks } from "@/server/prior-year-checks";
+import { priorYearAttention } from "@/ui/prior-year-view";
 import { Badge, StatusBadge } from "@/ui/badge";
 import { LinkButton } from "@/ui/button";
 import { buildHomeModel, paths, seeAllLabel, type HomeInput } from "@/ui/engagement-home";
@@ -40,12 +42,13 @@ export default async function EngagementHome({ params }: { params: Promise<{ id:
       index: await buildWorkingPaperIndex(tx, id),
       requests: (await requestCounts(tx, id)).overall,
       confirmations: (await confirmationSummary(tx, id)).overall,
+      priorYear: await getPriorYearChecks(tx, session.firmId, id),
       team: await getEngagementTeam(tx, id),
       people: await listAssignable(tx),
     };
   });
   if (!data || !data.audit || !data.overview || !data.index || !data.team) notFound();
-  const { engagement, accounts, audit, overview, index, requests, confirmations, team, people } = data;
+  const { engagement, accounts, audit, overview, index, requests, confirmations, priorYear, team, people } = data;
 
   const input: HomeInput = {
     engagementId: id,
@@ -82,6 +85,7 @@ export default async function EngagementHome({ params }: { params: Promise<{ id:
     papers: { total: index.overall.total, reviewed: index.overall.reviewed },
     requests,
     confirmations: { ...confirmations, total: confirmations.count },
+    priorYearAttention: priorYearAttention(priorYear).map((c) => c.label),
   };
   const model = buildHomeModel(input);
   const p = paths(id);
@@ -172,6 +176,12 @@ export default async function EngagementHome({ params }: { params: Promise<{ id:
             }
           >
             <ToDoRows items={model.toDo} />
+          </Section>
+        )}
+
+        {model.attention.length > 0 && (
+          <Section title="Needs attention" description="Warnings from the checks against last year. They do not stop the file being locked.">
+            <ToDoRows items={model.attention} />
           </Section>
         )}
       </div>

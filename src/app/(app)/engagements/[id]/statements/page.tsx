@@ -9,6 +9,8 @@ import { currentOf, loadHistory } from "@/server/note-texts";
 import { NotePassage, type PassageData } from "@/app/note-passage";
 import { canEditNotes } from "@/domain/permissions";
 import { describeKey, keptButNotShown, overridesFrom } from "@/domain/note-texts";
+import { getPriorYearChecks } from "@/server/prior-year-checks";
+import { PriorYearChecks } from "@/ui/prior-year-view";
 import { buildStatementPack } from "@/domain/statement-pack";
 import type { StatementLine } from "@/domain/statements";
 import { formatAmount, formatPresentation } from "@/domain/money";
@@ -56,11 +58,12 @@ export default async function StatementsPage({ params, searchParams }: { params:
   const whole = (await searchParams).units === "whole";
 
   const session = await getSession();
-  const { engagement, accounts, auditOn, history } = await withFirm(await getDb(), session.firmId, async (tx) => ({
+  const { engagement, accounts, auditOn, history, priorYear: priorYearResult } = await withFirm(await getDb(), session.firmId, async (tx) => ({
     engagement: await repo.getEngagement(tx, id),
     accounts: await repo.listAccounts(tx, id),
     auditOn: await isEnabled(tx, id),
     history: await loadHistory(tx, id),
+    priorYear: await getPriorYearChecks(tx, session.firmId, id),
   }));
   if (!engagement) notFound();
 
@@ -243,6 +246,8 @@ export default async function StatementsPage({ params, searchParams }: { params:
             </ul>
           </Callout>
         )}
+
+        {priorYearResult && <PriorYearChecks result={priorYearResult} engagementId={id} />}
 
         <div>
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
