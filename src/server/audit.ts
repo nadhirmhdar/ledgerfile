@@ -157,6 +157,12 @@ export interface ProcedureRow {
  */
 const PARTNER_STEP = "'^Partner sign-off'";
 
+/**
+ * The one definition of a procedure waiting for review: finished (done or not applicable), not yet reviewed, and not the partner's own
+ * sign-off. The audit overview, the area review and My work all use it, so they cannot disagree.
+ */
+export const PROCEDURE_AWAITING_REVIEW = `status <> 'open' and reviewed_by is null and evidence !~* ${PARTNER_STEP}`;
+
 async function requireOpen(tx: Tx, engagementId: string) {
   const engagement = await getEngagement(tx, engagementId);
   if (!engagement) throw new Error("Engagement not found.");
@@ -240,7 +246,7 @@ export async function getAuditOverview(tx: Tx, engagementId: string): Promise<Au
   const counts = await tx.query<{ areaCode: string; total: number; completed: number; na: number; unreviewed: number; selfReviewed: number }>(
     `select area_code as "areaCode", count(*)::int as total, count(*) filter (where status <> 'open')::int as completed,
             count(*) filter (where status = 'na')::int as na,
-            count(*) filter (where status <> 'open' and reviewed_by is null and evidence !~* ${PARTNER_STEP})::int as unreviewed,
+            count(*) filter (where ${PROCEDURE_AWAITING_REVIEW})::int as unreviewed,
             count(*) filter (where reviewed_by is not null and reviewed_by = performed_by)::int as "selfReviewed"
      from audit_procedures where engagement_id = $1 group by area_code`,
     [engagementId],
@@ -663,11 +669,11 @@ export async function reviewArea(tx: Tx, s: Session, engagementId: string, areaC
   const own = (await canSelfReviewAudit(tx)) ? "false" : "performed_by is not distinct from $3::uuid";
   const done = await tx.query<{ templateId: string; performedBy: string | null }>(
     `update audit_procedures set reviewed_by = $3, reviewed_at = now()
-     where engagement_id = $1 and area_code = $2 and status <> 'open' and reviewed_by is null and evidence !~* ${PARTNER_STEP} and not (${own}) returning template_id as "templateId", performed_by as "performedBy"`,
+     where engagement_id = $1 and area_code = $2 and ${PROCEDURE_AWAITING_REVIEW} and not (${own}) returning template_id as "templateId", performed_by as "performedBy"`,
     [engagementId, areaCode, s.userId],
   );
   const left = await tx.query<{ n: number }>(
-    `select count(*)::int as n from audit_procedures where engagement_id = $1 and area_code = $2 and status <> 'open' and reviewed_by is null and evidence !~* ${PARTNER_STEP}`,
+    `select count(*)::int as n from audit_procedures where engagement_id = $1 and area_code = $2 and ${PROCEDURE_AWAITING_REVIEW}`,
     [engagementId, areaCode],
   );
   const result = { reviewed: done.rows.length, skipped: left.rows[0].n, selfReviewed: done.rows.filter((r) => r.performedBy === s.userId).length };

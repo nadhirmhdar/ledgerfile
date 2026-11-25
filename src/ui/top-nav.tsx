@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 
 const ITEMS = [
   { href: "/", label: "Engagements", match: (p: string) => p === "/" || p.startsWith("/engagements") },
+  { href: "/my-work", label: "My work", match: (p: string) => p.startsWith("/my-work") },
   { href: "/clients", label: "Clients", match: (p: string) => p.startsWith("/clients") },
   { href: "/team", label: "Team", match: (p: string) => p.startsWith("/team") },
 ];
@@ -14,7 +15,7 @@ export function TopNav({ admin = false }: { admin?: boolean }) {
   const pathname = usePathname();
   const items = admin ? [...ITEMS, { href: "/firm", label: "Firm", match: (p: string) => p.startsWith("/firm") }] : ITEMS;
   return (
-    <nav aria-label="Main" className="flex items-stretch self-stretch sm:gap-1">
+    <nav aria-label="Main" className="flex items-stretch self-stretch max-sm:order-last max-sm:basis-full sm:gap-1">
       {items.map((item) => {
         const current = item.match(pathname);
         // The active link's underline sits on the bar's own bottom edge (-mb-px over the hairline).

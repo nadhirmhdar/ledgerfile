@@ -311,9 +311,13 @@ describe("rolling schedules forward", () => {
   }, 60_000);
 
   it("lets two engagements linked to the same prior year each bring its schedules forward, each only once", async () => {
-    // A second engagement for the same client, ending earlier in 2025, is also linked to last year's engagement.
+    // A second engagement for the same client, ending earlier in 2025, is also linked to last year's engagement. Creating it now would be refused as an
+    // overlap, so it is inserted as a file from before that rule: the scenario this test is about is the link, not the dates.
     const e2025b = await as(partner, async (tx) => {
-      const id = await repo.createEngagement(tx, partner, client, "2025-01-01", "2025-11-30");
+      const id = (await tx.query<{ id: string }>(
+        "insert into engagements (firm_id, client_id, period_start, period_end, prior_engagement_id) values ($1, $2, '2025-01-01', '2025-11-30', $3) returning id",
+        [partner.firmId, client, e2024],
+      )).rows[0].id;
       await repo.importTrialBalance(tx, partner, id, "tb.xlsx", TB_2025);
       await repo.approveAllMappings(tx, partner, id);
       await audit.setAuditEnabled(tx, partner, id, true);

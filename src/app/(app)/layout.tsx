@@ -23,9 +23,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         Skip to main content
       </a>
       <header className="bg-brand-deep text-white">
-        <div className="mx-auto flex w-full max-w-7xl items-stretch justify-between gap-2 px-4 sm:gap-3 sm:px-6">
-          <div className="flex min-w-0 items-stretch gap-2 sm:gap-8">
-            <Link href="/" aria-label="LedgerFile, engagements" className="flex items-center rounded-sm focus-visible:outline-accent-bright">
+        <div className="mx-auto flex w-full max-w-7xl flex-wrap items-stretch justify-between gap-x-2 px-4 sm:flex-nowrap sm:gap-3 sm:px-6">
+          <div className="contents sm:flex sm:min-w-0 sm:items-stretch sm:gap-8">
+            <Link href="/" aria-label="LedgerFile, engagements" className="flex min-h-14 items-center rounded-sm focus-visible:outline-accent-bright max-sm:mr-auto">
               <Wordmark onDark />
             </Link>
             <TopNav admin={canManageFirm(session.role)} />
