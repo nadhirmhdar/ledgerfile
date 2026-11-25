@@ -5,6 +5,8 @@ import { getDb, withFirm } from "@/server/db";
 import { getSession } from "@/server/session";
 import * as repo from "@/server/repo";
 import { isEnabled } from "@/server/audit";
+import { getPriorYearChecks } from "@/server/prior-year-checks";
+import { PriorYearChecks } from "@/ui/prior-year-view";
 import { buildStatementPack } from "@/domain/statement-pack";
 import type { StatementLine } from "@/domain/statements";
 import { POLICY_REVIEW_NOTICE } from "@/domain/policies";
@@ -70,10 +72,11 @@ export default async function StatementsPage({ params, searchParams }: { params:
   const whole = (await searchParams).units === "whole";
 
   const session = await getSession();
-  const { engagement, accounts, auditOn } = await withFirm(await getDb(), session.firmId, async (tx) => ({
+  const { engagement, accounts, auditOn, priorYear: priorYearResult } = await withFirm(await getDb(), session.firmId, async (tx) => ({
     engagement: await repo.getEngagement(tx, id),
     accounts: await repo.listAccounts(tx, id),
     auditOn: await isEnabled(tx, id),
+    priorYear: await getPriorYearChecks(tx, session.firmId, id),
   }));
   if (!engagement) notFound();
 
@@ -237,6 +240,8 @@ export default async function StatementsPage({ params, searchParams }: { params:
             </ul>
           </Callout>
         )}
+
+        {priorYearResult && <PriorYearChecks result={priorYearResult} engagementId={id} />}
 
         <div>
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
