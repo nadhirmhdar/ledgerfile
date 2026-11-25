@@ -15,9 +15,15 @@ describe("the words", () => {
     expect(describeAction("brand_new_thing", "x")).toBe("Brand new thing");
   });
   it("summarise a change as before and after, and leave secrets and the engagement id out", () => {
-    expect(summarise({ engagementId: "x", changed: ["name"], before: { name: "A" }, after: { name: "B" } })).toBe("Name: A → B; Changed: [\"name\"]");
+    expect(summarise({ engagementId: "x", changed: ["name"], before: { name: "A" }, after: { name: "B" } })).toBe("Name: A → B; Changed: name");
     expect(summarise({ password: "p", level: "reviewer" })).toBe("Level: reviewer");
     expect(summarise(null)).toBe("");
+    // Objects and arrays are words, never JSON.
+    const person = { id: "00000000-0000-4000-8000-000000000003", name: "Test Partner" };
+    expect(summarise({ changed: ["Preparer", "Reviewer"], before: { partner: null }, after: { partner: person } })).toBe("Partner: none → Test Partner; Changed: Preparer, Reviewer");
+    expect(summarise({ list: [{ a: 1 }, { b: 2 }], mixed: { x: 1, y: 2 }, empty: {}, one: { title: "A title" } })).toBe("List: 2 items; Mixed: 2 fields: x, y; Empty: empty; One: A title");
+    expect(summarise({ before: { p: { id: "i", name: "N" } }, after: { p: { id: "j", name: "M" } } })).toBe("P: N → M");
+    expect(describeAction("assign_team", "engagement")).toBe("Changed the engagement team");
     expect(redact({ a: { token: "t" } })).toEqual({ a: { token: "[hidden]" } });
   });
 });
@@ -49,6 +55,9 @@ describe("the page body", () => {
     expect(html).toContain("older=2026-03-01T10%3A00%3A00.000000Z%7C1");
     expect(html).toContain("newer=");
     expect(html).toContain("Clear the filters");
+    // A stacked block below the small breakpoint and the table from it up.
+    expect(html).toContain("sm:hidden");
+    expect(html).toContain("hidden sm:block");
   });
   it("says to narrow the dates instead of offering an export above the cap", () => {
     const html = renderToStaticMarkup(<AuditLogView page={{ entries: [entry], older: null, newer: null }} filters={NO_FILTERS} problems={[]} choices={choices} total={60000} />);

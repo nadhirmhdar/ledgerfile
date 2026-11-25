@@ -107,6 +107,36 @@ export function AuditLogView({ page, filters, problems, choices, total, cap = EX
       {page.entries.length === 0 ? (
         <EmptyState title="No entries match these filters." description={hasFilters(filters) ? "Clear a filter or widen the dates." : "Nothing has been recorded yet."} />
       ) : (
+        <>
+        <ul className="space-y-3 sm:hidden" aria-label="Audit log, newest first">
+          {page.entries.map((e) => (
+            <li key={e.id} className="rounded-lg border border-border bg-surface p-4 shadow-card">
+              <p className="flex flex-wrap gap-x-3 gap-y-0.5 text-small text-ink-subtle">
+                <span className="tabular-nums">{e.at}</span>
+                <span className="font-medium text-ink">{e.who}</span>
+              </p>
+              <p className="mt-2 font-medium text-ink">{e.what}</p>
+              <p className="text-small text-ink-subtle">{e.action}</p>
+              <p className="mt-2 text-sm">
+                {e.engagementId && e.engagement ? (
+                  <Link href={`/engagements/${e.engagementId}`} className="rounded-sm text-accent hover:underline">
+                    {e.engagement}
+                  </Link>
+                ) : (
+                  <span className="text-ink-muted">No engagement</span>
+                )}
+              </p>
+              {e.summary && <p className="mt-2 text-sm break-words">{e.summary}</p>}
+              {e.json && (
+                <details className="mt-1">
+                  <summary className="cursor-pointer text-small text-accent">Full detail</summary>
+                  <pre className="mt-1 max-h-64 overflow-auto rounded-md bg-surface-muted p-2 text-small whitespace-pre-wrap break-words">{e.json}</pre>
+                </details>
+              )}
+            </li>
+          ))}
+        </ul>
+        <div className="hidden sm:block">
         <Table caption="Audit log, newest first">
           <THead>
             <TRow>
@@ -149,6 +179,8 @@ export function AuditLogView({ page, filters, problems, choices, total, cap = EX
             ))}
           </tbody>
         </Table>
+        </div>
+        </>
       )}
 
       {(page.newer || page.older) && (

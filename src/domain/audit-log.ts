@@ -130,6 +130,7 @@ const BY_ACTION: Record<string, string> = {
   reset_procedure_wording: "Reset a library procedure to the library's wording",
   add_own_procedure: "Added the firm's own procedure",
   edit_own_procedure: "Edited the firm's own procedure",
+  assign_team: "Changed the engagement team",
   retire_own_procedure: "Retired the firm's own procedure",
   restore_own_procedure: "Restored the firm's own procedure",
 };
@@ -162,12 +163,18 @@ export function redact(value: unknown): unknown {
 
 const label = (key: string) => sentence(key.replace(/([a-z])([A-Z])/g, "$1_$2").toLowerCase());
 
+const cut = (s: string) => (s.length > 60 ? `${s.slice(0, 57)}…` : s);
+const plain = (v: unknown): v is string | number | boolean => typeof v === "string" || typeof v === "number" || typeof v === "boolean";
+
+/** One value in words, never JSON: a name for a thing that has one, plain values joined by commas, else how many fields or items it has. */
 const short = (v: unknown): string => {
   if (v === null || v === undefined) return "none";
-  if (typeof v === "string") return v.length > 60 ? `${v.slice(0, 57)}…` : v;
-  if (typeof v === "number" || typeof v === "boolean") return String(v);
-  const j = JSON.stringify(v);
-  return j.length > 60 ? `${j.slice(0, 57)}…` : j;
+  if (plain(v)) return cut(String(v));
+  if (Array.isArray(v)) return v.every(plain) ? cut(v.map(String).join(", ")) : `${v.length} item${v.length === 1 ? "" : "s"}`;
+  const o = v as Record<string, unknown>;
+  for (const k of ["name", "label", "title"]) if (typeof o[k] === "string" && o[k]) return cut(o[k] as string);
+  const keys = Object.keys(o);
+  return keys.length === 0 ? "empty" : cut(`${keys.length} field${keys.length === 1 ? "" : "s"}: ${keys.join(", ")}`);
 };
 
 /**
