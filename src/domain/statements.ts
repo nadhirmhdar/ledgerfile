@@ -30,10 +30,15 @@ export interface StatementSection {
   lines: StatementLine[];
 }
 
+/** "error" checks decide `clean` and block locking. A "warning" never does: it asks for attention only. Absent means "error", so every check written before this field keeps its behaviour. */
+export type Severity = "error" | "warning";
+export const severityOf = (c: { severity?: Severity }): Severity => c.severity ?? "error";
+
 export interface Check {
   label: string;
   passed: boolean;
   detail?: string;
+  severity?: Severity;
 }
 
 export interface Statements {

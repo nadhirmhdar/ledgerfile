@@ -37,6 +37,8 @@ export interface HomeInput {
   papers: { total: number; reviewed: number };
   requests: { total: number; open: number; overdue: number; received: number; notApplicable: number };
   confirmations: { total: number; notSent: number; awaitingReply: number; agreed: number; differs: number; noReply: number; prepared: number; reviewed: number };
+  /** Prior-year checks that need attention (warnings, by label). They never count as lock blockers. */
+  priorYearAttention?: string[];
 }
 
 export interface NextStep {
@@ -88,6 +90,8 @@ export interface HomeModel {
   toDo: ToDo[];
   /** How many things stand between the file and the lock, of which `toDo` shows the first few. */
   toDoTotal: number;
+  /** Warnings that need a person but do not stop the lock: the prior-year checks. Empty for a locked file. */
+  attention: ToDo[];
   tiles: Tile[];
 }
 
@@ -366,6 +370,7 @@ export function buildHomeModel(i: HomeInput): HomeModel {
     stages: stagesFor(i),
     toDo,
     toDoTotal: locked ? 0 : blockers.length,
+    attention: locked ? [] : (i.priorYearAttention ?? []).map((text) => ({ text, href: p.statements, owner: null })),
     tiles,
   };
 }

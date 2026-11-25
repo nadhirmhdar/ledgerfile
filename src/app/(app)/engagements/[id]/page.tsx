@@ -8,6 +8,8 @@ import { getAuditOverview } from "@/server/audit";
 import { requestCounts } from "@/server/client-requests";
 import { confirmationSummary } from "@/server/confirmations";
 import { buildWorkingPaperIndex } from "@/server/wp-index";
+import { getPriorYearChecks } from "@/server/prior-year-checks";
+import { priorYearAttention } from "@/ui/prior-year-view";
 import { Badge, StatusBadge } from "@/ui/badge";
 import { LinkButton } from "@/ui/button";
 import { buildHomeModel, paths, seeAllLabel, type HomeInput } from "@/ui/engagement-home";
@@ -36,10 +38,11 @@ export default async function EngagementHome({ params }: { params: Promise<{ id:
       index: await buildWorkingPaperIndex(tx, id),
       requests: (await requestCounts(tx, id)).overall,
       confirmations: (await confirmationSummary(tx, id)).overall,
+      priorYear: await getPriorYearChecks(tx, session.firmId, id),
     };
   });
   if (!data || !data.audit || !data.overview || !data.index) notFound();
-  const { engagement, accounts, audit, overview, index, requests, confirmations } = data;
+  const { engagement, accounts, audit, overview, index, requests, confirmations, priorYear } = data;
 
   const input: HomeInput = {
     engagementId: id,
@@ -76,6 +79,7 @@ export default async function EngagementHome({ params }: { params: Promise<{ id:
     papers: { total: index.overall.total, reviewed: index.overall.reviewed },
     requests,
     confirmations: { ...confirmations, total: confirmations.count },
+    priorYearAttention: priorYearAttention(priorYear).map((c) => c.label),
   };
   const model = buildHomeModel(input);
   const p = paths(id);
@@ -164,6 +168,12 @@ export default async function EngagementHome({ params }: { params: Promise<{ id:
             }
           >
             <ToDoRows items={model.toDo} />
+          </Section>
+        )}
+
+        {model.attention.length > 0 && (
+          <Section title="Needs attention" description="Warnings from the checks against last year. They do not stop the file being locked.">
+            <ToDoRows items={model.attention} />
           </Section>
         )}
       </div>
