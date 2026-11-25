@@ -2,7 +2,7 @@ import type { Tx } from "./db";
 import type { TbAccount } from "../domain/tb-parse";
 import { cleanName, nameKey } from "../domain/client-import";
 import type { MappingSource } from "../domain/mapping";
-import { EMPTY_DETAILS, type ClientDetails } from "../domain/client-details";
+import { EMPTY_DETAILS, periodsOverlap, type ClientDetails } from "../domain/client-details";
 import { assist, sameAccountName } from "../domain/mapping-assistant";
 import { learnedExamples } from "./mapping-examples";
 import { GROUP_BY_CODE } from "../domain/groups";
@@ -94,6 +94,24 @@ export async function lockClients(tx: Tx, firmId: string): Promise<void> {
   await tx.query("select pg_advisory_xact_lock(hashtext($1))", [`clients:${firmId}`]);
 }
 
+/**
+ * Taken by every path that creates an engagement, before it looks at the client's other periods and until the transaction ends, so two people creating
+ * engagements at once (one, or a roll-forward) cannot both pass the overlap check and leave two engagements over the same days.
+ */
+export async function lockEngagements(tx: Tx, firmId: string): Promise<void> {
+  await tx.query("select pg_advisory_xact_lock(hashtext($1))", [`engagements:${firmId}`]);
+}
+
+/** The refusal for a period that shares a day with another of the client's engagements, or null. Both ends count: a period starting the day another ends overlaps it. */
+export async function overlapRefusal(tx: Tx, clientId: string, clientName: string, start: string, end: string): Promise<string | null> {
+  const { rows } = await tx.query<{ start: string; end: string }>(
+    "select to_char(period_start, 'YYYY-MM-DD') as start, to_char(period_end, 'YYYY-MM-DD') as end from engagements where client_id = $1 order by period_start",
+    [clientId],
+  );
+  const hit = rows.find((r) => periodsOverlap({ start, end }, r));
+  return hit ? `${start} to ${end} overlaps an existing engagement of ${clientName} (${hit.start} to ${hit.end}).` : null;
+}
+
 /** Add a client. The name is cleaned (inner spaces collapsed), and refused when a client of this firm already has it, in any case or spacing. */
 export async function createClient(tx: Tx, s: Session, name: string): Promise<string> {
   if (!canCreateClient(s.role)) throw new Error(CLIENT_REFUSAL);
@@ -136,8 +154,11 @@ export async function getEngagement(tx: Tx, id: string): Promise<EngagementRow |
 /** Create an engagement and link it to the client's most recent earlier period, for mapping carry-forward. */
 export async function createEngagement(tx: Tx, s: Session, clientId: string, periodStart: string, periodEnd: string): Promise<string> {
   if (!canCreateEngagement(s.role)) throw new Error(ENGAGEMENT_REFUSAL);
-  const client = await tx.query("select 1 from clients where id = $1", [clientId]);
+  await lockEngagements(tx, s.firmId);
+  const client = await tx.query<{ name: string }>("select name from clients where id = $1", [clientId]);
   if (client.rows.length === 0) throw new Error("Client not found.");
+  const overlap = await overlapRefusal(tx, clientId, client.rows[0].name, periodStart, periodEnd);
+  if (overlap) throw new Error(overlap);
   const prior = await tx.query<{ id: string }>(
     "select id from engagements where client_id = $1 and period_end < $2 order by period_end desc limit 1",
     [clientId, periodEnd],

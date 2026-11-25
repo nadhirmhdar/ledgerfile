@@ -7,6 +7,9 @@ import * as review from "@/server/review";
 import { getAuditOverview } from "@/server/audit";
 import { requestCounts } from "@/server/client-requests";
 import { confirmationSummary } from "@/server/confirmations";
+import { getEngagementTeam, listAssignable } from "@/server/engagement-team";
+import { todayIso } from "@/domain/client-requests";
+import { canLock } from "@/domain/signoff";
 import { buildWorkingPaperIndex } from "@/server/wp-index";
 import { getPriorYearChecks } from "@/server/prior-year-checks";
 import { priorYearAttention } from "@/ui/prior-year-view";
@@ -15,6 +18,7 @@ import { LinkButton } from "@/ui/button";
 import { buildHomeModel, paths, seeAllLabel, type HomeInput } from "@/ui/engagement-home";
 import { Callout, EmptyState, StepList } from "@/ui/feedback";
 import { Card, Fact, PageHeader, Section, Stat } from "@/ui/layout";
+import { TeamPanel } from "@/ui/team-panel";
 import { ToDoRows } from "@/ui/todo-rows";
 import { count } from "@/ui/text";
 import { EngagementNav } from "./nav";
@@ -39,10 +43,12 @@ export default async function EngagementHome({ params }: { params: Promise<{ id:
       requests: (await requestCounts(tx, id)).overall,
       confirmations: (await confirmationSummary(tx, id)).overall,
       priorYear: await getPriorYearChecks(tx, session.firmId, id),
+      team: await getEngagementTeam(tx, id),
+      people: await listAssignable(tx),
     };
   });
-  if (!data || !data.audit || !data.overview || !data.index) notFound();
-  const { engagement, accounts, audit, overview, index, requests, confirmations, priorYear } = data;
+  if (!data || !data.audit || !data.overview || !data.index || !data.team) notFound();
+  const { engagement, accounts, audit, overview, index, requests, confirmations, priorYear, team, people } = data;
 
   const input: HomeInput = {
     engagementId: id,
@@ -154,6 +160,8 @@ export default async function EngagementHome({ params }: { params: Promise<{ id:
           </ul>
           <StepList steps={model.stages.map((s) => ({ ...s }))} />
         </Section>
+
+        <TeamPanel engagementId={id} team={team} people={people} canAssign={canLock(session.role) && engagement.status === "open"} today={todayIso()} />
 
         {!model.locked && model.toDo.length > 0 && (
           <Section
