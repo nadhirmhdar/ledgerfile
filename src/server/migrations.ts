@@ -7,7 +7,7 @@ import type { Db } from "./db";
  * The newest migration in db/migrations. A hosted start compares the database against this and refuses to run if they differ,
  * instead of reading the folder (which a serverless build may not ship). tests/migrations.test.ts fails when this falls behind.
  */
-export const LATEST_MIGRATION = "0033_methodology_adoptions.sql";
+export const LATEST_MIGRATION = "0034_retention.sql";
 
 export const migrationsDir = () => path.join(process.cwd(), "db", "migrations");
 
