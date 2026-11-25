@@ -28,6 +28,7 @@ import { ExpandRow } from "@/ui/area-row";
 import { count, plainCount } from "@/ui/text";
 import { getAdoption } from "@/server/methodology-adoption";
 import { adoptionLine } from "@/domain/methodology-adoption";
+import { MethodologyLabel } from "@/ui/methodology-label";
 import { EngagementNav } from "../nav";
 
 export const dynamic = "force-dynamic";
@@ -89,10 +90,15 @@ export default async function AuditPage({ params }: { params: Promise<{ id: stri
       <EngagementNav id={id} current="audit" status={engagement.status} archived={engagement.archivedAt !== null} />
 
       <div className="mt-6 space-y-8">
-        <Callout variant="draft" title={`Methodology content: ${LIBRARY_STATUS}`}>
-          The procedures loaded here come from the draft library in the repository&apos;s docs folder. Do not rely on them for a real audit until a qualified person has reviewed and approved that library.
-          <span className="mt-1 block font-medium">{adoptionLine(adoption)}</span>
-        </Callout>
+        <MethodologyLabel
+          state={adoption}
+          draft={
+            <Callout variant="draft" title={`Methodology content: ${LIBRARY_STATUS}`}>
+              The procedures loaded here come from the draft library in the repository&apos;s docs folder. Do not rely on them for a real audit until a qualified person has reviewed and approved that library.
+              <span className="mt-1 block font-medium">{adoptionLine(adoption)}</span>
+            </Callout>
+          }
+        />
 
         {overview.areas.length === 0 ? (
           <EmptyState

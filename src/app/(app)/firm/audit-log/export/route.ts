@@ -1,11 +1,11 @@
 import { getDb, withFirm } from "@/server/db";
 import { getSession } from "@/server/session";
-import { checkFilters, exportLog, isAdmin } from "@/server/audit-log";
+import { canSeeAuditLog, checkFilters, exportLog } from "@/server/audit-log";
 import { parseFilters } from "@/domain/audit-log";
 
 export const dynamic = "force-dynamic";
 
-/** Download the log for the current filters as Excel or CSV. Administrators only (read again from the database); anyone else gets 404. */
+/** Download the log for the current filters as Excel or CSV. Partners and administrators only (read again from the database); anyone else gets 404. */
 export async function GET(request: Request) {
   const session = await getSession();
   const query = Object.fromEntries(new URL(request.url).searchParams);
@@ -14,7 +14,7 @@ export async function GET(request: Request) {
   const parsed = parseFilters(query);
 
   const result = await withFirm(await getDb(), session.firmId, async (tx) => {
-    if (!(await isAdmin(tx, session))) return null;
+    if (!(await canSeeAuditLog(tx, session))) return null;
     const checked = await checkFilters(tx, parsed.filters);
     return exportLog(tx, session, checked.filters, format);
   });

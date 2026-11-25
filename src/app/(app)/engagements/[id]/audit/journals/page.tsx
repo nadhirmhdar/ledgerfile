@@ -7,6 +7,8 @@ import * as audit from "@/server/audit";
 import * as ledger from "@/server/ledger";
 import { FLAGS, FLAG_LABEL } from "@/domain/journal-risk";
 import { LIBRARY_STATUS } from "@/domain/audit";
+import { getAdoption } from "@/server/methodology-adoption";
+import { MethodologyLabel } from "@/ui/methodology-label";
 import { formatAmount } from "@/domain/money";
 import { ActionForm } from "@/app/action-form";
 import { FileInput } from "@/app/file-input";
@@ -39,10 +41,10 @@ export default async function JournalTestingPage({ params, searchParams }: { par
     if (!engagement) return null;
     const overview = (await ledger.getLedgerOverview(tx, id, filter))!;
     const lines = await ledger.getLinesForEntries(tx, id, overview.entries.map((e) => e.entryNo));
-    return { engagement, overview, lines, auditOverview: await audit.getAuditOverview(tx, id) };
+    return { engagement, overview, lines, auditOverview: await audit.getAuditOverview(tx, id), adoption: (await getAdoption(tx)).state };
   });
   if (!data) notFound();
-  const { engagement, overview, lines, auditOverview } = data;
+  const { engagement, overview, lines, auditOverview, adoption } = data;
 
   const open = engagement.status === "open";
   const enabled = auditOverview?.enabled ?? false;
@@ -79,9 +81,14 @@ export default async function JournalTestingPage({ params, searchParams }: { par
         <p className="max-w-3xl text-sm text-ink-muted">
           Import the client&apos;s journal listing for the period, check it is complete, and select entries to test for management override of controls. A flag is a reason to look at an entry, not a finding.
         </p>
-        <Callout variant="draft" title="Draft methodology">
-          The risk characteristics used here follow the draft methodology ({LIBRARY_STATUS}).
-        </Callout>
+        <MethodologyLabel
+          state={adoption}
+          draft={
+            <Callout variant="draft" title="Draft methodology">
+              The risk characteristics used here follow the draft methodology ({LIBRARY_STATUS}).
+            </Callout>
+          }
+        />
 
         {!enabled ? (
           <Callout variant="info">
