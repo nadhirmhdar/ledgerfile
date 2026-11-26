@@ -55,7 +55,7 @@ afterAll(async () => {
 });
 
 describe("the migration", () => {
-  it("is 0041, append-only for the application role, and another firm sees none", async () => {
+  it("is migration 0041, append-only for the application role, and another firm sees none", async () => {
     expect((await db.query("select 1 from schema_migrations where name = $1", ["0041_signed_prior_figures.sql"])).rows).toHaveLength(1);
     const id = await firstYear();
     const [bank] = await lineKeys(id);

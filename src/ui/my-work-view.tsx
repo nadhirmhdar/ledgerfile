@@ -6,7 +6,7 @@ import { EmptyState } from "./feedback";
 import { ListRow, ListRows } from "./layout";
 import { count } from "./text";
 
-const KIND_TONE: Record<LineKind, "info" | "neutral" | "warning" | "danger"> = { prepare: "info", review: "neutral", yours: "neutral", due: "warning", approve: "warning" };
+const KIND_TONE: Record<LineKind, "info" | "neutral" | "warning" | "danger"> = { prepare: "info", review: "neutral", yours: "neutral", due: "warning", confirm: "warning", approve: "warning" };
 
 /** The sentence under the title. */
 export const myWorkSubtitle = (groups: WorkGroup[]): string =>
