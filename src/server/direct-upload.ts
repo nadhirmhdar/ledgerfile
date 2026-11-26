@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { withFirm, type Db, type Tx } from "./db";
-import { DIRECT_UPLOAD_BYTES, DIRECT_UPLOAD_LABEL, maxUploadBytes, PENDING_UPLOAD_MINUTES, uploadLimitLabel } from "./config";
+import { DIRECT_UPLOAD_BYTES, DIRECT_UPLOAD_LABEL, IMPORT_DIRECT_BYTES, IMPORT_DIRECT_LABEL, maxUploadBytes, PENDING_UPLOAD_MINUTES, uploadLimitLabel } from "./config";
 import { fileStoreKind, FILE_KEY } from "./file-store";
 import type { Session } from "./repo";
 import { UPLOAD_CONTENT_TYPE } from "../ui/upload-view";
@@ -43,6 +43,8 @@ export interface PendingRow {
   description: string | null;
   /** The working paper this upload will be a new version of, when it is one. */
   replacesId: string | null;
+  /** What the upload is for: null (or absent) a working paper, otherwise a spreadsheet import. */
+  purpose?: string | null;
   expiresAt: Date;
 }
 
@@ -71,7 +73,7 @@ export function decideToken(input: { pathname: string; session: { userId: string
   if (row.expiresAt.getTime() <= now.getTime()) throw new Error(REFUSED);
   return {
     // The token cannot write more than was declared (and never more than the hosted maximum).
-    maximumSizeInBytes: Math.min(row.sizeBytes, DIRECT_UPLOAD_BYTES),
+    maximumSizeInBytes: Math.min(row.sizeBytes, row.purpose ? IMPORT_DIRECT_BYTES : DIRECT_UPLOAD_BYTES),
     addRandomSuffix: false,
     allowOverwrite: false,
     // The token dies with the row, so a late write cannot land after the sweep.
@@ -89,9 +91,9 @@ export function arrivalProblem(declaredBytes: number, arrived: { size: number } 
   return null;
 }
 
-type Row = { key: string; firmId: string; engagementId: string; userId: string; targetKind: string; target: string | null; fileName: string; sizeBytes: number; description: string | null; replacesId: string | null; expiresAt: Date | string };
+type Row = { key: string; firmId: string; engagementId: string; userId: string; targetKind: string; target: string | null; fileName: string; sizeBytes: number; description: string | null; replacesId: string | null; purpose: string | null; expiresAt: Date | string };
 const COLUMNS = `key, firm_id as "firmId", engagement_id as "engagementId", user_id as "userId", target_kind as "targetKind", target, file_name as "fileName",
-  size_bytes::float8 as "sizeBytes", description, replaces_id as "replacesId", expires_at as "expiresAt"`;
+  size_bytes::float8 as "sizeBytes", description, replaces_id as "replacesId", purpose, expires_at as "expiresAt"`;
 const toRow = (r: Row): PendingRow => ({ ...r, expiresAt: new Date(r.expiresAt) });
 
 /** The pending row of this user for this key; null when there is none. Row-level security hides every other firm's rows. */
@@ -117,6 +119,11 @@ export async function claimPending(tx: Tx, s: { userId: string }, key: string, n
 export async function sweepExpired(tx: Tx, now: Date): Promise<string[]> {
   const { rows } = await tx.query<{ key: string }>("delete from pending_uploads where expires_at <= $1::timestamptz returning key", [now.toISOString()]);
   return rows.map((r) => r.key);
+}
+
+/** What an import upload also needs: the object's bytes, since it is parsed and then deleted. Reading stops once past the limit. */
+export interface ImportBlobOps extends BlobOps {
+  read(key: string, maxBytes: number): Promise<Uint8Array | null>;
 }
 
 export interface BlobOps {
@@ -198,7 +205,8 @@ async function discard(db: Db, s: Session, ops: BlobOps, key: string) {
 export async function finishDirectUpload(db: Db, s: Session, ops: BlobOps, key: string, now: Date = new Date()): Promise<{ id: string; engagementId: string; fileName: string }> {
   if (!FILE_KEY.test(key)) throw new Error("This upload was not found.");
   const row = await withFirm(db, s.firmId, (tx) => loadPending(tx, s, key));
-  if (!row) throw new Error("This upload was not found. It may already have been finished, or it may have expired.");
+  // An import upload is never a working paper: it is left exactly as it is, for the import that asked for it.
+  if (!row || row.purpose) throw new Error("This upload was not found. It may already have been finished, or it may have expired.");
   if (row.expiresAt.getTime() <= now.getTime()) {
     await discard(db, s, ops, key);
     throw new Error("This upload took too long and has expired. Try uploading the file again.");
@@ -242,4 +250,10 @@ export function workingPaperLimit(env: Record<string, string | undefined> = proc
   const direct = directUploadAvailable(env);
   const bytes = direct ? DIRECT_UPLOAD_BYTES : maxUploadBytes(env);
   return { bytes, label: direct ? DIRECT_UPLOAD_LABEL : uploadLimitLabel(env), direct };
+}
+
+/** What an import form is told: whether a file over the function limit can go straight to the store, and the sizes to show and switch on. */
+export function importLimits(env: Record<string, string | undefined> = process.env): { direct: boolean; maxBytes: number; label: string; viaStoreAbove: number } {
+  const direct = directUploadAvailable(env);
+  return { direct, maxBytes: direct ? IMPORT_DIRECT_BYTES : maxUploadBytes(env), label: direct ? IMPORT_DIRECT_LABEL : uploadLimitLabel(env), viaStoreAbove: maxUploadBytes(env) };
 }

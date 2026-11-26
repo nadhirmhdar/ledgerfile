@@ -101,7 +101,41 @@ export async function inspectBlob(key: string, maxBytes: number, options: { sdk?
 }
 
 /** The operations a direct upload needs from the store, on the real Blob SDK (or one passed in by a test). */
+/**
+ * Read a stored object into memory, stopping as soon as it passes `maxBytes`: null when there is no such object, an array larger than the limit (so the
+ * caller refuses it) when it is too big. Errors name the operation, never the key, URL or token.
+ */
+export async function readBlob(key: string, maxBytes: number, options: { sdk?: BlobSdk } = {}): Promise<Uint8Array | null> {
+  if (typeof window !== "undefined") throw new Error("The storage adapter is server-only.");
+  if (!FILE_KEY.test(key)) throw new Error("Invalid storage key.");
+  const sdk = options.sdk ?? (await realSdk());
+  try {
+    const result = await sdk.get(key, { access: "private" });
+    if (!result || result.statusCode !== 200 || !result.stream) return null;
+    const chunks: Uint8Array[] = [];
+    let size = 0;
+    const reader = result.stream.getReader();
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value);
+      size += value.length;
+      if (size > maxBytes) {
+        await reader.cancel();
+        break;
+      }
+    }
+    return Buffer.concat(chunks);
+  } catch {
+    throw new Error("File storage get failed.");
+  }
+}
+
 export function blobOps(options: { sdk?: BlobSdk } = {}) {
   const store = vercelBlobFileStore(options);
-  return { inspect: (key: string, maxBytes: number) => inspectBlob(key, maxBytes, options), remove: (key: string) => store.remove(key) };
+  return {
+    inspect: (key: string, maxBytes: number) => inspectBlob(key, maxBytes, options),
+    read: (key: string, maxBytes: number) => readBlob(key, maxBytes, options),
+    remove: (key: string) => store.remove(key),
+  };
 }

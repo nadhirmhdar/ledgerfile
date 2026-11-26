@@ -6,6 +6,7 @@ import { formatAmount } from "@/domain/money";
 import { difference, MAX_SCHEDULE_LINES } from "@/domain/test-schedule";
 import { matchListing, type ExistingLine } from "@/domain/rollforward";
 import { importLinesAction, previewListingAction, type ListingPreview } from "@/app/schedule-actions";
+import { uploadForImport } from "@/app/import-upload";
 import { Button } from "@/ui/button";
 import { Disclosure } from "@/ui/controls";
 import { Callout } from "@/ui/feedback";
@@ -18,7 +19,7 @@ const radio = "flex items-start gap-2 text-sm text-ink";
  * Bring in a client's listing by pasting it or uploading a file. It is read and shown first, with what could not be read,
  * and only saved when the user confirms. The preview is kept here, so nothing is lost between the two steps.
  */
-export function ImportListing({ scheduleId, balanceMinor, existingLines, broughtForward }: { scheduleId: string; balanceMinor: number | null; existingLines: (ExistingLine & { amountMinor: number; ticked: boolean })[]; broughtForward: boolean }) {
+export function ImportListing({ scheduleId, balanceMinor, existingLines, broughtForward, limits }: { scheduleId: string; balanceMinor: number | null; existingLines: (ExistingLine & { amountMinor: number; ticked: boolean })[]; broughtForward: boolean; limits?: { direct: boolean; label: string; viaStoreAbove: number } }) {
   const router = useRouter();
   const form = useRef<HTMLFormElement>(null);
   const [preview, setPreview] = useState<ListingPreview | null>(null);
@@ -29,8 +30,19 @@ export function ImportListing({ scheduleId, balanceMinor, existingLines, brought
   const read = () => {
     if (!form.current) return;
     const data = new FormData(form.current);
+    data.set("scheduleId", scheduleId);
     setMessage(null);
-    startTransition(async () => setPreview(await previewListingAction(data)));
+    startTransition(async () => {
+      const file = data.get("file");
+      // A large file goes straight to the store first (hosted); the server reads it, then deletes it.
+      if (limits?.direct && file instanceof File && file.size > limits.viaStoreAbove) {
+        const r = await uploadForImport(file, { purpose: "schedule_listing", scheduleId });
+        if (!r.ok) return setMessage({ ok: false, text: r.message });
+        data.delete("file");
+        data.set("uploadKey", r.key);
+      }
+      setPreview(await previewListingAction(data));
+    });
   };
   const save = () => {
     if (!preview) return;
@@ -54,7 +66,7 @@ export function ImportListing({ scheduleId, balanceMinor, existingLines, brought
     <Disclosure summary="Import a listing from the client" className="mt-3">
       <p className="text-sm text-ink-muted">
         Paste from Excel, or upload an .xlsx or .csv file. It needs a heading row with a description column (such as Description, Name or Supplier) and an amount column
-        (such as Amount or Balance); a reference column is used if there is one. A schedule holds at most {MAX_SCHEDULE_LINES.toLocaleString("en-US")} lines.
+        (such as Amount or Balance); a reference column is used if there is one. A schedule holds at most {MAX_SCHEDULE_LINES.toLocaleString("en-US")} lines.{limits?.direct ? ` Files up to ${limits.label}.` : ""}
       </p>
       <form ref={form} className="mt-3 space-y-3" onSubmit={(e) => e.preventDefault()}>
         <Field label="Paste the listing">

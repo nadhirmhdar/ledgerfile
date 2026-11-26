@@ -7,6 +7,7 @@ import { getSession } from "@/server/session";
 import type { Session } from "@/server/repo";
 import * as schedules from "@/server/test-schedules";
 import { readGrid } from "@/server/excel";
+import { engagementOfSchedule, importFileFrom, type ImportFile } from "@/server/import-source";
 import { gridFromText, parseListing, type ListingLine, type ListingRejected } from "@/domain/listing-parse";
 import { MAX_SCHEDULE_LINES } from "@/domain/test-schedule";
 import type { FormState } from "./actions";
@@ -92,15 +93,22 @@ export interface ListingPreview {
 
 /** Read a pasted listing or an uploaded file and show what would be imported. Nothing is saved. */
 export async function previewListingAction(form: FormData): Promise<ListingPreview> {
-  await getSession();
+  const session = await getSession();
   const fail = (message: string): ListingPreview => ({ ok: false, message, lines: [], rejected: [], errors: [message], totalMinor: 0 });
-  const file = form.get("file");
+  let source: ImportFile | null = null;
+  try {
+    const scheduleId = field(form, "scheduleId");
+    source = await importFileFrom(form, session, "schedule_listing", form.get("uploadKey") ? ((await engagementOfSchedule(session, scheduleId)) ?? "") : "", scheduleId || null);
+  } catch (e) {
+    return fail(e instanceof Error && !("code" in e) ? e.message : "The file could not be read.");
+  }
   const pasted = field(form, "pasted");
   let grid: unknown[][];
-  if (file instanceof File && file.size > 0) {
+  if (source) {
+    const { file, maxBytes } = source;
     try {
       // A little over the line limit is read, so an over-long listing is reported and never silently cut short.
-      grid = await readGrid(file.name, await file.arrayBuffer(), MAX_SCHEDULE_LINES + 200);
+      grid = await readGrid(file.name, await file.arrayBuffer(), MAX_SCHEDULE_LINES + 200, { maxBytes });
     } catch (e) {
       return fail(e instanceof Error ? e.message : "The file could not be read.");
     }

@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState, useRef, useState } from "react";
+import { startTransition, useActionState, useRef, useState } from "react";
+import { uploadForImport } from "./import-upload";
 import { buttonClass } from "@/ui/button";
 import { Field, Input, Select } from "@/ui/form";
 import { plainCount } from "@/ui/text";
@@ -101,7 +102,9 @@ const columnName = (c: number) => (c < 26 ? String.fromCharCode(65 + c) : `${c +
  * kept here, in the component, because a form action empties a file input; the server reads the file again on every step and takes from the form only the
  * columns a person changed, so what is imported is what the preview read.
  */
-export function UploadForm({ engagementId, hasAccounts }: { engagementId: string; hasAccounts: boolean }) {
+export function UploadForm({ engagementId, hasAccounts, limits }: { engagementId: string; hasAccounts: boolean; limits?: { direct: boolean; label: string; viaStoreAbove: number } }) {
+  const [sending, setSending] = useState(false);
+  const [uploadProblem, setUploadProblem] = useState("");
   const [state, action, pending] = useActionState(uploadTrialBalanceAction, initial);
   const [file, setFile] = useState<File | null>(null);
   const [dismissed, setDismissed] = useState<FormState | null>(null);
@@ -119,6 +122,20 @@ export function UploadForm({ engagementId, hasAccounts }: { engagementId: string
     ask.current = false;
     form.set("intent", step.current);
     step.current = "preview";
+    setUploadProblem("");
+    const chosen = form.get("file");
+    // A large file goes straight to the store first (hosted), for each step: the server reads it, then deletes it.
+    if (limits?.direct && chosen instanceof File && chosen.size > limits.viaStoreAbove) {
+      setSending(true);
+      void uploadForImport(chosen, { purpose: "trial_balance", engagementId }).then((r) => {
+        setSending(false);
+        if (!r.ok) return setUploadProblem(r.message);
+        form.delete("file");
+        form.set("uploadKey", r.key);
+        startTransition(() => action(form));
+      });
+      return;
+    }
     action(form);
   };
   const reread = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -356,6 +373,7 @@ export function UploadForm({ engagementId, hasAccounts }: { engagementId: string
               Choose columns
             </button>
           </div>
+          {limits?.direct && <p className="mt-2 text-sm text-ink-muted">Files up to {limits.label}.</p>}
           <p className="mt-2 text-sm text-ink-muted">
             Needs a column for account code or name, and either Debit and Credit columns or one Balance column. A Prior Year column is optional. You see what would be imported, and can change the columns, before anything is saved. If the columns are not found, or you want to say which is which, choose them: they are remembered for this client.
           </p>
@@ -364,6 +382,8 @@ export function UploadForm({ engagementId, hasAccounts }: { engagementId: string
           </p>
         </>
       )}
+      {sending && <p role="status" className="mt-3 text-sm font-medium text-ink-muted">Uploading the file…</p>}
+      {uploadProblem && <p role="status" className="mt-3 text-sm font-medium text-danger-strong">{uploadProblem}</p>}
       <Feedback state={state} />
       {!state.ok && state.message && (
         <p className="mt-2 text-sm">
