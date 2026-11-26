@@ -14,6 +14,7 @@
     "seed:sample-hosted": "tsx --env-file-if-exists=.env.vercel scripts/seed-sample-hosted.mts",
     "db:migrate": "tsx --env-file-if-exists=.env.vercel scripts/migrate.mts",
     "db:setup-hosted": "tsx --env-file-if-exists=.env.vercel scripts/setup-hosted.mts",
+    "smoke:hosted": "tsx scripts/smoke-hosted.mts",
     "sample:statements": "tsx scripts/sample-statements.mts",
     "methodology": "tsx scripts/build-methodology.mts"
   },

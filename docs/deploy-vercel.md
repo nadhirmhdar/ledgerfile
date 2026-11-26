@@ -75,6 +75,31 @@ Put the Vercel function region next to the Neon region ([function regions](https
 
 Vercel's Hobby plan is "for your personal or non-commercial use" ([terms, section 4](https://vercel.com/legal/terms), last updated 2026-10-19). A firm using LedgerFile for client work needs the Pro plan.
 
+## After a deploy
+
+A short read-only check of the deployed site, run by hand from a checkout. It is not part of CI.
+
+Set three variables in the terminal you run it from (do not put them in a file in the repository):
+
+| Variable | What it is |
+| --- | --- |
+| `SMOKE_BASE_URL` | The site's address. It must be https (http is accepted for localhost only). |
+| `SMOKE_EMAIL` | The sign-in to check with. An administrator sign-in checks the most pages. |
+| `SMOKE_PASSWORD` | Its password. |
+
+```
+npm run smoke:hosted
+```
+
+It signs in, opens the home page, My work, Clients, the first engagement on the home page (overview, Trial balance, Lead sheets, Statements, Audit, Review, Index), Firm, the audit log, Retention and Account, then signs out.
+
+- `PASS Statements`: the page answered 200 and showed its heading.
+- `FAIL Statements (status 500)`, or `(heading not found)`, `(no answer)`, `(timed out)`: look at that page and at the function logs.
+- `SKIP Firm (not offered to this sign-in)`: the role does not have that page.
+- The last line counts them. The exit code is not zero when anything failed.
+
+The output holds page names only: no address, sign-in, cookie, client name or page text. Signing in and signing out are the only requests that change anything: a session is made and then ended, and the sign-in is written to the audit log. Use the right password: wrong ones count towards the account's lockout. A hosted site refuses the public demo password.
+
 ## What was and was not verified
 
 - **In CI, against real PostgreSQL 17** (a throwaway service container; the owner role is not a superuser but can create roles and databases, as Neon's is): `npm run db:setup-hosted` runs twice; `ledgerfile_app` logs in with the plaintext password after being created from a SCRAM verifier; the runtime URL is built from Neon-style variable names; the runtime test signs up, signs in, looks up a session, adds a user and checks two-firm isolation as `ledgerfile_app`; every database-backed test file runs through the adapter.
