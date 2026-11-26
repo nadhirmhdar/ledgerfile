@@ -53,6 +53,7 @@ const LABEL: Record<string, string> = {
   "review_point:respond": "Responded to a review point",
   "review_point:reply": "Replied on a review point",
   "review_point:clear": "Cleared a review point",
+  "engagement:export_whole_file": "Downloaded the whole file",
   "engagement:lock": "Locked the engagement",
   "engagement:unlock": "Unlocked the engagement",
   "engagement:archive": "Archived the file",
