@@ -131,6 +131,7 @@ const RULES: { re: RegExp; where: Where; owner?: "reviewer" | "partner"; say: (m
   { re: /^Audit: the benchmark figure has changed since materiality was set\./, where: "audit", owner: "reviewer", say: () => "Revise or confirm materiality again" },
   { re: /^Audit: risk has not been assessed for (\d+) area\(s\)\.$/, where: "audit", owner: "reviewer", say: (m) => `Assess risk in ${count(+m[1], "area")}` },
   { re: /^Audit: the programme has not been loaded for (\d+) area\(s\)\.$/, where: "audit", owner: "reviewer", say: (m) => `Load the audit programme for ${count(+m[1], "area")}` },
+  { re: /^The partner has approved acceptance and planning: (.+?)\.$/, where: "audit", owner: "partner", say: (m) => `Partner approval needed: ${m[1]}` },
   { re: /^Audit: the partner has not approved the risk assessment\.$/, where: "audit", owner: "partner", say: () => "Get the risk assessment approved by a partner" },
   { re: /^Audit: the risk assessment has changed since the partner approved it\./, where: "audit", owner: "partner", say: () => "Approve the risk assessment again" },
   { re: /^Audit: (\d+) procedure\(s\) and checklist step\(s\) are not yet completed\.$/, where: "audit", say: (m) => `${count(+m[1], "audit procedure or checklist step", "audit procedures or checklist steps")} to complete` },

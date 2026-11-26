@@ -23,6 +23,9 @@ import { ctl, ctlWarn, Disclosure, fieldLabel } from "@/ui/controls";
 import { Callout, EmptyState, ProgressBar } from "@/ui/feedback";
 import { Card, ListRow, ListRows, PageHeader, Section, Stat, EngagementFacts } from "@/ui/layout";
 import { Table, TCell, THead, TRow } from "@/ui/table";
+import { getApprovals } from "@/server/partner-approvals";
+import { PartnerApprovalsSection } from "@/ui/partner-approvals-section";
+import { canLock } from "@/domain/signoff";
 import { approvalView, checklistPill, mayDo, planningSentence, planningSteps, programmeProgress, riskSummary, stepTone, waitingFor } from "@/ui/audit-view";
 import { ExpandRow } from "@/ui/area-row";
 import { count, plainCount } from "@/ui/text";
@@ -41,7 +44,7 @@ export default async function AuditPage({ params }: { params: Promise<{ id: stri
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
 
   const session = await getSession();
-  const { engagement, overview, planned, revenue, significance, adoption, areaTeams, team } = await withFirm(await getDb(), session.firmId, async (tx) => ({
+  const { engagement, overview, planned, revenue, significance, adoption, areaTeams, team, approvals } = await withFirm(await getDb(), session.firmId, async (tx) => ({
     engagement: await repo.getEngagement(tx, id),
     overview: await audit.getAuditOverview(tx, id),
     planned: await getAnsweredDerivation(tx, id),
@@ -50,6 +53,7 @@ export default async function AuditPage({ params }: { params: Promise<{ id: stri
     adoption: (await getAdoption(tx)).state,
     areaTeams: await listAreaAssignments(tx, id),
     team: await getEngagementTeam(tx, id),
+    approvals: await getApprovals(tx, id),
   }));
   if (!engagement || !overview) notFound();
 
@@ -151,6 +155,14 @@ export default async function AuditPage({ params }: { params: Promise<{ id: stri
                 ))}
               </ListRows>
             </Section>
+
+            <PartnerApprovalsSection
+              engagementId={id}
+              approvals={approvals}
+              partnerAssigned={!!team?.partner}
+              isPartner={team?.partner?.id === session.userId && canLock(session.role)}
+              open={open}
+            />
 
             <Section title="Materiality" id="materiality">
               {m ? (
