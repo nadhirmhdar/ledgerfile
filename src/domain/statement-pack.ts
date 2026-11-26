@@ -1,7 +1,8 @@
 import { GROUPS, GROUP_BY_CODE } from "./groups";
 import { applicablePolicies, POLICY_REVIEW_NOTICE } from "./policies";
 import { BASIS_KEY, GENERAL_KEY, groupKey, POLICIES_KEY, policyKey } from "./note-texts";
-import { buildStatements, type Check, type StatementAccount, type StatementLine, type Statements } from "./statements";
+import { placeholderCount } from "./placeholders";
+import { buildStatements, severityOf, type Check, type StatementAccount, type StatementLine, type Statements } from "./statements";
 
 /**
  * The full set of financial statements: the two primary statements from statements.ts
@@ -113,6 +114,102 @@ export function roundAccounts(accounts: PackAccount[], unitMinor: number): { acc
     }
   }
   return { accounts: rounded, rounding };
+}
+
+// --- Consistency checks ---------------------------------------------------------
+
+export const PROFIT_CHECK_LABEL = "Profit for the year agrees across the statements";
+export const NOTE_TOTALS_CHECK_LABEL = "Every note total agrees to its line on the statements";
+export const PLACEHOLDERS_CHECK_LABEL = "No placeholders left in the notes";
+export const CASH_FLOW_CHECK_LABEL = "Cash flow statement agrees to the movement in cash";
+export const EQUITY_CHECK_LABEL = "Statement of changes in equity agrees to total equity";
+/**
+ * The pack's own error checks, which stop a lock as the statements' base checks do: the cash flow and the equity statement agree, profit agrees across
+ * the statements, and every note agrees to its line. The placeholder check is a warning and never does.
+ */
+export const PACK_BLOCKING_CHECK_LABELS = [CASH_FLOW_CHECK_LABEL, EQUITY_CHECK_LABEL, PROFIT_CHECK_LABEL, NOTE_TOTALS_CHECK_LABEL];
+/** The labels of the pack checks that fail and stop a lock. */
+export const packBlockers = (checks: Check[]): string[] => checks.filter((c) => !c.passed && PACK_BLOCKING_CHECK_LABELS.includes(c.label)).map((c) => c.label);
+
+const MAX_NOTES_LISTED = 5;
+const shown = (minor: number, unitMinor: number) =>
+  (minor / 100).toLocaleString("en-US", { minimumFractionDigits: unitMinor > 1 ? 0 : 2, maximumFractionDigits: unitMinor > 1 ? 0 : 2 });
+
+/** What the two checks read: the pieces of a built pack. A test can change one of them and run the checks again. */
+export interface ConsistencyParts {
+  base: Statements;
+  equity: EquityStatement | null;
+  cashFlow: CashFlowStatement | null;
+  notes: Note[];
+  unitMinor: number;
+}
+
+/**
+ * Why these hold under whole-unit rounding. Rounding is done once, on the accounts (roundAccounts), and the difference it leaves is put through one
+ * nominated account, so the trial balance still adds to zero. Every statement, note and lead sheet is then built from those same rounded accounts, by
+ * adding whole numbers, so two figures that mean the same thing are the same integer: nothing is rounded a second time on the way to a statement. The
+ * one figure rounded separately, the current portion of borrowings, is taken out of the non-current line and shown as its own line, so the lines of
+ * the group still add to the group total.
+ */
+export function consistencyChecks({ base, equity, cashFlow, notes, unitMinor }: ConsistencyParts): Check[] {
+  const money = (n: number) => shown(n, unitMinor);
+  const line = (key: string) => base.comprehensiveIncome.find((l) => l.key === key);
+
+  // 1. Profit for the year, from the income statement, the statement of changes in equity and the cash flow statement.
+  const profit = line("PROFIT")?.current ?? 0;
+  const tax = line("TAXEXP")?.current ?? 0;
+  const profitProblems: string[] = [];
+  if (equity) {
+    const inEquity = equity.rows.find((r) => r.key === "profit")?.total ?? 0;
+    if (inEquity !== profit) profitProblems.push(`the statement of changes in equity shows ${money(inEquity)}, ${money(inEquity - profit)} different`);
+  }
+  if (cashFlow) {
+    const start = cashFlow.sections.flatMap((s) => s.lines).find((l) => l.key === "PBT")?.current ?? 0;
+    const implied = start - tax;
+    if (implied !== profit) profitProblems.push(`the cash flow statement starts from profit before tax of ${money(start)}, which gives ${money(implied)} after tax, ${money(implied - profit)} different`);
+  }
+  const profitCheck: Check = {
+    label: PROFIT_CHECK_LABEL,
+    passed: profitProblems.length === 0,
+    detail: profitProblems.length === 0 ? undefined : `The income statement shows profit for the year of ${money(profit)}, but ${profitProblems.join(", and ")}.`,
+  };
+
+  // 2. Each note's table total against the line it supports, in presentation sign, for each year the statements show.
+  const faceLines = [...base.comprehensiveIncome, ...base.financialPosition.flatMap((s) => s.lines)];
+  const differences = notes.flatMap((n) => {
+    if (!n.table || !n.groupCode) return [];
+    // The statement can split a group over more than one line (borrowings: non-current and the current portion), so its face is their sum.
+    const face = faceLines.filter((l) => l.groupCode === n.groupCode);
+    const faceCurrent = face.reduce((s, l) => s + l.current, 0);
+    const facePrior = face.reduce((s, l) => s + l.prior, 0);
+    const parts: string[] = [];
+    if (n.table.totalCurrent !== faceCurrent) parts.push(`note total ${money(n.table.totalCurrent)}, statements ${money(faceCurrent)}, difference ${money(n.table.totalCurrent - faceCurrent)}`);
+    if (base.hasComparatives && n.table.totalPrior !== facePrior) parts.push(`prior year: note total ${money(n.table.totalPrior)}, statements ${money(facePrior)}, difference ${money(n.table.totalPrior - facePrior)}`);
+    return parts.length === 0 ? [] : [`Note ${n.number}, ${n.title}: ${parts.join("; ")}`];
+  });
+  const noteCheck: Check = {
+    label: NOTE_TOTALS_CHECK_LABEL,
+    passed: differences.length === 0,
+    detail: differences.length === 0 ? undefined : `${differences.length} note(s) do not agree to the statements.`,
+    items: differences.length === 0 ? undefined : [...differences.slice(0, MAX_NOTES_LISTED), ...(differences.length > MAX_NOTES_LISTED ? [`and ${differences.length - MAX_NOTES_LISTED} more`] : [])],
+  };
+  return [profitCheck, noteCheck];
+}
+
+/** A warning, never an error: the notes still have [bracketed] wording for the preparer. Counted with the same helper the page uses. */
+export function placeholderCheck(notes: Note[]): Check {
+  const perNote = notes
+    .map((n) => ({ number: n.number, count: placeholderCount([...n.paragraphs, ...(n.subsections ?? []).flatMap((x) => x.paragraphs)]) }))
+    .filter((n) => n.count > 0);
+  const total = perNote.reduce((s, n) => s + n.count, 0);
+  const list = perNote.map((n) => String(n.number));
+  const where = list.length <= 1 ? list[0] : `${list.slice(0, -1).join(", ")} and ${list[list.length - 1]}`;
+  return {
+    label: PLACEHOLDERS_CHECK_LABEL,
+    passed: total === 0,
+    severity: "warning",
+    detail: total === 0 ? undefined : `${total} placeholder${total === 1 ? "" : "s"} still to complete, in note${list.length === 1 ? "" : "s"} ${where}.`,
+  };
 }
 
 // --- The pack -----------------------------------------------------------------
@@ -284,7 +381,7 @@ export function buildStatementPack(
   if (cashFlow) {
     const diff = cashFlow.netChange - (cashFlow.closing - cashFlow.opening);
     checks.push({
-      label: "Cash flow statement agrees to the movement in cash",
+      label: CASH_FLOW_CHECK_LABEL,
       passed: diff === 0,
       detail: diff === 0 ? undefined : "The derived cash flows do not explain the change in cash; check that every account is mapped and both years balance.",
     });
@@ -292,8 +389,11 @@ export function buildStatementPack(
   if (equity) {
     const closing = equity.rows[3].total;
     const sfpEquity = base.financialPosition.flatMap((s) => s.lines).find((l) => l.key === "TOTAL_EQUITY")?.current ?? 0;
-    checks.push({ label: "Statement of changes in equity agrees to total equity", passed: closing === sfpEquity });
+    checks.push({ label: EQUITY_CHECK_LABEL, passed: closing === sfpEquity });
   }
 
-  return { base, equity, cashFlow, notes, noteByGroup, rounding, checks, clean: checks.every((x) => x.passed) };
+  checks.push(...consistencyChecks({ base, equity, cashFlow, notes, unitMinor: unit }), placeholderCheck(notes));
+
+  // A warning never changes `clean`: only error checks do.
+  return { base, equity, cashFlow, notes, noteByGroup, rounding, checks, clean: checks.every((x) => x.passed || severityOf(x) === "warning") };
 }

@@ -5,6 +5,7 @@ import { getAdoption } from "./methodology-adoption";
 import { lockAdoption } from "../domain/methodology-adoption";
 import { buildLeadSheets } from "../domain/leadsheet";
 import { buildStatements } from "../domain/statements";
+import { buildStatementPack, packBlockers } from "../domain/statement-pack";
 import { GROUP_BY_CODE } from "../domain/groups";
 import { canLock, canReview, lockReadiness, signOffBlocker, type Level, type LockReadiness, type Role } from "../domain/signoff";
 
@@ -80,6 +81,8 @@ export async function getOverview(tx: Tx, engagementId: string): Promise<ReviewO
   const accounts = (await listAccounts(tx, engagementId)).map((a) => ({ ...a, closingMinor: a.closingMinor + a.adjustmentMinor }));
   const sheets = buildLeadSheets(accounts).sheets;
   const statements = buildStatements(accounts, { borrowingsCurrent: { current: lock.rows[0].splitCurrent, prior: lock.rows[0].splitPrior } });
+  // The pack's own error checks (cash flow, equity, profit across the statements, note totals) stop a lock like the base checks. The placeholder warning never does.
+  const consistency = packBlockers(buildStatementPack(accounts, { borrowingsCurrent: { current: lock.rows[0].splitCurrent, prior: lock.rows[0].splitPrior } }).checks);
 
   const signOffs = await tx.query<{ target: string; level: Level; userId: string; name: string; at: string }>(
     `select s.target, s.level, s.user_id as "userId", u.name, to_char(s.signed_at, 'YYYY-MM-DD') as at
@@ -132,8 +135,8 @@ export async function getOverview(tx: Tx, engagementId: string): Promise<ReviewO
     leadSheets,
     points: points.rows.map((p) => ({ ...p, targetName: targetName(p.target) })),
     readiness: lockReadiness({
-      statementsClean: statements.clean,
-      failedChecks: statements.checks.filter((c) => !c.passed).map((c) => c.label),
+      statementsClean: statements.clean && consistency.length === 0,
+      failedChecks: [...statements.checks.filter((c) => !c.passed).map((c) => c.label), ...consistency],
       leadSheets: leadSheets.map((l) => ({ name: l.groupName, prepared: !!l.preparer, reviewed: !!l.reviewer })),
       openPoints: points.rows.filter((p) => p.status === "open").length,
     }),
