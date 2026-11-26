@@ -42,7 +42,7 @@ export async function getMyWork(tx: Tx, s: Session, today: string): Promise<Work
   if (engagements.length === 0) return [];
   const ids = engagements.map((e) => e.id);
 
-  const [procedures, schedules, confirmations, points, signOffs, areaRows] = await Promise.all([
+  const [procedures, schedules, confirmations, points, signOffs, areaRows, ownIndependence] = await Promise.all([
     tx.query<{ engagementId: string; areaCode: string; open: number; awaiting: number }>(
       `select engagement_id as "engagementId", area_code as "areaCode",
               count(*) filter (where status = 'open')::int as open, count(*) filter (where ${PROCEDURE_AWAITING_REVIEW})::int as awaiting
@@ -77,7 +77,13 @@ export async function getMyWork(tx: Tx, s: Session, today: string): Promise<Work
        from engagement_area_assignments where engagement_id = any($1::uuid[])`,
       [ids],
     ),
+    tx.query<{ engagementId: string; stages: number }>(
+      `select engagement_id as "engagementId", count(distinct stage)::int as stages from independence_confirmations
+       where engagement_id = any($1::uuid[]) and user_id = $2 group by engagement_id`,
+      [ids, s.userId],
+    ),
   ]);
+  const confirmedStages = new Map(ownIndependence.rows.map((r) => [r.engagementId, r.stages]));
 
   const by = <T extends { engagementId: string }>(rows: T[]) => {
     const map = new Map<string, T[]>();
@@ -160,6 +166,12 @@ export async function getMyWork(tx: Tx, s: Session, today: string): Promise<Work
     if (!reviewSide) {
       const mine = myPoints.filter((p) => p.authorId === s.userId && p.answered).length;
       add({ slug: "yours", kind: "yours", label: `${count(mine, "review point")} you raised ${mine === 1 ? "has" : "have"} an answer`, count: mine, href: `${base}/review` });
+    }
+
+    // Independence: a person on this file's team (its roles or an area) who has not confirmed both stages gets one line.
+    const onTeam = asPreparer || asReviewer || asPartner || [...own.values()].some((a) => a.preparerId === s.userId || a.reviewerId === s.userId);
+    if (onTeam && (confirmedStages.get(e.id) ?? 0) < 2) {
+      add({ slug: "independence", kind: "confirm", label: "Independence not confirmed", count: 1, href: `${base}#independence` });
     }
 
     // (d) Report due: only for an engagement the person is on.

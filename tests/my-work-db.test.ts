@@ -47,6 +47,11 @@ async function newEngagement(name: string, team: { preparer?: repo.Session; revi
     return e;
   });
   await as(partner, (tx) => assignTeam(tx, partner, id, { preparerId: team.preparer?.userId ?? null, reviewerId: team.reviewer?.userId ?? null, partnerId: team.partner?.userId ?? null, reportDueOn: team.due ?? null }));
+  // The team has confirmed independence, so these tests are about the other work (the independence line has its own tests).
+  for (const member of [team.preparer, team.reviewer, team.partner]) {
+    if (!member) continue;
+    for (const stage of ["planning", "completion"]) await db.query("insert into independence_confirmations (firm_id, engagement_id, user_id, stage, outcome) values ($1, $2, $3, $4, 'confirmed')", [member.firmId, id, member.userId, stage]);
+  }
   return id;
 }
 

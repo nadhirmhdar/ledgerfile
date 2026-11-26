@@ -28,6 +28,9 @@ import { ASSEMBLY_RULE } from "@/domain/archiving";
 import { todayIso } from "@/domain/client-requests";
 import { canLock } from "@/domain/signoff";
 import { LOCK_REASON_MAX, LOCK_REASON_MIN } from "@/domain/prior-year-checks";
+import { independenceCheck } from "@/domain/independence";
+import { getIndependence } from "@/server/independence";
+import { IndependenceWarning } from "@/ui/independence-warning";
 import { ARCHIVE_IRREVERSIBLE, ARCHIVE_PREVENTS, ARCHIVE_STAYS, archiveSection, deadlineView } from "@/ui/archive-view";
 import { Card, PageHeader, Section, EngagementFacts } from "@/ui/layout";
 import { ToDoRows } from "@/ui/todo-rows";
@@ -43,12 +46,14 @@ export default async function ReviewPage({ params }: { params: Promise<{ id: str
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
 
   const session = await getSession();
-  const { engagement, overview, revenue, explain } = await withFirm(await getDb(), session.firmId, async (tx) => ({
+  const { engagement, overview, revenue, explain, independence } = await withFirm(await getDb(), session.firmId, async (tx) => ({
     engagement: await repo.getEngagement(tx, id),
     overview: await review.getOverview(tx, id),
     revenue: await getRevenuePresumption(tx, id),
     // Only a partner who can lock is asked: with last year signed and the comparatives differing, a reason is needed.
     explain: canLock(session.role) ? await review.lockExplanationNeeded(tx, session.firmId, id) : null,
+    // A warning beside the lock; it never stops it (whether it should is an owner decision not taken).
+    independence: await getIndependence(tx, id),
   }));
   if (!engagement || !overview) notFound();
 
@@ -119,6 +124,7 @@ export default async function ReviewPage({ params }: { params: Promise<{ id: str
             A partner rebutted the presumed significant risk on revenue recognition (C13, ISA 240). Reason: {revenue.reason} Rebutted by {revenue.by} on {revenue.at}.
           </Callout>
         )}
+        {open && <IndependenceWarning check={independenceCheck(independence)} />}
         {view.state === "locked" ? (
           <>
             <Card title={archived ? "Archived" : "Locked"}>
