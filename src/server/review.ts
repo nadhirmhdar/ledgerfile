@@ -30,8 +30,19 @@ export interface LeadSheetReview {
   openPoints: number;
 }
 
+/** One reply in a review point's thread, oldest first. A response written before threads existed is read from the point itself and shown first, with no date. */
+export interface ThreadReply {
+  id: string;
+  authorName: string;
+  body: string;
+  /** YYYY-MM-DD; null for a response written before the date was kept. */
+  writtenAt: string | null;
+  legacy: boolean;
+}
+
 export interface ReviewPoint {
   id: string;
+  authorId: string;
   target: string;
   targetName: string;
   body: string;
@@ -39,6 +50,8 @@ export interface ReviewPoint {
   createdAt: string;
   response: string | null;
   responderName: string | null;
+  /** The reply thread. When the point has no replies yet but has a single older response, that response is the one entry. */
+  thread: ThreadReply[];
   status: "open" | "cleared";
   clearedByName: string | null;
 }
@@ -91,8 +104,8 @@ export async function getOverview(tx: Tx, engagementId: string): Promise<ReviewO
      from sign_offs s join users u on u.id = s.user_id where s.engagement_id = $1`,
     [engagementId],
   );
-  const points = await tx.query<Omit<ReviewPoint, "targetName">>(
-    `select p.id, p.target, p.body, a.name as "authorName", to_char(p.created_at, 'YYYY-MM-DD') as "createdAt",
+  const pointRows = await tx.query<Omit<ReviewPoint, "targetName" | "thread">>(
+    `select p.id, p.author_id as "authorId", p.target, p.body, a.name as "authorName", to_char(p.created_at, 'YYYY-MM-DD') as "createdAt",
             p.response, r.name as "responderName", p.status, c.name as "clearedByName"
      from review_points p
      join users a on a.id = p.author_id
@@ -102,6 +115,20 @@ export async function getOverview(tx: Tx, engagementId: string): Promise<ReviewO
      order by (p.status = 'cleared'), p.created_at`,
     [engagementId],
   );
+
+  const replies = await tx.query<{ pointId: string; id: string; authorName: string; body: string; writtenAt: string; legacy: boolean }>(
+    `select r.point_id as "pointId", r.id::text as id, u.name as "authorName", r.body, to_char(r.written_at, 'YYYY-MM-DD') as "writtenAt", r.legacy
+     from review_point_replies r join users u on u.id = r.author_id where r.engagement_id = $1 order by r.id`,
+    [engagementId],
+  );
+  const points = {
+    rows: pointRows.rows.map((p): Omit<ReviewPoint, "targetName"> => {
+      const own = replies.rows.filter((r) => r.pointId === p.id).map((r) => ({ id: r.id, authorName: r.authorName, body: r.body, legacy: r.legacy, writtenAt: r.legacy ? null : r.writtenAt }));
+      // No backfill: an older single response is read from the column and shown as the first reply until the point is first replied to.
+      const thread: ThreadReply[] = own.length === 0 && p.response ? [{ id: "legacy", authorName: p.responderName ?? "Unknown", body: p.response, writtenAt: null, legacy: true }] : own;
+      return { ...p, thread };
+    }),
+  };
 
   const solePractitioner = await isSolePractitioner(tx);
 
@@ -206,8 +233,8 @@ export async function addReviewPoint(tx: Tx, actor: Actor, engagementId: string,
 }
 
 async function openPoint(tx: Tx, pointId: string) {
-  const { rows } = await tx.query<{ engagementId: string; status: string }>(
-    'select engagement_id as "engagementId", status from review_points where id = $1',
+  const { rows } = await tx.query<{ engagementId: string; status: string; authorId: string }>(
+    'select engagement_id as "engagementId", status, author_id as "authorId" from review_points where id = $1',
     [pointId],
   );
   if (rows.length === 0) throw new Error("Review point not found.");
@@ -216,14 +243,41 @@ async function openPoint(tx: Tx, pointId: string) {
   return rows[0];
 }
 
-export async function respondToReviewPoint(tx: Tx, actor: Actor, pointId: string, response: string): Promise<void> {
+/**
+ * Reply on a review point. Anyone in the firm may reply, as anyone may respond today; the reviewer or partner who raised the point answers back the
+ * same way. Only on an open point of an open engagement. The thread is append-only.
+ *
+ * "Answered" keeps its meaning everywhere (review_points.response is not null): a reply by someone other than the point's author sets response and
+ * responded_by to that reply, as respond always did; a reply by the author, asking again, clears both, so the point waits for a response again.
+ */
+export async function replyToReviewPoint(tx: Tx, actor: Actor, pointId: string, reply: string): Promise<void> {
   const point = await openPoint(tx, pointId);
-  const text = response.trim();
-  if (text.length < 2) throw new Error("Write a response.");
-  if (text.length > 2000) throw new Error("The response is too long.");
-  await tx.query("update review_points set response = $2, responded_by = $3 where id = $1", [pointId, text, actor.userId]);
-  await audit(tx, actor, "respond", "review_point", pointId, { engagementId: point.engagementId, response: text });
+  const text = reply.trim();
+  if (text.length < 2) throw new Error("Write a reply.");
+  if (text.length > 2000) throw new Error("The reply is too long.");
+  // A response written before threads existed would be overwritten below, so it is first kept in the thread as its own entry.
+  const earlier = await tx.query<{ n: number; response: string | null; respondedBy: string | null }>(
+    `select (select count(*)::int from review_point_replies where point_id = $1) as n, response, responded_by as "respondedBy" from review_points where id = $1`,
+    [pointId],
+  );
+  if (earlier.rows[0].n === 0 && earlier.rows[0].response && earlier.rows[0].respondedBy) {
+    await tx.query("insert into review_point_replies (firm_id, engagement_id, point_id, author_id, body, legacy) values ($1, $2, $3, $4, $5, true)", [
+      actor.firmId,
+      point.engagementId,
+      pointId,
+      earlier.rows[0].respondedBy,
+      earlier.rows[0].response,
+    ]);
+  }
+  await tx.query("insert into review_point_replies (firm_id, engagement_id, point_id, author_id, body) values ($1, $2, $3, $4, $5)", [actor.firmId, point.engagementId, pointId, actor.userId, text]);
+  const byAuthor = actor.userId === point.authorId;
+  if (byAuthor) await tx.query("update review_points set response = null, responded_by = null where id = $1", [pointId]);
+  else await tx.query("update review_points set response = $2, responded_by = $3 where id = $1", [pointId, text, actor.userId]);
+  await audit(tx, actor, "reply", "review_point", pointId, { engagementId: point.engagementId, byAuthor, answered: !byAuthor, reply: text });
 }
+
+/** The name the form and older callers use: responding is replying. */
+export const respondToReviewPoint = replyToReviewPoint;
 
 export async function clearReviewPoint(tx: Tx, actor: Actor, pointId: string): Promise<void> {
   const point = await openPoint(tx, pointId);

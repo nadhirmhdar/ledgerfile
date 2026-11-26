@@ -202,8 +202,8 @@ describe("other changes that invalidate sign-offs", () => {
   });
 
   it("keeps the text of every response in the audit log", async () => {
-    const log = await db.query<{ detail: { response: string } }>("select detail from audit_log where action = 'respond'");
-    expect(log.rows[0].detail.response).toContain("Agreed to confirmation");
+    const log = await db.query<{ detail: { reply: string } }>("select detail from audit_log where action = 'reply'");
+    expect(log.rows[0].detail.reply).toContain("Agreed to confirmation");
   });
 });
 

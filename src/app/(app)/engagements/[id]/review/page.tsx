@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Thread } from "@/ui/review-thread";
 import { notFound } from "next/navigation";
 import { getDb, withFirm } from "@/server/db";
 import { getSession } from "@/server/session";
@@ -340,25 +341,24 @@ export default async function ReviewPage({ params }: { params: Promise<{ id: str
                   <li key={p.id}>
                     <Card>
                       <div className="flex flex-wrap items-start justify-between gap-2">
-                        <p className="text-sm text-ink-muted">
-                          {p.targetName} · raised by {p.authorName} on {p.createdAt}
+                        <p className="flex flex-wrap gap-x-3 text-sm text-ink-muted">
+                          <span>{p.targetName}</span>
+                          <span>
+                            raised by {p.authorName} on {p.createdAt}
+                          </span>
                         </p>
                         <Badge tone="warning">Open</Badge>
                       </div>
                       <p className="mt-1 font-semibold">{p.body}</p>
-                      {p.response && (
-                        <p className="mt-2 border-l-2 border-border-strong pl-3 text-sm">
-                          {p.response} <span className="text-ink-muted">— {p.responderName}</span>
-                        </p>
-                      )}
+                      <Thread thread={p.thread} />
                       {points.respond && (
                         <ActionForm action={respondReviewPointAction} fields={{ engagementId: id, pointId: p.id }} className="mt-3">
                           <div className="flex flex-wrap items-end gap-2">
-                            <label className={`${fieldLabel} min-w-56 flex-1`}>
-                              {p.response ? "Replace the response" : "Response"}
+                            <label className={`${fieldLabel} min-w-0 flex-1 basis-56`}>
+                              {p.thread.length > 0 ? "Reply" : "Response"}
                               <input name="response" required minLength={2} maxLength={2000} className={ctl} />
                             </label>
-                            <Button variant="secondary">Save response</Button>
+                            <Button variant="secondary">{p.thread.length > 0 ? "Add reply" : "Save response"}</Button>
                           </div>
                         </ActionForm>
                       )}
@@ -383,15 +383,15 @@ export default async function ReviewPage({ params }: { params: Promise<{ id: str
                 <ul className="mt-3 space-y-2">
                   {clearedPoints.map((p) => (
                     <li key={p.id} className="rounded-md border border-border bg-surface-muted p-3 text-sm">
-                      <p className="text-ink-muted">
-                        {p.targetName} · raised by {p.authorName} on {p.createdAt} · cleared by {p.clearedByName}
+                      <p className="flex flex-wrap gap-x-3 text-ink-muted">
+                        <span>{p.targetName}</span>
+                        <span>
+                          raised by {p.authorName} on {p.createdAt}
+                        </span>
+                        <span>cleared by {p.clearedByName}</span>
                       </p>
                       <p className="mt-1">{p.body}</p>
-                      {p.response && (
-                        <p className="mt-1 border-l-2 border-border-strong pl-3 text-ink-muted">
-                          {p.response} <span>— {p.responderName}</span>
-                        </p>
-                      )}
+                      <Thread thread={p.thread} />
                     </li>
                   ))}
                 </ul>
