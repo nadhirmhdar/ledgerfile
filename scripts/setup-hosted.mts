@@ -10,6 +10,7 @@ import { ensureAppRole, ensureSetupRoleCanSwitch, verifyRuntimeConnection } from
 import { applyMigrations, upsertGroups } from "../src/server/migrations";
 import { SAMPLE_USERS, samplePasswordProblems } from "../src/server/sample-seed";
 import { scramVerifier } from "../src/server/scram";
+import { correctSampleRetainedEarnings } from "../src/server/sample-correction";
 import { loadSampleClient } from "./seed-common";
 
 function stop(lines: string[]): never {
@@ -79,6 +80,9 @@ try {
     await loadSampleClient(db);
     console.log("3. Sample firm: seeded");
   }
+
+  // An already-seeded sample is corrected in place, never wiped: only if its 2025 figures are still exactly the old seeded ones. Safe to repeat.
+  console.log(`3b. ${(await correctSampleRetainedEarnings(db)).line}`);
 } catch (e) {
   // Postgres adds a SQLSTATE code and, on permission errors, a DETAIL line (for example which option or attribute is missing). They name
   // roles and options, never secrets; they go through redact() all the same.

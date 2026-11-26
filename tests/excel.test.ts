@@ -14,7 +14,7 @@ describe("Excel import", () => {
     const parsed = parseTrialBalance(await readGrid("falcon-tb-2025.xlsx", load("falcon-tb-2025.xlsx")));
     expect(parsed.errors).toEqual([]);
     expect(parsed.balanced).toBe(true);
-    expect(parsed.accounts).toHaveLength(30);
+    expect(parsed.accounts).toHaveLength(31);
     const receivables = parsed.accounts.find((a) => a.code === "1100");
     expect(receivables).toMatchObject({ closingMinor: 91245025, priorMinor: 68420000 });
     const sales = parsed.accounts.find((a) => a.code === "4000");
