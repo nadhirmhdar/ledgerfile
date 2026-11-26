@@ -76,7 +76,7 @@ afterAll(async () => {
 });
 
 describe("the migration", () => {
-  it("is 0040, with one row per area, the app role may change and remove it, and another firm sees none", async () => {
+  it("is migration 0040, with one row per area, the app role may change and remove it, and another firm sees none", async () => {
     expect((await db.query("select 1 from schema_migrations where name = $1", ["0040_area_assignments.sql"])).rows).toHaveLength(1);
     const { id, areas } = await newEngagement({ preparer: prep, reviewer: rev, partner });
     await setArea(partner, id, areas[0].code, prep2.userId, null);
