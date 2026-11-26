@@ -113,7 +113,7 @@ export function statementsDocument(input: StatementsDocumentInput): StatementBlo
         rows: [
           row("", [year, ...(comparatives ? [priorYear] : [])], "header"),
           ...note.table.rows.map((r) => row(r.label, [fmt(r.current), ...(comparatives ? [r.prior === null ? "" : fmt(r.prior)] : [])], "line")),
-          row("Total", [fmt(note.table.totalCurrent), ...(comparatives ? [fmt(note.table.totalPrior)] : [])], "total"),
+          ...(note.table.showTotal === false ? [] : [row("Total", [fmt(note.table.totalCurrent), ...(comparatives ? [fmt(note.table.totalPrior)] : [])], "total")]),
         ],
       });
     }

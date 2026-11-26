@@ -60,6 +60,8 @@ function books(comparatives = true): PackAccount[] {
   return [...all, cash];
 }
 
+/** A note whose table is totalled and agreed to a statement line. The related-party and tax notes show a ledger with no total, so the check leaves them out. */
+const totalled = (x: { table?: { showTotal?: boolean } }) => !!x.table && x.table.showTotal !== false;
 const parts = (pack: ReturnType<typeof buildStatementPack>, unitMinor = 1): ConsistencyParts => ({ base: pack.base, equity: pack.equity, cashFlow: pack.cashFlow, notes: pack.notes, unitMinor });
 const clone = <T,>(x: T): T => structuredClone(x);
 const byLabel = (checks: Check[], label: string) => checks.find((c) => c.label === label)!;
@@ -69,7 +71,7 @@ describe("the two error checks and the warning pass on a normal pack", () => {
     for (const unitMinor of [1, 100]) {
       it(`${comparatives ? "with" : "without"} comparatives, ${unitMinor === 1 ? "exact" : "whole units"}`, () => {
         const pack = buildStatementPack(books(comparatives), { unitMinor });
-        expect(pack.notes.filter((x) => x.table)).toHaveLength(7);
+        expect(pack.notes.filter(totalled)).toHaveLength(7);
         expect(byLabel(pack.checks, PROFIT_CHECK_LABEL)).toMatchObject({ passed: true });
         expect(byLabel(pack.checks, NOTE_TOTALS_CHECK_LABEL)).toMatchObject({ passed: true });
         expect(pack.checks.filter((c) => !c.passed && severityOf(c) === "error")).toEqual([]);
@@ -92,7 +94,7 @@ describe("why the checks hold under whole-unit rounding", () => {
     expect(whole.rounding.prior).not.toBeNull();
     expect(exact.rounding.current).toBeNull();
     // Every note total is a whole number of units and equals its face line; profit is the same in all three statements.
-    for (const note of whole.notes.filter((x) => x.table)) {
+    for (const note of whole.notes.filter(totalled)) {
       expect(note.table!.totalCurrent % 100, note.title).toBe(0);
       expect(note.table!.totalCurrent).toBe(note.table!.rows.reduce((s, r) => s + r.current, 0));
     }
@@ -114,7 +116,7 @@ describe("why the checks hold under whole-unit rounding", () => {
   it("does not hide a real difference: a figure forced off by one unit still fails after rounding", () => {
     const whole = buildStatementPack(books(), { unitMinor: 100 });
     const tampered = clone(parts(whole, 100));
-    tampered.notes.find((x) => x.table)!.table!.totalCurrent += 100;
+    tampered.notes.find(totalled)!.table!.totalCurrent += 100;
     expect(byLabel(consistencyChecks(tampered), NOTE_TOTALS_CHECK_LABEL).passed).toBe(false);
   });
 });
@@ -159,11 +161,11 @@ describe("profit for the year agrees across the statements", () => {
 
 describe("every note total agrees to its line on the statements", () => {
   const pack = buildStatementPack(books());
-  const withTable = pack.notes.filter((x) => x.table);
+  const withTable = pack.notes.filter(totalled);
 
   it("names the note, both amounts and the difference, for the current year and the prior year", () => {
     const t = clone(parts(pack));
-    const note = t.notes.find((x) => x.table)!;
+    const note = t.notes.find(totalled)!;
     note.table!.totalCurrent += 250;
     note.table!.totalPrior -= 100;
     const check = byLabel(consistencyChecks(t), NOTE_TOTALS_CHECK_LABEL);
@@ -175,13 +177,13 @@ describe("every note total agrees to its line on the statements", () => {
 
   it("lists up to five notes, then says how many more", () => {
     const six = clone(parts(pack));
-    six.notes.filter((x) => x.table).slice(0, 6).forEach((x) => (x.table!.totalCurrent += 100));
+    six.notes.filter(totalled).slice(0, 6).forEach((x) => (x.table!.totalCurrent += 100));
     const sixItems = byLabel(consistencyChecks(six), NOTE_TOTALS_CHECK_LABEL).items!;
     expect(sixItems).toHaveLength(6);
     expect(sixItems[5]).toBe("and 1 more");
 
     const all = clone(parts(pack));
-    all.notes.filter((x) => x.table).forEach((x) => (x.table!.totalCurrent += 100));
+    all.notes.filter(totalled).forEach((x) => (x.table!.totalCurrent += 100));
     const check = byLabel(consistencyChecks(all), NOTE_TOTALS_CHECK_LABEL);
     expect(withTable).toHaveLength(7);
     expect(check.detail).toBe("7 note(s) do not agree to the statements.");
@@ -190,14 +192,14 @@ describe("every note total agrees to its line on the statements", () => {
     expect(check.items![5]).toBe("and 2 more");
     // Exactly five notes: no "more" line.
     const five = clone(parts(pack));
-    five.notes.filter((x) => x.table).slice(0, 5).forEach((x) => (x.table!.totalCurrent += 100));
+    five.notes.filter(totalled).slice(0, 5).forEach((x) => (x.table!.totalCurrent += 100));
     expect(byLabel(consistencyChecks(five), NOTE_TOTALS_CHECK_LABEL).items).toHaveLength(5);
   });
 
   it("ignores the prior year when there are no comparatives", () => {
     const noComp = buildStatementPack(books(false));
     const t = clone(parts(noComp));
-    t.notes.find((x) => x.table)!.table!.totalPrior += 999;
+    t.notes.find(totalled)!.table!.totalPrior += 999;
     expect(byLabel(consistencyChecks(t), NOTE_TOTALS_CHECK_LABEL).passed).toBe(true);
   });
 });
@@ -221,6 +223,7 @@ describe("no placeholders left in the notes", () => {
     const policies = first.notes.find((x) => x.key === POLICIES_KEY)!;
     const noteTexts: Record<string, string[]> = { [GENERAL_KEY]: ["A trading company."], [BASIS_KEY]: ["Prepared under IFRS for SMEs."], [POLICIES_KEY]: ["Policies are set out below."] };
     for (const s of policies.subsections ?? []) noteTexts[s.key] = ["Reviewed wording."];
+    for (const x of first.notes) if (x.key && !(x.key in noteTexts)) noteTexts[x.key] = ["Reviewed wording."];
     const done = buildStatementPack(books(), { noteTexts });
     expect(byLabel(done.checks, PLACEHOLDERS_CHECK_LABEL)).toMatchObject({ passed: true });
     expect(done.checks.every((c) => c.passed)).toBe(true);
@@ -234,7 +237,7 @@ describe("no placeholders left in the notes", () => {
     t.find((x) => x.key === POLICIES_KEY)!.subsections = (policies.subsections ?? []).map((s) => ({ ...s, paragraphs: ["Done."] }));
     t.find((x) => x.key === POLICIES_KEY)!.paragraphs = ["Done."];
     t.find((x) => x.number === 1)!.paragraphs = ["[One] and [two]."];
-    t.find((x) => x.number === 2)!.paragraphs = ["Done."];
+    for (const x of t) if (x.number !== 1) x.paragraphs = ["Done."];
     expect(placeholderCheck(t).detail).toBe("2 placeholders still to complete, in note 1.");
   });
 
@@ -285,7 +288,7 @@ describe("the sample client's 2025 file", () => {
       const pack = buildStatementPack(accounts, { unitMinor });
       expect(byLabel(pack.checks, PROFIT_CHECK_LABEL).passed).toBe(true);
       expect(byLabel(pack.checks, NOTE_TOTALS_CHECK_LABEL).passed).toBe(true);
-      expect(pack.notes.filter((x) => x.table).length).toBeGreaterThan(3);
+      expect(pack.notes.filter(totalled).length).toBeGreaterThan(3);
     }
   });
 });

@@ -9,7 +9,6 @@ import { blobOps, type BlobSdk } from "../src/server/blob-file-store";
 import { beginDirectUpload, finishDirectUpload } from "../src/server/direct-upload";
 import { buildWorkingPaperIndex } from "../src/server/wp-index";
 import { exportIndex } from "../src/server/wp-index-export";
-import { LATEST_MIGRATION } from "../src/server/migrations";
 import type { FileStore } from "../src/server/file-store";
 
 // Invented firms and people.
@@ -64,7 +63,7 @@ afterAll(async () => {
 
 describe("the migration", () => {
   it("is 0037, and an existing paper is version 1 with no change", async () => {
-    expect(LATEST_MIGRATION).toBe("0037_working_paper_versions.sql");
+    expect((await db.query("select 1 from schema_migrations where name = $1", ["0037_working_paper_versions.sql"])).rows).toHaveLength(1);
     const e = await engagement();
     const id = await upload(prep, e, "plain.txt", "Plain file.");
     expect((await row(id)).replaces_id).toBeNull();

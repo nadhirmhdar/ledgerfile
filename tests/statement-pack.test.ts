@@ -151,7 +151,7 @@ describe("notes", () => {
     ]);
     expect(pack.notes[2].paragraphs[0]).toContain("Draft wording");
     expect(pack.notes[1].paragraphs[0]).toContain("AED");
-    expect(pack.notes.slice(3).map((x) => [x.number, x.groupCode])).toEqual([[4, "TRADEREC"], [5, "RETAINED"], [6, "TRADEPAY"], [7, "ADMIN"]]);
+    expect(pack.notes.slice(3).filter((x) => x.groupCode).map((x) => [x.number, x.groupCode])).toEqual([[4, "TRADEREC"], [5, "RETAINED"], [6, "TRADEPAY"], [7, "ADMIN"]]);
     expect(pack.noteByGroup).toEqual({ TRADEREC: 4, RETAINED: 5, TRADEPAY: 6, ADMIN: 7 });
   });
 

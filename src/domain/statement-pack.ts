@@ -1,7 +1,8 @@
 import { GROUPS, GROUP_BY_CODE } from "./groups";
 import { applicablePolicies, POLICY_REVIEW_NOTICE } from "./policies";
-import { BASIS_KEY, GENERAL_KEY, groupKey, POLICIES_KEY, policyKey } from "./note-texts";
+import { BASIS_KEY, GENERAL_KEY, groupKey, POLICIES_KEY, policyKey, STANDARD_NOTES } from "./note-texts";
 import { placeholderCount } from "./placeholders";
+import { STANDARD_NOTE_WORDING } from "./standard-notes";
 import { buildStatements, severityOf, type Check, type StatementAccount, type StatementLine, type Statements } from "./statements";
 
 /**
@@ -41,7 +42,11 @@ export interface Note {
   overridden?: boolean;
   /** Titled passages within the note, used for the individual accounting policies. `text` is the paragraphs joined, for anything that shows one block. */
   subsections?: { key: string; title: string; text: string; paragraphs: string[]; generated: string[]; overridden: boolean }[];
-  table?: { rows: { label: string; current: number; prior: number | null }[]; totalCurrent: number; totalPrior: number };
+  /**
+   * A group note's table adds its accounts up to a total that is the statement line. A ledger table (related parties, income tax) has one row for each
+   * of two groups, each row carrying its group code and agreeing to that group's line on the statements; it has no total.
+   */
+  table?: { rows: { label: string; current: number; prior: number | null; groupCode?: string }[]; totalCurrent: number; totalPrior: number; showTotal?: boolean };
   groupCode?: string;
 }
 
@@ -374,6 +379,25 @@ export function buildStatementPack(
       table: { rows, totalCurrent: rows.reduce((s, r) => s + r.current, 0), totalPrior: rows.reduce((s, r) => s + (r.prior ?? 0), 0) },
     });
     noteByGroup[group.code] = next++;
+  }
+
+  // The standard notes after the group notes. Related parties and income tax only when their groups have a balance in either year; the other three
+  // always. Their words are generated (and can be edited like any passage); their tables come from the same figures as the face lines.
+  const ledgerRow = (label: string, group: string, sign: 1 | -1) => ({ label, current: sign * c(group) + 0, prior: base.hasComparatives ? sign * p(group) + 0 : null, groupCode: group });
+  for (const std of STANDARD_NOTES) {
+    if (std.groups.length > 0 && !std.groups.some(used)) continue;
+    const table =
+      std.key === "related"
+        ? [ledgerRow("Due from related parties", "RPREC", 1), ledgerRow("Due to related parties", "RPPAY", -1)]
+        : std.key === "tax"
+          ? [ledgerRow("Income tax expense", "TAXEXP", 1), ledgerRow("Current tax liability", "TAXLIAB", -1)]
+          : null;
+    notes.push({
+      number: next++,
+      title: std.title,
+      ...passage(std.key, STANDARD_NOTE_WORDING[std.key]),
+      ...(table ? { table: { rows: table, totalCurrent: 0, totalPrior: 0, showTotal: false } } : {}),
+    });
   }
 
   // --- Checks ---

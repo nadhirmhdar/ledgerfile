@@ -11,7 +11,7 @@ import { Field, Input } from "@/ui/form";
 import { currentOf, loadHistory } from "@/server/note-texts";
 import { NotePassage, type PassageData } from "@/app/note-passage";
 import { canEditNotes } from "@/domain/permissions";
-import { describeKey, keptButNotShown, overridesFrom } from "@/domain/note-texts";
+import { describeKey, keptButNotShown, overridesFrom, STANDARD_NOTES } from "@/domain/note-texts";
 import { getPriorYearChecks } from "@/server/prior-year-checks";
 import { PriorYearChecks } from "@/ui/prior-year-view";
 import { buildStatementPack } from "@/domain/statement-pack";
@@ -181,6 +181,8 @@ export default async function StatementsPage({ params, searchParams }: { params:
     ...(pack.equity ? [{ href: "#sce", label: "Changes in equity" }] : []),
     ...(pack.cashFlow ? [{ href: "#scf", label: "Cash flows" }] : []),
     { href: "#notes", label: "Notes" },
+    // The standard notes after the group notes, so a preparer can go straight to the ones they must complete.
+    ...pack.notes.filter((n) => n.key && STANDARD_NOTES.some((x) => x.key === n.key)).map((n) => ({ href: `#note-${n.number}`, label: n.title })),
   ];
   const noteAmountCols = s.hasComparatives ? 4 : 3;
 
@@ -503,7 +505,7 @@ export default async function StatementsPage({ params, searchParams }: { params:
                       </h3>
                       {draftNumbers.includes(note.number) && <Badge tone="warning">Draft, needs review</Badge>}
                       {toComplete > 0 && <Badge tone="warning">{toComplete} to complete</Badge>}
-                      {note.table && <span className="ml-auto text-sm font-normal text-ink-muted tabular-nums">Total {fmt(note.table.totalCurrent)}</span>}
+                      {note.table && note.table.showTotal !== false && <span className="ml-auto text-sm font-normal text-ink-muted tabular-nums">Total {fmt(note.table.totalCurrent)}</span>}
                     </span>
                   </summary>
                   <div className="space-y-3 border-t border-border px-4 py-4 text-sm">
@@ -550,11 +552,13 @@ export default async function StatementsPage({ params, searchParams }: { params:
                               {s.hasComparatives && <td className={num}>{r.prior === null ? "" : fmt(r.prior)}</td>}
                             </tr>
                           ))}
-                          <tr className="font-semibold">
-                            <td className="px-2 py-1.5 sm:px-4">Total</td>
-                            <td className={`${num} ${ruleFor("total")}`}>{fmt(note.table.totalCurrent)}</td>
-                            {s.hasComparatives && <td className={`${num} ${ruleFor("total")}`}>{fmt(note.table.totalPrior)}</td>}
-                          </tr>
+                          {note.table.showTotal !== false && (
+                            <tr className="font-semibold">
+                              <td className="px-2 py-1.5 sm:px-4">Total</td>
+                              <td className={`${num} ${ruleFor("total")}`}>{fmt(note.table.totalCurrent)}</td>
+                              {s.hasComparatives && <td className={`${num} ${ruleFor("total")}`}>{fmt(note.table.totalPrior)}</td>}
+                            </tr>
+                          )}
                         </tbody>
                       </Table>
                     )}

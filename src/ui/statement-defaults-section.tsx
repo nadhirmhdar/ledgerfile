@@ -1,6 +1,6 @@
 import { ActionForm } from "@/app/action-form";
 import { saveFirmDefaultsAction } from "@/app/statement-defaults-actions";
-import { MAX_PARAGRAPH_LENGTH, MAX_PARAGRAPHS, policyKey } from "@/domain/note-texts";
+import { MAX_PARAGRAPH_LENGTH, MAX_PARAGRAPHS, policyKey, STANDARD_NOTES } from "@/domain/note-texts";
 import { POLICIES } from "@/domain/policies";
 import { paragraphsToText, UNIT_LABEL, type Unit } from "@/domain/statement-defaults";
 import type { FirmDefaults } from "@/server/statement-defaults";
@@ -71,6 +71,15 @@ export function StatementDefaultsSection({ defaults, mayEdit }: { defaults: Firm
                   <Textarea name={`note:${p.key}`} defaultValue={text(p.key)} rows={4} />
                 </Field>
               ))}
+              <Disclosure summary={`Other standard notes (${STANDARD_NOTES.length})`}>
+                <div className="space-y-3">
+                  {STANDARD_NOTES.map((n) => (
+                    <Field key={n.key} label={n.title}>
+                      <Textarea name={`note:${n.key}`} defaultValue={text(n.key)} rows={3} />
+                    </Field>
+                  ))}
+                </div>
+              </Disclosure>
               <Disclosure summary={`Accounting policies (${POLICIES.length})`}>
                 <div className="space-y-3">
                   {POLICIES.map((p) => (
