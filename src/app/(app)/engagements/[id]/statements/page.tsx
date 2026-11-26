@@ -261,7 +261,10 @@ export default async function StatementsPage({ params, searchParams }: { params:
                 const detail = checkDetail(c.detail);
                 return (
                   <li key={c.label} className="flex flex-wrap items-start gap-x-3 gap-y-1 py-2 first:pt-0 last:pb-0">
-                    <StatusBadge status={c.passed ? "done" : severityOf(c) === "warning" ? "needs_review" : "problem"} label={c.passed ? "Passed" : severityOf(c) === "warning" ? "Needs attention" : "Failed"} />
+                    {/* When only warnings fail the box is titled "Needs attention", so a failing row does not repeat the words on a badge of its own. */}
+                    {!(pack.clean && !c.passed) && (
+                      <StatusBadge status={c.passed ? "done" : severityOf(c) === "warning" ? "needs_review" : "problem"} label={c.passed ? "Passed" : severityOf(c) === "warning" ? "Needs attention" : "Failed"} />
+                    )}
                     <div className="min-w-0 flex-1 basis-60 text-ink">
                       <p className={c.passed ? "" : "font-semibold"}>{c.label}.</p>
                       {detail && <p className="text-ink-muted">{detail}</p>}

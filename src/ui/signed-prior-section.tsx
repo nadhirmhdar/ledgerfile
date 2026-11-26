@@ -11,7 +11,8 @@ import { plainCount } from "./text";
 export function SignedPriorSection({ engagementId, check, rows, canEnter }: { engagementId: string; check: Check; rows: SignedPriorRow[]; canEnter: boolean }) {
   const body = (
     <div className="flex flex-wrap items-start gap-x-3 gap-y-1">
-      <StatusBadge status={check.passed ? "done" : "needs_review"} label={check.passed ? "Passed" : "Needs attention"} />
+      {/* A failing check sits in the box titled "Needs attention", so it does not repeat the words on a badge of its own. */}
+      {check.passed && <StatusBadge status="done" label="Passed" />}
       <div className="min-w-0 flex-1 basis-60 text-ink">
         <p className={check.passed ? "" : "font-semibold"}>{check.label}.</p>
         {check.detail && <p className="text-ink-muted">{plainCount(check.detail)}</p>}
