@@ -4,6 +4,9 @@ import { getDb, withFirm } from "@/server/db";
 import { getSession } from "@/server/session";
 import { buildWorkingPaperIndex } from "@/server/wp-index";
 import { canLock } from "@/domain/signoff";
+import { formatBytes, outlineExport, overCapMessage } from "@/server/file-export";
+import { exportMaxBytes } from "@/server/config";
+import { ExportChooser } from "@/ui/export-chooser";
 import * as repo from "@/server/repo";
 import { isIndexFilter, KIND_LABEL, notApplicableNote, STATUS_LABEL, type IndexEntry, type IndexFilter, type Status } from "@/domain/wp-index";
 import { Badge, StatusBadge } from "@/ui/badge";
@@ -79,9 +82,10 @@ export default async function IndexPage({ params, searchParams }: { params: Prom
   const q = parseIndexSearch(query.q);
 
   const session = await getSession();
-  const { engagement, index } = await withFirm(await getDb(), session.firmId, async (tx) => ({
+  const { engagement, index, outline } = await withFirm(await getDb(), session.firmId, async (tx) => ({
     engagement: await repo.getEngagement(tx, id),
     index: await buildWorkingPaperIndex(tx, id),
+    outline: canLock(session.role) ? await outlineExport(tx, id) : null,
   }));
   if (!engagement || !index) notFound();
 
@@ -111,22 +115,22 @@ export default async function IndexPage({ params, searchParams }: { params: Prom
         meta={<EngagementFacts client={engagement.clientName} periodStart={engagement.periodStart} periodEnd={engagement.periodEnd} />}
         subtitle={indexSentence(o)}
         actions={
-          <div className="flex flex-wrap gap-2">
-            <a href={`${base}/export`} className={buttonClass("secondary")}>
-              Download index (Excel)
-            </a>
-            {canLock(session.role) && (
-              // A plain link: the route streams the zip and logs the download, so it must not be prefetched. It re-reads the role itself.
-              <a href={`${base}/download-all`} className={buttonClass("secondary")}>
-                Download the whole file
-              </a>
-            )}
-          </div>
+          <a href={`${base}/export`} className={buttonClass("secondary")}>
+            Download index (Excel)
+          </a>
         }
       />
       <EngagementNav id={id} current="index" status={engagement.status} archived={engagement.archivedAt !== null} />
 
       <div className="mt-6 space-y-8">
+        {outline && (
+          <ExportChooser
+            action={`${base}/download-all`}
+            whole={{ files: outline.whole.files, size: formatBytes(outline.whole.bytes) }}
+            sections={outline.sections.map((x) => ({ code: x.code, title: x.title, files: x.files, size: formatBytes(x.bytes) }))}
+            refusal={outline.whole.bytes > exportMaxBytes() ? overCapMessage(exportMaxBytes()) : null}
+          />
+        )}
         {!index.auditOn && (
           <Callout variant="info" title="The audit is off for this engagement">
             Only the papers that do not depend on it are listed.

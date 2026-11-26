@@ -159,6 +159,15 @@ export const uploadTooLargeMessage = (env: Env = process.env): string => `The fi
  */
 export const DIRECT_UPLOAD_BYTES = 50 * 1024 * 1024;
 export const DIRECT_UPLOAD_LABEL = `${DIRECT_UPLOAD_BYTES / 1024 / 1024} MB`;
+/**
+ * The largest whole-file download, as estimated from stored sizes before anything is produced (default 1 GB; EXPORT_MAX_BYTES overrides). Above it the
+ * download is refused before it starts and the page suggests downloading by section. A download must also finish within the route's 300 second limit.
+ */
+export const DEFAULT_EXPORT_MAX_BYTES = 1024 * 1024 * 1024;
+export function exportMaxBytes(env: Env = process.env): number {
+  const v = Number(env.EXPORT_MAX_BYTES?.trim());
+  return Number.isInteger(v) && v > 0 ? v : DEFAULT_EXPORT_MAX_BYTES;
+}
 /** How long the browser has to send a file after the server has said it may. */
 export const PENDING_UPLOAD_MINUTES = 15;
 
