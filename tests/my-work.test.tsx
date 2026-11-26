@@ -61,7 +61,8 @@ describe("the options in each select", () => {
     const team = { preparer: null, reviewer: { id: "p", name: "Pia", role: "preparer" as const }, partner: null, reportDueOn: null };
     const html = renderToStaticMarkup(<TeamPanel engagementId="e" team={team} people={people} canAssign today="2026-03-01" />);
     expect(html).toContain("Pia (Preparer), no longer a reviewer");
-    expect(html.match(/Pia \(Preparer\)/g)).toHaveLength(2); // preparer select and the stale reviewer; none under partner
+    // The engagement team form, before the areas section: the preparer select and the stale reviewer; none under partner.
+    expect(html.split('id="area-teams"')[0].match(/Pia \(Preparer\)/g)).toHaveLength(2);
   });
 });
 

@@ -30,6 +30,9 @@ import { getAdoption } from "@/server/methodology-adoption";
 import { adoptionLine } from "@/domain/methodology-adoption";
 import { MethodologyLabel } from "@/ui/methodology-label";
 import { EngagementNav } from "../nav";
+import { AreaAssignees } from "@/ui/area-assignees";
+import { listAreaAssignments } from "@/server/area-assignments";
+import { getEngagementTeam } from "@/server/engagement-team";
 
 export const dynamic = "force-dynamic";
 
@@ -38,13 +41,15 @@ export default async function AuditPage({ params }: { params: Promise<{ id: stri
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
 
   const session = await getSession();
-  const { engagement, overview, planned, revenue, significance, adoption } = await withFirm(await getDb(), session.firmId, async (tx) => ({
+  const { engagement, overview, planned, revenue, significance, adoption, areaTeams, team } = await withFirm(await getDb(), session.firmId, async (tx) => ({
     engagement: await repo.getEngagement(tx, id),
     overview: await audit.getAuditOverview(tx, id),
     planned: await getAnsweredDerivation(tx, id),
     significance: await getAreaSignificance(tx, id, [...AREA_BY_CODE.values()]),
     revenue: await getRevenuePresumption(tx, id),
     adoption: (await getAdoption(tx)).state,
+    areaTeams: await listAreaAssignments(tx, id),
+    team: await getEngagementTeam(tx, id),
   }));
   if (!engagement || !overview) notFound();
 
@@ -245,6 +250,7 @@ export default async function AuditPage({ params }: { params: Promise<{ id: stri
                           {area.code} {area.title}
                         </Link>
                       </h3>
+                      <AreaAssignees area={areaTeams.get(area.code)} engagement={{ preparerId: team?.preparer?.id ?? null, reviewerId: team?.reviewer?.id ?? null }} className="basis-full" />
                       <Badge tone={risk.tone}>{risk.label}</Badge>
                       {sigBadge(area.code, !!area.fixedRisk)}
                       {prog.loaded ? (

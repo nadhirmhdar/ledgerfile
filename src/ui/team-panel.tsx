@@ -1,4 +1,8 @@
+import Link from "next/link";
+import { AreaAssignmentForm } from "@/app/area-assignment-form";
 import { EngagementTeamForm } from "@/app/engagement-team-form";
+import { ASSIGNABLE_AREAS, SAME_AS_ENGAGEMENT, areaTitle } from "@/domain/area-assignments";
+import type { AreaAssignment } from "@/server/area-assignments";
 import { dueWords, NO_DATE, NOT_ASSIGNED, reportDueState, SLOT_LABEL, SLOTS } from "@/domain/my-work";
 import type { EngagementTeam, TeamPerson } from "@/server/engagement-team";
 import { Badge } from "./badge";
@@ -15,6 +19,7 @@ export function TeamPanel({
   people,
   canAssign,
   today,
+  areaAssignments = [],
 }: {
   engagementId: string;
   team: EngagementTeam;
@@ -22,6 +27,8 @@ export function TeamPanel({
   /** A partner or administrator, on an engagement that is open. */
   canAssign: boolean;
   today: string;
+  /** The audit areas that have their own preparer or reviewer. */
+  areaAssignments?: AreaAssignment[];
 }) {
   const due = reportDueState(team.reportDueOn, today);
   return (
@@ -65,6 +72,38 @@ export function TeamPanel({
           </div>
         </dl>
       )}
+      <div className="mt-6 space-y-3" id="area-teams">
+        <h3 className="text-sm font-semibold text-ink">Areas with their own team</h3>
+        {areaAssignments.length === 0 ? (
+          <p className="text-sm text-ink-muted">Every audit area follows the engagement&apos;s preparer and reviewer.</p>
+        ) : (
+          <ul className="divide-y divide-border rounded-lg border border-border bg-surface shadow-card">
+            {areaAssignments.map((a) => (
+              <li key={a.areaCode} className="flex flex-wrap items-baseline gap-x-4 gap-y-1 px-4 py-3">
+                <Link href={`/engagements/${engagementId}/audit/${a.areaCode}`} className="min-w-0 basis-full rounded-sm font-medium text-accent hover:underline sm:basis-64">
+                  {a.areaCode} {areaTitle(a.areaCode)}
+                </Link>
+                <span className="text-small text-ink-muted">
+                  Preparer: <span className="font-medium text-ink">{a.preparer?.name ?? SAME_AS_ENGAGEMENT}</span>
+                </span>
+                <span className="text-small text-ink-muted">
+                  Reviewer: <span className="font-medium text-ink">{a.reviewer?.name ?? SAME_AS_ENGAGEMENT}</span>
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+        {canAssign && (
+          <div className="rounded-lg border border-border bg-surface p-4 shadow-card sm:p-6">
+            <AreaAssignmentForm
+              engagementId={engagementId}
+              people={people}
+              areas={ASSIGNABLE_AREAS}
+              current={Object.fromEntries(areaAssignments.map((a) => [a.areaCode, { preparerId: a.preparer?.id ?? null, reviewerId: a.reviewer?.id ?? null }]))}
+            />
+          </div>
+        )}
+      </div>
     </Section>
   );
 }

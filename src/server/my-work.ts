@@ -2,6 +2,7 @@ import type { Tx } from "./db";
 import type { Session } from "./repo";
 import { PROCEDURE_AWAITING_REVIEW } from "./audit";
 import { GROUP_BY_CODE } from "../domain/groups";
+import { effectiveTeam } from "../domain/area-assignments";
 import { reportDueState, isShownDue, dueWords, sortGroups, SLOT_LABEL, type WorkGroup, type WorkLine } from "../domain/my-work";
 import { count } from "../ui/text";
 
@@ -9,6 +10,10 @@ import { count } from "../ui/text";
  * What waits for one person, across the firm's open engagements. One query for the engagements and one for each kind of work, each over
  * all engagements at once. "Open" and "ready for review" are the same definitions the audit and review pages use (PROCEDURE_AWAITING_REVIEW,
  * prepared_by / reviewed_by, a review point's status and response); nothing here has its own.
+ *
+ * Assignment by area: for an audit area that has its own preparer (or reviewer), that person gets the area's preparer (or reviewer) work, in place of
+ * the engagement's preparer (or reviewer). Areas without an override are exactly as before. Only the work grouped by area (procedures and test
+ * schedules) follows the area; confirmations, review points, lead sheet sign-offs, the partner's items and the due date stay with the engagement's roles.
  *
  * Only open engagements count: a locked or archived file has nothing left to do. An engagement the person is not on appears only for a
  * review point they raised that has been answered.
@@ -37,7 +42,7 @@ export async function getMyWork(tx: Tx, s: Session, today: string): Promise<Work
   if (engagements.length === 0) return [];
   const ids = engagements.map((e) => e.id);
 
-  const [procedures, schedules, confirmations, points, signOffs] = await Promise.all([
+  const [procedures, schedules, confirmations, points, signOffs, areaRows] = await Promise.all([
     tx.query<{ engagementId: string; areaCode: string; open: number; awaiting: number }>(
       `select engagement_id as "engagementId", area_code as "areaCode",
               count(*) filter (where status = 'open')::int as open, count(*) filter (where ${PROCEDURE_AWAITING_REVIEW})::int as awaiting
@@ -67,6 +72,11 @@ export async function getMyWork(tx: Tx, s: Session, today: string): Promise<Work
        order by p.target`,
       [ids],
     ),
+    tx.query<{ engagementId: string; areaCode: string; preparerId: string | null; reviewerId: string | null }>(
+      `select engagement_id as "engagementId", area_code as "areaCode", preparer_id as "preparerId", reviewer_id as "reviewerId"
+       from engagement_area_assignments where engagement_id = any($1::uuid[])`,
+      [ids],
+    ),
   ]);
 
   const by = <T extends { engagementId: string }>(rows: T[]) => {
@@ -79,6 +89,7 @@ export async function getMyWork(tx: Tx, s: Session, today: string): Promise<Work
   const conf = by(confirmations.rows);
   const pts = by(points.rows);
   const sheets = by(signOffs.rows);
+  const owned = by(areaRows.rows);
 
   const groups: WorkGroup[] = [];
   for (const e of engagements) {
@@ -98,29 +109,38 @@ export async function getMyWork(tx: Tx, s: Session, today: string): Promise<Work
       return areas.size === 1 ? `${base}/audit/${[...areas][0]}` : `${base}/audit`;
     };
 
+    // Who prepares and who reviews each area: its own person where one is set, else the engagement's.
+    const own = new Map((owned.get(e.id) ?? []).map((a) => [a.areaCode, a]));
+    const prepOf = (areaCode: string) => effectiveTeam(own.get(areaCode), e).preparerId;
+    const revOf = (areaCode: string) => effectiveTeam(own.get(areaCode), e).reviewerId;
+    const reviewsArea = (areaCode: string) => revOf(areaCode) === s.userId || asPartner;
     const myProcs = proc.get(e.id) ?? [];
     const mySched = sched.get(e.id) ?? [];
     const myConf = conf.get(e.id) ?? [];
     const myPoints = pts.get(e.id) ?? [];
 
+    // The work grouped by area follows the area's own preparer where there is one.
+    const open = myProcs.filter((p) => p.open > 0 && prepOf(p.areaCode) === s.userId);
+    const nOpen = open.reduce((t, p) => t + p.open, 0);
+    add({ slug: "prep-proc", kind: "prepare", label: `${count(nOpen, "procedure")} still open`, count: nOpen, href: where(open) });
+    const toPrep = mySched.filter((x) => x.unprepared && prepOf(x.areaCode) === s.userId);
+    add({ slug: "prep-sched", kind: "prepare", label: `${count(toPrep.length, "test schedule")} not yet prepared`, count: toPrep.length, href: where(toPrep) });
+
     if (asPreparer) {
-      const open = myProcs.filter((p) => p.open > 0);
-      const n = open.reduce((t, p) => t + p.open, 0);
-      add({ slug: "prep-proc", kind: "prepare", label: `${count(n, "procedure")} still open`, count: n, href: where(open) });
-      const toPrep = mySched.filter((x) => x.unprepared);
-      add({ slug: "prep-sched", kind: "prepare", label: `${count(toPrep.length, "test schedule")} not yet prepared`, count: toPrep.length, href: where(toPrep) });
       const toPrepC = myConf.filter((x) => x.unprepared).length;
       add({ slug: "prep-conf", kind: "prepare", label: `${count(toPrepC, "confirmation")} not yet prepared`, count: toPrepC, href: `${base}/audit/confirmations` });
       const waiting = myPoints.filter((p) => !p.answered).length;
       add({ slug: "prep-points", kind: "prepare", label: `${count(waiting, "review point")} waiting for your response`, count: waiting, href: `${base}/review` });
     }
 
+    // The review of an area's work goes to the area's own reviewer where there is one, in place of the engagement's reviewer; the partner still sees all of it.
+    const toReview = myProcs.filter((p) => p.awaiting > 0 && reviewsArea(p.areaCode));
+    const nReview = toReview.reduce((t, p) => t + p.awaiting, 0);
+    add({ slug: "rev-proc", kind: "review", label: `${count(nReview, "procedure")} done and not yet reviewed`, count: nReview, href: where(toReview) });
+    const sch = mySched.filter((x) => !x.unprepared && reviewsArea(x.areaCode));
+    add({ slug: "rev-sched", kind: "review", label: `${count(sch.length, "test schedule")} prepared and not yet reviewed`, count: sch.length, href: where(sch) });
+
     if (reviewSide) {
-      const toReview = myProcs.filter((p) => p.awaiting > 0);
-      const n = toReview.reduce((t, p) => t + p.awaiting, 0);
-      add({ slug: "rev-proc", kind: "review", label: `${count(n, "procedure")} done and not yet reviewed`, count: n, href: where(toReview) });
-      const sch = mySched.filter((x) => !x.unprepared);
-      add({ slug: "rev-sched", kind: "review", label: `${count(sch.length, "test schedule")} prepared and not yet reviewed`, count: sch.length, href: where(sch) });
       const cnf = myConf.filter((x) => !x.unprepared).length;
       add({ slug: "rev-conf", kind: "review", label: `${count(cnf, "confirmation")} prepared and not yet reviewed`, count: cnf, href: `${base}/audit/confirmations` });
       const answered = myPoints.filter((p) => p.answered).length;
@@ -150,7 +170,9 @@ export async function getMyWork(tx: Tx, s: Session, today: string): Promise<Work
     }
 
     if (lines.length === 0) continue;
-    const roles = [asPreparer && SLOT_LABEL.preparer, asReviewer && SLOT_LABEL.reviewer, asPartner && SLOT_LABEL.partner].filter((r): r is string => !!r);
+    const areaPreparer = [...own.values()].some((a) => a.preparerId === s.userId);
+    const areaReviewer = [...own.values()].some((a) => a.reviewerId === s.userId);
+    const roles = [(asPreparer || areaPreparer) && SLOT_LABEL.preparer, (asReviewer || areaReviewer) && SLOT_LABEL.reviewer, asPartner && SLOT_LABEL.partner].filter((r): r is string => !!r);
     groups.push({ engagementId: e.id, clientName: e.clientName, periodEnd: e.periodEnd, reportDueOn: e.reportDueOn, due, roles, lines });
   }
   return sortGroups(groups);
