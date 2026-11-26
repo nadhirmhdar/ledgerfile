@@ -79,10 +79,10 @@ export async function outlineExport(tx: Tx, engagementId: string): Promise<Expor
 
   const facts = (
     await tx.query<{ accounts: number; audited: boolean; opinion: boolean; logged: number }>(
-      `select (select count(*)::int from accounts where engagement_id = $1) as accounts, e.audit_enabled as audited,
-              exists (select 1 from audit_opinions where engagement_id = $1) as opinion,
-              (select count(*)::int from audit_log where entity_id = $1) as logged
-       from engagements e where e.id = $1`,
+      `select (select count(*)::int from accounts where engagement_id = $1::uuid) as accounts, e.audit_enabled as audited,
+              exists (select 1 from audit_opinions where engagement_id = $1::uuid) as opinion,
+              (select count(*)::int from audit_log where entity_id = $1::text) as logged
+       from engagements e where e.id = $1::uuid`,
       [engagementId],
     )
   ).rows[0];
