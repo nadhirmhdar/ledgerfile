@@ -21,7 +21,7 @@ export function ExportChooser({
   refusal: string | null;
 }) {
   return (
-    <Section title="Download the file" id="download" description={`The whole file: About ${count(whole.files, "file")}, ${whole.size}. Every download holds a README and this engagement's audit log.`}>
+    <Section title="Download the file" id="download" description={`The whole file: about ${count(whole.files, "file")}, ${whole.size}. Every download holds a README and this engagement's audit log.`}>
       {refusal && (
         <Callout variant="warning" className="mb-3">
           {refusal}
