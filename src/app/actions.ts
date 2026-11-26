@@ -7,6 +7,7 @@ import { getSession } from "@/server/session";
 import * as repo from "@/server/repo";
 import * as assistant from "@/server/mapping-assistant";
 import { readSheets } from "@/server/excel";
+import { importFileFrom, type ImportFile } from "@/server/import-source";
 import { readsDiffer, recogniseWorkbook } from "@/domain/tb-recognise";
 import { buildPreview, chosenFromEntries, type Preview as TbPreview, readTrialBalance, ROLE_LABEL, savedFrom, SOURCE_SENTENCE, type Layout } from "@/domain/tb-layout";
 import * as tbLayout from "@/server/tb-layout";
@@ -184,13 +185,19 @@ function withNote(state: FormState, note: string | null): FormState {
 export async function uploadTrialBalanceAction(_prev: FormState, form: FormData): Promise<FormState> {
   const session = await getSession();
   const engagementId = String(form.get("engagementId") ?? "");
-  const file = form.get("file");
   if (!UUID.test(engagementId)) return { ok: false, message: "Engagement not found." };
-  if (!(file instanceof File) || file.size === 0) return { ok: false, message: "Choose a trial balance file to upload." };
+  let source: ImportFile | null;
+  try {
+    source = await importFileFrom(form, session, "trial_balance", engagementId);
+  } catch (e) {
+    return { ok: false, message: e instanceof Error && !("code" in e) ? e.message : "The file could not be read." };
+  }
+  if (!source) return { ok: false, message: "Choose a trial balance file to upload." };
+  const { file, maxBytes } = source;
 
   let sheets: { name: string; rows: unknown[][] }[];
   try {
-    sheets = await readSheets(file.name, await file.arrayBuffer(), undefined, { keepIndent: true });
+    sheets = await readSheets(file.name, await file.arrayBuffer(), undefined, { keepIndent: true, maxBytes });
   } catch (e) {
     return { ok: false, message: `${e instanceof Error ? e.message : "The file could not be read."} Or start from our template: ${TEMPLATE_LINK_TEXT}.` };
   }

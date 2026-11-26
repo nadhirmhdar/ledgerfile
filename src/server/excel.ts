@@ -18,14 +18,22 @@ function plain(value: ExcelJS.CellValue): unknown {
 
 const MAX_SHEETS = 10;
 
+export interface ReadOptions {
+  keepIndent?: boolean;
+  /** The size limit for this file, when it is not the ordinary upload limit. */
+  maxBytes?: number;
+}
+
 /** Read every worksheet of an .xlsx file (up to ten), or a .csv file (one sheet), each as a grid of cells. Old .xls files are refused. */
 /**
  * `keepIndent` puts two spaces in front of a text cell for each level of indent the cell has in Excel, so a reader of the grid can tell a group line from
  * the accounts indented below it (a CSV shows its own leading spaces). Readers that trim text, as the plain detection does, are not affected.
  */
-export async function readSheets(fileName: string, data: ArrayBuffer, maxRows: number = MAX_ROWS, options: { keepIndent?: boolean } = {}): Promise<{ name: string; rows: unknown[][] }[]> {
+export async function readSheets(fileName: string, data: ArrayBuffer, maxRows: number = MAX_ROWS, options: ReadOptions = {}): Promise<{ name: string; rows: unknown[][] }[]> {
   if (data.byteLength === 0) throw new Error("The file is empty.");
-  if (data.byteLength > maxUploadBytes()) throw new Error(uploadTooLargeMessage());
+  // A file that came straight from the Blob store has its own, larger limit; everything else keeps the function's upload limit.
+  const limit = options.maxBytes ?? maxUploadBytes();
+  if (data.byteLength > limit) throw new Error(options.maxBytes ? `The file is larger than ${Math.round(limit / 1024 / 1024)} MB.` : uploadTooLargeMessage());
   const lower = fileName.toLowerCase();
 
   if (lower.endsWith(".csv")) {
@@ -66,6 +74,6 @@ export async function readSheets(fileName: string, data: ArrayBuffer, maxRows: n
 }
 
 /** Read the first worksheet of an .xlsx file, or a .csv file, into a grid of cells. */
-export async function readGrid(fileName: string, data: ArrayBuffer, maxRows: number = MAX_ROWS): Promise<unknown[][]> {
-  return (await readSheets(fileName, data, maxRows))[0].rows;
+export async function readGrid(fileName: string, data: ArrayBuffer, maxRows: number = MAX_ROWS, options: ReadOptions = {}): Promise<unknown[][]> {
+  return (await readSheets(fileName, data, maxRows, options))[0].rows;
 }

@@ -6,6 +6,7 @@ import { getSession } from "@/server/session";
 import type { Session } from "@/server/repo";
 import * as ledger from "@/server/ledger";
 import { readGrid } from "@/server/excel";
+import { importFileFrom, type ImportFile } from "@/server/import-source";
 import { MAX_LEDGER_LINES, parseLedger } from "@/domain/ledger-parse";
 import type { FormState } from "./actions";
 
@@ -30,14 +31,20 @@ async function run(form: FormData, done: (result: unknown) => string, work: (tx:
 }
 
 export async function importLedgerAction(_prev: FormState, form: FormData): Promise<FormState> {
-  await getSession();
-  const file = form.get("file");
-  if (!(file instanceof File) || file.size === 0) return { ok: false, message: "Choose the journal listing to upload." };
+  const session = await getSession();
+  let source: ImportFile | null;
+  try {
+    source = await importFileFrom(form, session, "journal_listing", field(form, "engagementId"));
+  } catch (e) {
+    return { ok: false, message: e instanceof Error && !("code" in e) ? e.message : "The file could not be read." };
+  }
+  if (!source) return { ok: false, message: "Choose the journal listing to upload." };
+  const { file, maxBytes } = source;
 
   let grid: unknown[][];
   try {
     // A little over the line limit is read, so that an over-long listing is reported and never silently cut short.
-    grid = await readGrid(file.name, await file.arrayBuffer(), MAX_LEDGER_LINES + 200);
+    grid = await readGrid(file.name, await file.arrayBuffer(), MAX_LEDGER_LINES + 200, { maxBytes });
   } catch (e) {
     return { ok: false, message: e instanceof Error ? e.message : "The file could not be read." };
   }

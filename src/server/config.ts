@@ -159,6 +159,17 @@ export const uploadTooLargeMessage = (env: Env = process.env): string => `The fi
  */
 export const DIRECT_UPLOAD_BYTES = 50 * 1024 * 1024;
 export const DIRECT_UPLOAD_LABEL = `${DIRECT_UPLOAD_BYTES / 1024 / 1024} MB`;
+/**
+ * A spreadsheet import over the function limit goes straight to the private store too (hosted, with the read-write token), is read on the server and then
+ * deleted. Held to 25 MB, and refused before it is parsed when it has more rows than the limit for its kind. The row limits come from measurement: the
+ * Excel reader keeps the whole workbook in memory (about 700 MB at 100,000 rows, over 1 GB at 200,000, well past a function's 2 GB at 25 MB of xlsx),
+ * and a trial balance beyond 20,000 rows would be cut short by the reader rather than refused. The journal parser itself takes at most 50,000 lines.
+ */
+export const IMPORT_DIRECT_BYTES = 25 * 1024 * 1024;
+export const IMPORT_DIRECT_LABEL = `${IMPORT_DIRECT_BYTES / 1024 / 1024} MB`;
+export const IMPORT_PURPOSES = ["trial_balance", "journal_listing", "schedule_listing"] as const;
+export type ImportPurpose = (typeof IMPORT_PURPOSES)[number];
+export const IMPORT_DIRECT_ROWS: Record<ImportPurpose, number> = { trial_balance: 20_000, journal_listing: 100_000, schedule_listing: 100_000 };
 /** How long the browser has to send a file after the server has said it may. */
 export const PENDING_UPLOAD_MINUTES = 15;
 

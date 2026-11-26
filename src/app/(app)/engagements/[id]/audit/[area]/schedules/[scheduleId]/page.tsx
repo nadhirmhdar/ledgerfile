@@ -19,6 +19,7 @@ import { SummaryChevron, summaryRow } from "@/ui/summary-cue";
 import { scheduleCrumbs } from "@/ui/engagement-nav";
 import { EngagementNav } from "../../../../nav";
 import { ImportListing } from "./import-listing";
+import { importLimits } from "@/server/direct-upload";
 import { LinesTable } from "./lines-table";
 
 export const dynamic = "force-dynamic";
@@ -132,6 +133,7 @@ export default async function SchedulePage({ params }: { params: Promise<{ id: s
         <Section title="Lines">
           {schedule.editable && (
             <ImportListing
+              limits={importLimits()}
               scheduleId={schedule.id}
               balanceMinor={schedule.balanceMinor}
               existingLines={schedule.lines.map((l) => ({ id: l.id, docRef: l.docRef, description: l.description, amountMinor: l.amountMinor, ticked: l.tested || l.tickmarks.length > 0 }))}

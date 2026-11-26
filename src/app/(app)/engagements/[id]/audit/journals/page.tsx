@@ -23,12 +23,29 @@ import { completenessSentence, entryPill, journalHref, journalSentence, matching
 import { SummaryChevron } from "@/ui/summary-cue";
 import { Table, TCell, THead, TRow } from "@/ui/table";
 import { count } from "@/ui/text";
-import { maxUploadBytes } from "@/server/config";
+import { importLimits } from "@/server/direct-upload";
+import { LargeImportForm } from "@/app/import-form";
 import { EngagementNav } from "../../nav";
 
 export const dynamic = "force-dynamic";
 
 const FLAG_EXPLANATION = new Map(FLAGS.map((f) => [f.code, f.explanation]));
+
+/** The journal import form: with direct uploads a large file goes to the store first; otherwise the ordinary form. */
+function ImportShell({ limits, engagementId, children }: { limits: ReturnType<typeof importLimits>; engagementId: string; children: React.ReactNode }) {
+  if (!limits.direct) {
+    return (
+      <ActionForm action={importLedgerAction} fields={{ engagementId }}>
+        {children}
+      </ActionForm>
+    );
+  }
+  return (
+    <LargeImportForm action={importLedgerAction} fields={{ engagementId }} purpose="journal_listing" engagementId={engagementId} viaStoreAbove={limits.viaStoreAbove}>
+      {children}
+    </LargeImportForm>
+  );
+}
 
 export default async function JournalTestingPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ flag?: string; user?: string }> }) {
   const { id } = await params;
@@ -36,6 +53,7 @@ export default async function JournalTestingPage({ params, searchParams }: { par
   const filter = await searchParams;
 
   const session = await getSession();
+  const limits = importLimits();
   const data = await withFirm(await getDb(), session.firmId, async (tx) => {
     const engagement = await repo.getEngagement(tx, id);
     if (!engagement) return null;
@@ -102,10 +120,10 @@ export default async function JournalTestingPage({ params, searchParams }: { par
           <>
             {open && (
               <Disclosure summary={overview.listing ? "Replace the journal listing" : "Import the journal listing"} open={!overview.listing}>
-                <ActionForm action={importLedgerAction} fields={{ engagementId: id }}>
+                <ImportShell limits={limits} engagementId={id}>
                   <div className="flex flex-wrap items-end gap-3">
                     <FileInput
-                      maxBytes={maxUploadBytes()}
+                      maxBytes={limits.maxBytes}
                       accept=".xlsx,.csv"
                       label="Journal listing file"
                       className="block max-w-full text-sm text-ink file:mr-3 file:min-h-10 file:cursor-pointer file:rounded-md file:border file:border-border-input file:bg-surface file:px-4 file:text-sm file:font-medium file:text-ink hover:file:bg-surface-muted"
@@ -113,11 +131,11 @@ export default async function JournalTestingPage({ params, searchParams }: { par
                     <Button variant="primary">{overview.listing ? "Replace" : "Import"}</Button>
                   </div>
                   <p className="mt-3 text-sm text-ink-muted">
-                    Excel (.xlsx) or CSV, up to 50,000 lines. Needs columns for date, journal number, account code, and Debit and Credit (or one Amount). Description and Posted by are used when present. Dates are read day first
+                    Excel (.xlsx) or CSV, up to 50,000 lines{limits.direct ? ` and ${limits.label}` : ""}. Needs columns for date, journal number, account code, and Debit and Credit (or one Amount). Description and Posted by are used when present. Dates are read day first
                     (31/12/2025). Every entry must balance.
                     {overview.listing && " The listing cannot be replaced once an entry has been tested."}
                   </p>
-                </ActionForm>
+                </ImportShell>
               </Disclosure>
             )}
 
