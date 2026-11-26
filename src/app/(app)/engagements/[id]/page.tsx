@@ -9,6 +9,8 @@ import { requestCounts } from "@/server/client-requests";
 import { confirmationSummary } from "@/server/confirmations";
 import { getEngagementTeam, listAssignable } from "@/server/engagement-team";
 import { listAreaAssignments } from "@/server/area-assignments";
+import { getIndependence } from "@/server/independence";
+import { IndependenceSection } from "@/ui/independence-section";
 import { todayIso } from "@/domain/client-requests";
 import { canLock } from "@/domain/signoff";
 import { buildWorkingPaperIndex } from "@/server/wp-index";
@@ -47,10 +49,11 @@ export default async function EngagementHome({ params }: { params: Promise<{ id:
       team: await getEngagementTeam(tx, id),
       people: await listAssignable(tx),
       areaAssignments: [...(await listAreaAssignments(tx, id)).values()],
+      independence: await getIndependence(tx, id),
     };
   });
   if (!data || !data.audit || !data.overview || !data.index || !data.team) notFound();
-  const { engagement, accounts, audit, overview, index, requests, confirmations, priorYear, team, people, areaAssignments } = data;
+  const { engagement, accounts, audit, overview, index, requests, confirmations, priorYear, team, people, areaAssignments, independence } = data;
 
   const input: HomeInput = {
     engagementId: id,
@@ -164,6 +167,8 @@ export default async function EngagementHome({ params }: { params: Promise<{ id:
         </Section>
 
         <TeamPanel engagementId={id} team={team} people={people} canAssign={canLock(session.role) && engagement.status === "open"} today={todayIso()} areaAssignments={areaAssignments} />
+
+        <IndependenceSection engagementId={id} data={independence} userId={session.userId} open={engagement.status === "open"} />
 
         {!model.locked && model.toDo.length > 0 && (
           <Section
