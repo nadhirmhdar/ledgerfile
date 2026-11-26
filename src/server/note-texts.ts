@@ -2,7 +2,7 @@ import type { Tx } from "./db";
 import { audit, type Session } from "./repo";
 import { canEditNotes } from "../domain/permissions";
 import type { Role } from "../domain/signoff";
-import { checkParagraphs, cutForLog, describeKey, isKnownKey, overridesFrom, type NoteVersion } from "../domain/note-texts";
+import { checkParagraphs, cutForLog, describeKey, isKnownKey, overridesFrom, type NoteSource, type NoteVersion } from "../domain/note-texts";
 
 /**
  * The editable wording of the notes, kept as an append-only list of versions (migration 0032, note_texts). Every save, restore and "back to the
@@ -20,7 +20,7 @@ interface VersionRow {
   generated: boolean;
   by: string;
   at: string;
-  source: "person" | "firm_default" | null;
+  source: NoteSource | null;
 }
 
 const toVersion = (r: VersionRow): NoteVersion => ({

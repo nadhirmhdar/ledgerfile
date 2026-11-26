@@ -292,3 +292,68 @@ describe("the sample client's 2025 file", () => {
     }
   });
 });
+
+/** The invented company again, with a loan to a director, an amount due to a parent and a tax liability, so the related-party and income tax notes appear. */
+function booksWithLedgers(comparatives = true): PackAccount[] {
+  const base = books(comparatives).filter((a) => a.name !== "Bank");
+  const extra = [
+    acct("RPREC", "Loan to director", 250050, comparatives ? 200050 : null),
+    acct("RPPAY", "Due to parent company", -400050, comparatives ? -350050 : null),
+    acct("TAXLIAB", "Corporate tax payable", -90050, comparatives ? -70050 : null),
+  ];
+  const all = [...base, ...extra];
+  const cash = acct("CASH", "Bank", -all.reduce((s, a) => s + a.closingMinor, 0), comparatives ? -all.reduce((s, a) => s + (a.priorMinor ?? 0), 0) : null);
+  return [...all, cash];
+}
+const ledgerNotes = (notes: ConsistencyParts["notes"]) => notes.filter((x) => x.table && x.table.showTotal === false);
+
+describe("the related-party and income tax rows agree to their lines on the statements", () => {
+  for (const comparatives of [true, false]) {
+    for (const unitMinor of [1, 100]) {
+      it(`${comparatives ? "with" : "without"} comparatives, ${unitMinor === 1 ? "exact" : "whole units"}`, () => {
+        const pack = buildStatementPack(booksWithLedgers(comparatives), { unitMinor });
+        const ledgers = ledgerNotes(pack.notes);
+        expect(ledgers.map((x) => x.table!.rows.map((r) => r.groupCode))).toEqual([["RPREC", "RPPAY"], ["TAXEXP", "TAXLIAB"]]);
+        expect(byLabel(pack.checks, NOTE_TOTALS_CHECK_LABEL)).toMatchObject({ passed: true });
+        expect(severityOf(byLabel(pack.checks, NOTE_TOTALS_CHECK_LABEL))).toBe("error");
+      });
+    }
+  }
+
+  it("names the note, the row, both amounts and the difference, for the current and the prior year", () => {
+    const pack = buildStatementPack(booksWithLedgers());
+    const t = clone(parts(pack));
+    const tax = ledgerNotes(t.notes).find((x) => x.title.toLowerCase().includes("tax"))!;
+    tax.table!.rows[1].current += 250;
+    tax.table!.rows[1].prior! -= 100;
+    const check = byLabel(consistencyChecks(t), NOTE_TOTALS_CHECK_LABEL);
+    expect(check.passed).toBe(false);
+    expect(check.detail).toBe("1 note(s) do not agree to the statements.");
+    expect(check.items).toEqual([expect.stringMatching(new RegExp(`^Note ${tax.number}, ${tax.title}, ${tax.table!.rows[1].label}: row total [\\d,.]+, statements [\\d,.]+, difference 2\\.50; prior year: row total [\\d,.]+, statements [\\d,.]+, difference -1\\.00$`))]);
+  });
+
+  it("ignores the prior year when there are no comparatives", () => {
+    const t = clone(parts(buildStatementPack(booksWithLedgers(false))));
+    ledgerNotes(t.notes)[0].table!.rows[0].prior = 999;
+    expect(byLabel(consistencyChecks(t), NOTE_TOTALS_CHECK_LABEL).passed).toBe(true);
+  });
+
+  it("is still one check: ledger rows count towards the same five, then 'and N more'", () => {
+    const t = clone(parts(buildStatementPack(booksWithLedgers())));
+    for (const x of t.notes.filter(totalled)) x.table!.totalCurrent += 100;
+    for (const x of ledgerNotes(t.notes)) for (const r of x.table!.rows) r.current += 100;
+    const check = byLabel(consistencyChecks(t), NOTE_TOTALS_CHECK_LABEL);
+    expect(check.detail).toBe("11 note(s) do not agree to the statements.");
+    expect(check.items).toHaveLength(6);
+    expect(check.items![5]).toBe("and 6 more");
+    expect(t.notes.filter(totalled)).toHaveLength(7);
+  });
+
+  it("a pack without the related-party or tax note still passes", () => {
+    const pack = buildStatementPack(books());
+    expect(pack.notes.some((x) => x.title.toLowerCase().includes("related"))).toBe(false);
+    expect(byLabel(pack.checks, NOTE_TOTALS_CHECK_LABEL).passed).toBe(true);
+    const onlyTax = ledgerNotes(pack.notes);
+    expect(onlyTax.length).toBeLessThanOrEqual(1);
+  });
+});

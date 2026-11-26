@@ -8,7 +8,7 @@ import { learnedExamples } from "./mapping-examples";
 import { GROUP_BY_CODE } from "../domain/groups";
 import type { MappedAccount } from "../domain/leadsheet";
 import type { Role } from "../domain/signoff";
-import { applyFirmDefaults } from "./statement-defaults";
+import { applyFirmDefaults, carryPriorNotes } from "./statement-defaults";
 import { canCreateClient, canCreateEngagement, CLIENT_REFUSAL, ENGAGEMENT_REFUSAL } from "../domain/permissions";
 
 export interface Session {
@@ -172,9 +172,11 @@ export async function createEngagement(tx: Tx, s: Session, clientId: string, per
     "insert into engagements (firm_id, client_id, period_start, period_end, prior_engagement_id) values ($1, $2, $3, $4, $5) returning id",
     [s.firmId, clientId, periodStart, periodEnd, prior.rows[0]?.id ?? null],
   );
-  await audit(tx, s, "create", "engagement", rows[0].id, { clientId, periodStart, periodEnd });
-  // The firm's statement defaults, copied onto this new engagement only.
-  await applyFirmDefaults(tx, s, rows[0].id);
+  // A next year (the client has an earlier engagement) carries last year's person-written notes, as roll-forward does; a first engagement carries nothing.
+  const carried = prior.rows[0] ? await carryPriorNotes(tx, s, prior.rows[0].id, rows[0].id) : [];
+  await audit(tx, s, "create", "engagement", rows[0].id, { clientId, periodStart, periodEnd, ...(prior.rows[0] ? { carriedNotes: carried.length } : {}) });
+  // The firm's statement defaults, copied onto this new engagement only; a carried passage takes precedence over the default for the same key.
+  await applyFirmDefaults(tx, s, rows[0].id, new Set(carried));
   return rows[0].id;
 }
 
