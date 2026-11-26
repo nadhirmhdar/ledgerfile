@@ -141,7 +141,8 @@ describe("the statement pack", () => {
     expect(revenue.generated[0]).toContain("Revenue is measured at the consideration");
     expect(after.notes.find((x) => x.groupCode === "TRADEREC")).toMatchObject({ key: KEY.group, overridden: true, paragraphs: texts[KEY.group] });
     // Nothing else about the pack moved: figures, tables, totals, checks and the note numbers.
-    const strip = (p: typeof before) => ({ ...p, notes: p.notes.map(({ number, title, table, groupCode }) => ({ number, title, table, groupCode })) });
+    // The placeholder warning counts the words, which a person's text changes, so it is left out of this comparison.
+    const strip = (p: typeof before) => ({ ...p, checks: p.checks.filter((c) => c.label !== "No placeholders left in the notes"), notes: p.notes.map(({ number, title, table, groupCode }) => ({ number, title, table, groupCode })) });
     expect(strip(after)).toEqual(strip(before));
     expect(after.notes.map((x) => x.number)).toEqual(before.notes.map((x) => x.number));
     // A passage without an entry keeps the generated words, and says so.

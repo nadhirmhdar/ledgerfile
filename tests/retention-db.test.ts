@@ -101,7 +101,8 @@ async function populated(name: string): Promise<{ engagement: string; client: st
     ]);
     await ledger.selectForTesting(tx, partner, e, "J1");
     await ledger.recordJournalTest(tx, partner, e, "J1", { workDone: "Agreed to the invoice.", conclusion: "No exception found." });
-    await review.addReviewPoint(tx, partner, e, "GENERAL", "Explain the opening balance.");
+    const point = await review.addReviewPoint(tx, partner, e, "GENERAL", "Explain the opening balance.");
+    await review.replyToReviewPoint(tx, preparer, point, "The opening balance agrees to last year's signed file.");
     const sheets = (await review.getOverview(tx, e))!.leadSheets.map((l) => l.groupCode);
     await review.signOff(tx, preparer, e, sheets[0], "preparer").catch(() => undefined);
   });

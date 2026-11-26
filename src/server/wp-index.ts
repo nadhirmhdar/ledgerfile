@@ -5,6 +5,7 @@ import { getAnalytics } from "./analytics";
 import { requestCounts } from "./client-requests";
 import { buildLeadSheets } from "../domain/leadsheet";
 import { buildStatements } from "../domain/statements";
+import { buildStatementPack, packBlockers } from "../domain/statement-pack";
 import { AREA_BY_CODE, CHECKLISTS } from "../domain/audit";
 import { GROUP_BY_CODE } from "../domain/groups";
 import { confirmationState } from "../domain/confirmations";
@@ -94,7 +95,9 @@ export async function buildWorkingPaperIndex(tx: Tx, engagementId: string): Prom
   });
 
   const statements = buildStatements(accounts, { borrowingsCurrent: { current: engagement.borrowingsCurrentMinor, prior: engagement.borrowingsCurrentPriorMinor } });
-  const failed = statements.checks.filter((c) => !c.passed).length;
+  const failed =
+    statements.checks.filter((c) => !c.passed).length +
+    packBlockers(buildStatementPack(accounts, { borrowingsCurrent: { current: engagement.borrowingsCurrentMinor, prior: engagement.borrowingsCurrentPriorMinor } }).checks).length;
   add({
     reference: "G3",
     section: GENERAL,

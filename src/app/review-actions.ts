@@ -54,7 +54,7 @@ export async function clearReviewPointAction(_prev: FormState, form: FormData): 
 }
 
 export async function lockAction(_prev: FormState, form: FormData): Promise<FormState> {
-  return run(form, "Engagement locked.", (tx, actor, id) => review.lockEngagement(tx, actor, id));
+  return run(form, "Engagement locked.", (tx, actor, id) => review.lockEngagement(tx, actor, id, field(form, "reason")));
 }
 
 export async function unlockAction(_prev: FormState, form: FormData): Promise<FormState> {

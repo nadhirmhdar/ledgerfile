@@ -1,6 +1,6 @@
 // Writes a synthetic journal listing for the sample client's 2025 year, for trying journal
-// entry testing. It reconciles to samples/falcon-tb-2025.xlsx (apart from retained earnings,
-// which takes the prior year's result) and includes a few entries with the characteristics
+// entry testing. It reconciles to samples/falcon-tb-2025.xlsx (retained earnings takes the prior year's
+// result and the dividend is the only other equity movement) and includes a few entries with the characteristics
 // journal testing looks for. Every name and figure is invented.
 import ExcelJS from "exceljs";
 import { writeFileSync } from "node:fs";

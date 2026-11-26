@@ -15,7 +15,7 @@ import { describeKey, keptButNotShown, overridesFrom } from "@/domain/note-texts
 import { getPriorYearChecks } from "@/server/prior-year-checks";
 import { PriorYearChecks } from "@/ui/prior-year-view";
 import { buildStatementPack } from "@/domain/statement-pack";
-import type { StatementLine } from "@/domain/statements";
+import { severityOf, type StatementLine } from "@/domain/statements";
 import { formatAmount, formatPresentation } from "@/domain/money";
 import { ActionForm } from "@/app/action-form";
 import { setBorrowingsCurrentAction } from "@/app/actions";
@@ -228,7 +228,7 @@ export default async function StatementsPage({ params, searchParams }: { params:
             </Disclosure>
           )}
         </div>
-        {pack.clean ? (
+        {pack.checks.every((c) => c.passed) ? (
           <div className="flex flex-wrap items-start gap-3">
             <span className="mt-4 shrink-0 text-success-strong">
               <CheckIcon aria-label="All checks pass" role="img" />
@@ -245,17 +245,24 @@ export default async function StatementsPage({ params, searchParams }: { params:
             </Disclosure>
           </div>
         ) : (
-          <Callout variant="warning" title="Checks to put right">
+          <Callout variant="warning" title={pack.clean ? "Needs attention" : "Checks to put right"}>
             <ul className="mt-2 divide-y divide-warning/30">
               {checks.map((c) => {
                 const fix = c.passed ? null : checkFix(c.label, id);
                 const detail = checkDetail(c.detail);
                 return (
                   <li key={c.label} className="flex flex-wrap items-start gap-x-3 gap-y-1 py-2 first:pt-0 last:pb-0">
-                    <StatusBadge status={c.passed ? "done" : "problem"} label={c.passed ? "Passed" : "Failed"} />
+                    <StatusBadge status={c.passed ? "done" : severityOf(c) === "warning" ? "needs_review" : "problem"} label={c.passed ? "Passed" : severityOf(c) === "warning" ? "Needs attention" : "Failed"} />
                     <div className="min-w-0 flex-1 basis-60 text-ink">
                       <p className={c.passed ? "" : "font-semibold"}>{c.label}.</p>
                       {detail && <p className="text-ink-muted">{detail}</p>}
+                      {!c.passed && c.items && (
+                        <ul className="mt-1 list-disc space-y-0.5 pl-5 text-ink-muted">
+                          {c.items.map((item) => (
+                            <li key={item}>{item}</li>
+                          ))}
+                        </ul>
+                      )}
                       {fix && (
                         <Link href={fix.href} className="mt-0.5 inline-block font-medium text-accent underline underline-offset-2">
                           {fix.text}
