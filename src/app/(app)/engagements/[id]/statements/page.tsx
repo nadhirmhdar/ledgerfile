@@ -15,6 +15,9 @@ import { describeKey, keptButNotShown, overridesFrom, STANDARD_NOTES } from "@/d
 import { getPriorYearChecks } from "@/server/prior-year-checks";
 import { PriorYearChecks } from "@/ui/prior-year-view";
 import { buildStatementPack } from "@/domain/statement-pack";
+import { getSignedPrior } from "@/server/signed-prior";
+import { SignedPriorSection } from "@/ui/signed-prior-section";
+import { signedPriorCheck, signedPriorLines } from "@/domain/signed-prior";
 import { severityOf, type StatementLine } from "@/domain/statements";
 import { formatAmount, formatPresentation } from "@/domain/money";
 import { ActionForm } from "@/app/action-form";
@@ -61,7 +64,7 @@ export default async function StatementsPage({ params, searchParams }: { params:
   const unitsParam = (await searchParams).units;
 
   const session = await getSession();
-  const { engagement, accounts, auditOn, history, priorYear: priorYearResult, priorPeriodEnd } = await withFirm(await getDb(), session.firmId, async (tx) => ({
+  const { engagement, accounts, auditOn, history, priorYear: priorYearResult, priorPeriodEnd, signedPrior } = await withFirm(await getDb(), session.firmId, async (tx) => ({
     engagement: await repo.getEngagement(tx, id),
     // Last year's period end, for the label on a passage carried forward from it.
     priorPeriodEnd: (await tx.query<{ end: string }>("select to_char(p.period_end, 'YYYY-MM-DD') as end from engagements e join engagements p on p.id = e.prior_engagement_id where e.id = $1", [id])).rows[0]?.end ?? null,
@@ -69,6 +72,7 @@ export default async function StatementsPage({ params, searchParams }: { params:
     auditOn: await isEnabled(tx, id),
     history: await loadHistory(tx, id),
     priorYear: await getPriorYearChecks(tx, session.firmId, id),
+    signedPrior: await getSignedPrior(tx, id),
   }));
   if (!engagement) notFound();
   // The engagement's own rounding is the default view; the toggle (an explicit ?units=) still overrides it for this view.
@@ -282,6 +286,15 @@ export default async function StatementsPage({ params, searchParams }: { params:
         )}
 
         {priorYearResult && <PriorYearChecks result={priorYearResult} engagementId={id} />}
+        {priorYearResult && !priorYearResult.linked && s.hasComparatives && (
+          // A client's first year in LedgerFile: the comparatives are checked against the signed statements' figures entered here (a warning, never a block).
+          <SignedPriorSection
+            engagementId={id}
+            canEnter={canEdit}
+            check={signedPriorCheck(s, new Map([...signedPrior].map(([k, v]) => [k, v.amountMinor])), pack.rounding.unitMinor)}
+            rows={signedPriorLines(s).map((l) => ({ key: l.key, label: l.label, comparative: fmt(l.comparative), saved: signedPrior.get(l.key)?.amountMinor != null ? (signedPrior.get(l.key)!.amountMinor! / 100).toFixed(2) : "" }))}
+          />
+        )}
 
         <div>
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2">

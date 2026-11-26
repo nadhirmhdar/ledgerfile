@@ -126,6 +126,8 @@ async function populated(name: string): Promise<{ engagement: string; client: st
     await analytics.saveExplanation(tx, partner, e, "REVENUE", "Revenue grew because of an invented new contract.").catch(() => undefined);
   });
   await as(partner, (tx) => setAreaAssignment(tx, partner, e, { areaCode: "C5", preparerId: preparer.userId, reviewerId: null }));
+  // A signed prior-year figure, so the new table has a row to purge.
+  await db.query("insert into signed_prior_figures (firm_id, engagement_id, line_key, amount, entered_by) values ($1, $2, 'CASH', 1234.50, $3)", [A, e, partner.userId]);
   await as(partner, (tx) => saveNoteText(tx, partner, e, "general", ["Invented general information for the retention test."]));
   await as(partner, (tx) => planning.rebutRevenuePresumption(tx, partner, e, "An invented reason for rebutting the presumption, in words."));
   await recordOpinion2(e);
