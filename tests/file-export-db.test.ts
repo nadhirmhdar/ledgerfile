@@ -154,3 +154,87 @@ describe("the whole-file download", () => {
     mem.files.set(key, kept);
   });
 });
+
+const get = async (who: repo.Session, id: string, section?: string) => {
+  session = who;
+  const { GET } = await import("../src/app/(app)/engagements/[id]/index/download-all/route");
+  return GET(new Request(`http://t/x${section === undefined ? "" : `?section=${section}`}`), { params: Promise.resolve({ id }) });
+};
+const outline = (id: string) => as(partner, async (tx) => (await (await import("../src/server/file-export")).outlineExport(tx, id))!);
+
+describe("the size shown before the download", () => {
+  it("matches the zip: the same number of files, and bytes within a third or 150 KB", async () => {
+    const o = await outline(engagement);
+    const entries = await zipOf(await get(partner, engagement));
+    expect(o.whole.files).toBe(entries.length);
+    const actual = entries.reduce((t, e) => t + e.size, 0);
+    expect(Math.abs(o.whole.bytes - actual)).toBeLessThanOrEqual(Math.max(actual / 3, 150 * 1024));
+    for (const section of o.sections) {
+      const own = await zipOf(await get(partner, engagement, section.code));
+      expect(section.files, section.code).toBe(own.length);
+      const size = own.reduce((t, e) => t + e.size, 0);
+      expect(Math.abs(section.bytes - size), section.code).toBeLessThanOrEqual(Math.max(size / 3, 150 * 1024));
+    }
+  });
+});
+
+describe("the cap", () => {
+  it("refuses the whole file before anything is sent, with the message, and still allows a section", async () => {
+    const logged = async () => (await db.query<{ n: number }>("select count(*)::int as n from audit_log where action = 'export_whole_file'")).rows[0].n;
+    const before = await logged();
+    process.env.EXPORT_MAX_BYTES = "1000";
+    try {
+      const response = await get(partner, engagement);
+      expect(response.status).toBe(413);
+      expect(response.headers.get("content-type")).toContain("text/plain");
+      expect(await response.text()).toMatch(/cannot be downloaded in one piece\. Download it by section instead\./);
+      expect(await logged()).toBe(before);
+      const section = await get(partner, engagement, "UNFILED");
+      expect(section.status).toBe(200);
+      await section.arrayBuffer();
+    } finally {
+      delete process.env.EXPORT_MAX_BYTES;
+    }
+    const { exportMaxBytes, DEFAULT_EXPORT_MAX_BYTES } = await import("../src/server/config");
+    expect(exportMaxBytes({})).toBe(DEFAULT_EXPORT_MAX_BYTES);
+    expect(exportMaxBytes({ EXPORT_MAX_BYTES: "5" })).toBe(5);
+    expect(exportMaxBytes({ EXPORT_MAX_BYTES: "nonsense" })).toBe(DEFAULT_EXPORT_MAX_BYTES);
+  });
+});
+
+describe("a section download", () => {
+  it("holds only that section's papers and generated documents, plus the audit log and the README, and says which section", async () => {
+    const o = await outline(engagement);
+    expect(o.sections.map((s) => s.code)).toEqual(expect.arrayContaining(["G", "A", "D", "C5", "UNFILED"]));
+    const names = async (code: string) => (await zipOf(await get(partner, engagement, code))).map((e) => e.name);
+    const unfiled = await names("UNFILED");
+    expect(unfiled.filter((n) => n.startsWith("06 Working papers/"))).toHaveLength(2);
+    expect(unfiled).toHaveLength(4);
+    const general = await names("G");
+    expect(general.every((n) => n.startsWith("01 Financial statements/") || n === "Audit log.csv" || n === "README.txt")).toBe(true);
+    expect(general).toHaveLength(4);
+    const area = await names("C5");
+    expect(area.filter((n) => n.startsWith("04 Test schedules/"))).toHaveLength(1);
+    expect(area.some((n) => n.startsWith("01 ") || n.startsWith("03 ") || n === "00 Index.xlsx")).toBe(false);
+    expect((await names("A")).filter((n) => n.startsWith("03 Letters/"))).toEqual([expect.stringContaining("engagement-letter")]);
+    const entries = await zipOf(await get(partner, engagement, "G"));
+    expect(textOf(entries, "README.txt")).toContain("This download holds one index section only: G General.");
+    const row = (await db.query<{ detail: { section?: string; files: number } }>("select detail from audit_log where action = 'export_whole_file' and entity_id = $1 order by id desc limit 1", [engagement])).rows[0];
+    expect(row.detail).toMatchObject({ section: "G", files: entries.length });
+  });
+
+  it("is refused for an unknown section, and to a reviewer, a preparer or another firm", async () => {
+    expect((await get(partner, engagement, "NOPE")).status).toBe(404);
+    for (const who of [reviewer, preparer, partnerB]) expect((await get(who, engagement, "G")).status, who.userId).toBe(404);
+  });
+});
+
+describe("telling a complete zip from a cut-off one", () => {
+  it("ends the README, the last entry, with the number of entries", async () => {
+    for (const section of [undefined, "G"]) {
+      const entries = await zipOf(await get(partner, engagement, section));
+      expect(entries.at(-1)!.name).toBe("README.txt");
+      expect(textOf(entries, "README.txt").trimEnd().split(/\r\n/).at(-1)).toBe(`End of file: ${entries.length} entries`);
+    }
+  });
+});
