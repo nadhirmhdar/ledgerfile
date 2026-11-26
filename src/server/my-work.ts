@@ -3,6 +3,8 @@ import type { Session } from "./repo";
 import { PROCEDURE_AWAITING_REVIEW } from "./audit";
 import { GROUP_BY_CODE } from "../domain/groups";
 import { effectiveTeam } from "../domain/area-assignments";
+import { listApprovals } from "./partner-approvals";
+import { APPROVAL_KINDS, APPROVAL_LABEL, isCurrent } from "../domain/partner-approvals";
 import { reportDueState, isShownDue, dueWords, sortGroups, SLOT_LABEL, type WorkGroup, type WorkLine } from "../domain/my-work";
 import { count } from "../ui/text";
 
@@ -27,13 +29,14 @@ interface EngagementRow {
   preparerId: string | null;
   reviewerId: string | null;
   partnerId: string | null;
+  audited: boolean;
 }
 
 export async function getMyWork(tx: Tx, s: Session, today: string): Promise<WorkGroup[]> {
   const engagements = (
     await tx.query<EngagementRow>(
       `select e.id, c.name as "clientName", to_char(e.period_end, 'YYYY-MM-DD') as "periodEnd", to_char(e.report_due_on, 'YYYY-MM-DD') as "reportDueOn",
-              e.preparer_id as "preparerId", e.reviewer_id as "reviewerId", e.partner_id as "partnerId"
+              e.preparer_id as "preparerId", e.reviewer_id as "reviewerId", e.partner_id as "partnerId", e.audit_enabled as audited
        from engagements e join clients c on c.id = e.client_id
        where e.status = 'open' and e.archived_at is null and e.firm_id = $1`,
       [s.firmId],
@@ -90,6 +93,7 @@ export async function getMyWork(tx: Tx, s: Session, today: string): Promise<Work
   const pts = by(points.rows);
   const sheets = by(signOffs.rows);
   const owned = by(areaRows.rows);
+  const approvalsOf = await listApprovals(tx, ids);
 
   const groups: WorkGroup[] = [];
   for (const e of engagements) {
@@ -160,6 +164,13 @@ export async function getMyWork(tx: Tx, s: Session, today: string): Promise<Work
     if (!reviewSide) {
       const mine = myPoints.filter((p) => p.authorId === s.userId && p.answered).length;
       add({ slug: "yours", kind: "yours", label: `${count(mine, "review point")} you raised ${mine === 1 ? "has" : "have"} an answer`, count: mine, href: `${base}/review` });
+    }
+
+    // The engagement partner's approval of acceptance and planning, on an audited engagement (missing or stale).
+    if (asPartner && e.audited) {
+      for (const kind of APPROVAL_KINDS) {
+        if (!isCurrent(approvalsOf.get(e.id)?.[kind] ?? null)) add({ slug: `approve-${kind}`, kind: "approve", label: `${APPROVAL_LABEL[kind]} not approved`, count: 1, href: `${base}/audit#partner-approvals` });
+      }
     }
 
     // (d) Report due: only for an engagement the person is on.

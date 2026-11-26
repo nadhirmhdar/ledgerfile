@@ -77,10 +77,10 @@ export function dueWords(s: DueState): string {
 
 // --- My work ----------------------------------------------------------------------------------------------------------------
 
-export type LineKind = "prepare" | "review" | "yours" | "due";
+export type LineKind = "prepare" | "review" | "yours" | "due" | "approve";
 
 /** Which part of the brief the line belongs to, as the short label shown beside it. */
-export const LINE_KIND_LABEL: Record<LineKind, string> = { prepare: "To prepare", review: "To review", yours: "Your review point", due: "Report due" };
+export const LINE_KIND_LABEL: Record<LineKind, string> = { prepare: "To prepare", review: "To review", yours: "Your review point", due: "Report due", approve: "To approve" };
 
 export interface WorkLine {
   key: string;

@@ -1,6 +1,8 @@
 import type { Tx } from "./db";
 import { audit, getEngagement, isSolePractitioner, listAccounts } from "./repo";
 import { getAuditOverview } from "./audit";
+import { getApprovals } from "./partner-approvals";
+import { approvalsBlocker } from "../domain/partner-approvals";
 import { getAdoption } from "./methodology-adoption";
 import { getPriorYearChecks } from "./prior-year-checks";
 import { checkLockReason, signedComparativesDifference } from "../domain/prior-year-checks";
@@ -171,6 +173,9 @@ export async function getOverview(tx: Tx, engagementId: string): Promise<ReviewO
     }),
   };
   overview.readiness = { ready: overview.readiness.ready && auditBlockers.length === 0, blockers: [...overview.readiness.blockers, ...auditBlockers] };
+  // The partner's approval of acceptance and planning (owner decision B1): an error check at the final lock only, and only on an audited engagement.
+  const approvals = auditOverview?.enabled ? approvalsBlocker(await getApprovals(tx, engagementId)) : null;
+  if (approvals) overview.readiness = { ready: false, blockers: [...overview.readiness.blockers, approvals] };
   overview.auditNotApplicable = auditOverview?.enabled ? auditOverview.notApplicable : 0;
   return overview;
 }
