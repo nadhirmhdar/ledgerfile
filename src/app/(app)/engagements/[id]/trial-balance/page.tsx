@@ -14,6 +14,7 @@ import { SOURCE_SENTENCE } from "@/domain/tb-layout";
 import { canReview } from "@/domain/signoff";
 import { bandOf, HIGH } from "@/domain/mapping-assistant";
 import { MappingSelect, UploadForm } from "@/app/forms";
+import { importLimits } from "@/server/direct-upload";
 import { Badge } from "@/ui/badge";
 import { Button, LinkButton, buttonClass } from "@/ui/button";
 import { Callout, EmptyState } from "@/ui/feedback";
@@ -160,7 +161,7 @@ export default async function TrialBalancePage({ params, searchParams }: { param
         {accounts.length === 0 ? (
           controls.importFirst ? (
             <Card title="Import the trial balance" description="Start here. The mapping, lead sheets and statements are all built from it.">
-              <UploadForm engagementId={id} hasAccounts={false} />
+              <UploadForm engagementId={id} hasAccounts={false} limits={importLimits()} />
               {rememberedNote}
             </Card>
           ) : (
@@ -360,7 +361,7 @@ export default async function TrialBalancePage({ params, searchParams }: { param
                   <Callout variant="warning" className="mb-4">
                     Replacing re-reads every balance and removes all lead-sheet sign-offs. Mappings are kept for account codes that stay the same. It cannot be done while there are journal entries.
                   </Callout>
-                  <UploadForm engagementId={id} hasAccounts />
+                  <UploadForm engagementId={id} hasAccounts limits={importLimits()} />
                   {rememberedNote}
                 </div>
               </details>
