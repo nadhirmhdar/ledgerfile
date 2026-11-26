@@ -1,7 +1,7 @@
 /**
  * A read-only check of a deployed site, run by hand after a deploy: `npm run smoke:hosted` with SMOKE_BASE_URL, SMOKE_EMAIL and
  * SMOKE_PASSWORD set. It signs in as the sign-in form does, opens the pages in PAGES with GET requests, and signs out. Signing in and
- * signing out are the only requests that change anything (the session, and the sign-in line in the audit log). It is not part of CI.
+ * signing out are the only requests that are not GET (signing in makes a session and an audit log line; signing out ends the session). Not part of CI.
  *
  * The repository is public and the output may be pasted anywhere, so nothing printed here comes from the site or the environment: only
  * the page names below, a status number, and fixed wording. Errors are never printed, because they can carry the address.

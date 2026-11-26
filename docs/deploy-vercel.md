@@ -65,7 +65,7 @@ Rows are limited too, and refused before the file is parsed: 20,000 for a trial 
 
 Downloads still go through the logged route and are streamed, so a 50 MB file is not subject to the 4.5 MB response cap (the docs say the cap "doesn't apply to" streamed responses; that is not confirmed for a Next.js route handler until it is tried on a deployment). The route reads the whole file and checks its sha256 before it sends the first byte, so a file that has changed is still refused (409).
 
-**The whole-file download** (partners and administrators, Index page) is a zip streamed from one function. Its route sets `maxDuration = 300`: with fluid compute (on by default) 300 seconds is both the default and the maximum on Hobby, and within Pro and Enterprise ([limits](https://vercel.com/docs/functions/limitations), page last updated 2026-08-24, read 2026-11-26), and the limit covers the time spent sending the streamed response. The page shows "About N files, X MB" from stored sizes. A whole file estimated above `EXPORT_MAX_BYTES` (default 1 GB) is refused before it starts, and the file is then taken by index section. **A cut-off download can be told from a complete one:** `README.txt` is written last and its last line is `End of file: N entries`, the number of files in the zip. A zip without it, or whose count differs, is incomplete. A very slow connection can run past 300 seconds well under the cap: 1 GB needs about 3.5 MB a second sustained.
+**The whole-file download** (partners and administrators, Index page) is a zip streamed from one function. Its route sets `maxDuration = 300`: with fluid compute (on by default) 300 seconds is both the default and the maximum on Hobby, and within Pro and Enterprise ([limits](https://vercel.com/docs/functions/limitations), page last updated 2026-08-24, read 2026-11-26), and the limit covers the time spent sending the streamed response. The page shows "about N files, X MB" from stored sizes. A whole file estimated above `EXPORT_MAX_BYTES` (default 1 GB) is refused before it starts, and the file is then taken by index section. **A cut-off download can be told from a complete one:** `README.txt` is written last and its last line is `End of file: N entries`, the number of files in the zip. A zip without it, or whose count differs, is incomplete. A very slow connection can run past 300 seconds well under the cap: 1 GB needs about 3.5 MB a second sustained.
 
 ## Regions
 
@@ -98,7 +98,7 @@ It signs in, opens the home page, My work, Clients, the first engagement on the 
 - `SKIP Firm (not offered to this sign-in)`: the role does not have that page.
 - The last line counts them. The exit code is not zero when anything failed.
 
-The output holds page names only: no address, sign-in, cookie, client name or page text. Signing in and signing out are the only requests that change anything: a session is made and then ended, and the sign-in is written to the audit log. Use the right password: wrong ones count towards the account's lockout. A hosted site refuses the public demo password.
+The output holds page names only: no address, sign-in, cookie, client name or page text. Besides signing in and out it sends only GET requests and submits no other form. Signing in makes a session, writes the sign-in to the audit log, resets the failed-attempt count and clears expired sessions; signing out ends the session. Use the right password: wrong ones count towards the account's lockout. A hosted site refuses the public demo password.
 
 ## What was and was not verified
 
