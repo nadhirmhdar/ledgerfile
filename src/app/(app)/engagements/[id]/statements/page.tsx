@@ -61,8 +61,10 @@ export default async function StatementsPage({ params, searchParams }: { params:
   const unitsParam = (await searchParams).units;
 
   const session = await getSession();
-  const { engagement, accounts, auditOn, history, priorYear: priorYearResult } = await withFirm(await getDb(), session.firmId, async (tx) => ({
+  const { engagement, accounts, auditOn, history, priorYear: priorYearResult, priorPeriodEnd } = await withFirm(await getDb(), session.firmId, async (tx) => ({
     engagement: await repo.getEngagement(tx, id),
+    // Last year's period end, for the label on a passage carried forward from it.
+    priorPeriodEnd: (await tx.query<{ end: string }>("select to_char(p.period_end, 'YYYY-MM-DD') as end from engagements e join engagements p on p.id = e.prior_engagement_id where e.id = $1", [id])).rows[0]?.end ?? null,
     accounts: await repo.listAccounts(tx, id),
     auditOn: await isEnabled(tx, id),
     history: await loadHistory(tx, id),
@@ -83,7 +85,8 @@ export default async function StatementsPage({ params, searchParams }: { params:
     paragraphs,
     generated,
     overridden,
-    current: overridden && current.get(key) ? { version: current.get(key)!.version, by: current.get(key)!.by, at: current.get(key)!.at, fromDefault: current.get(key)!.source === "firm_default" } : null,
+    current: overridden && current.get(key) ? { version: current.get(key)!.version, by: current.get(key)!.by, at: current.get(key)!.at, fromDefault: current.get(key)!.source === "firm_default", carried: current.get(key)!.source === "carried_forward" } : null,
+    priorPeriodEnd,
     history: history.get(key) ?? [],
     canEdit,
   });

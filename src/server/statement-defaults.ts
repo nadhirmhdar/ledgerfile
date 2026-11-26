@@ -1,6 +1,6 @@
 import type { Tx } from "./db";
 import { canLock, type Role } from "../domain/signoff";
-import { cutForLog, describeKey, isKnownKey, policyKey, STANDARD_NOTES } from "../domain/note-texts";
+import { carriesForward, cutForLog, describeKey, isKnownKey, policyKey, STANDARD_NOTES, type NoteSource } from "../domain/note-texts";
 import { POLICIES } from "../domain/policies";
 import { checkCurrency, checkDefaultText, isUnit, NOT_PARTNER_DEFAULTS, paragraphsToText, type Unit } from "../domain/statement-defaults";
 
@@ -115,11 +115,12 @@ export async function saveFirmDefaults(tx: Tx, s: { firmId: string; userId: stri
  * from the firm defaults. Called right after an engagement is created (single creation and bulk roll-forward) and nowhere else, so an existing
  * engagement is never touched. Writes nothing when the firm has set nothing.
  */
-export async function applyFirmDefaults(tx: Tx, s: { firmId: string; userId: string }, engagementId: string): Promise<void> {
+export async function applyFirmDefaults(tx: Tx, s: { firmId: string; userId: string }, engagementId: string, carried: ReadonlySet<string> = new Set()): Promise<void> {
   const d = await loadFirmDefaults(tx);
   if (d.currency === null && d.unit === null && d.notes.size === 0) return;
   await tx.query("update engagements set currency = $2, statement_unit = $3 where id = $1 and firm_id = $4", [engagementId, d.currency, d.unit, s.firmId]);
-  for (const [key, v] of d.notes) {
+  // A passage carried from last year already has version 1 here and takes precedence over the firm default for the same key.
+  for (const [key, v] of [...d.notes].filter(([k]) => !carried.has(k))) {
     await tx.query("insert into note_texts (firm_id, engagement_id, note_key, version, paragraphs, is_generated, written_by, source) values ($1, $2, $3, 1, $4::jsonb, false, $5, 'firm_default')", [
       s.firmId,
       engagementId,
@@ -128,7 +129,35 @@ export async function applyFirmDefaults(tx: Tx, s: { firmId: string; userId: str
       s.userId,
     ]);
   }
-  await audit(tx, s, "apply_firm_defaults", "engagement", engagementId, { currency: d.currency, unit: d.unit, notes: [...d.notes.keys()] });
+  await audit(tx, s, "apply_firm_defaults", "engagement", engagementId, { currency: d.currency, unit: d.unit, notes: [...d.notes.keys()].filter((k) => !carried.has(k)) });
+}
+
+/**
+ * Roll-forward: carry last year's person-written passages onto the NEW engagement (owner decision 2026-11-25), as version 1 with source 'carried_forward',
+ * written now by the person rolling forward. For each key it takes the prior engagement's CURRENT version and carries it only when that was a person's own
+ * words: written by a person (source null or 'person'), or itself carried and not edited since ('carried_forward', so edited wording keeps moving year to
+ * year). A current version that is a firm default or "back to the generated wording" is not carried. A group:<CODE> passage is carried like any other; if
+ * that group has no note this year it is simply stored and not shown, as for any unused key. Returns the keys carried, which the firm defaults then skip.
+ */
+export async function carryPriorNotes(tx: Tx, s: { firmId: string; userId: string }, priorEngagementId: string, engagementId: string): Promise<string[]> {
+  const { rows } = await tx.query<{ key: string; paragraphs: unknown; generated: boolean; source: NoteSource | null }>(
+    `select distinct on (note_key) note_key as key, paragraphs, is_generated as generated, source
+     from note_texts where engagement_id = $1 and firm_id = $2 order by note_key, version desc`,
+    [priorEngagementId, s.firmId],
+  );
+  const keys: string[] = [];
+  for (const r of rows) {
+    if (!carriesForward(r)) continue;
+    await tx.query("insert into note_texts (firm_id, engagement_id, note_key, version, paragraphs, is_generated, written_by, source) values ($1, $2, $3, 1, $4::jsonb, false, $5, 'carried_forward')", [
+      s.firmId,
+      engagementId,
+      r.key,
+      JSON.stringify(r.paragraphs),
+      s.userId,
+    ]);
+    keys.push(r.key);
+  }
+  return keys;
 }
 
 /** A partner changes one engagement's own currency while it is open. Logged with before and after. Existing notes and the firm's defaults are untouched. */

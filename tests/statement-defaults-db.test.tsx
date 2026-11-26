@@ -163,7 +163,7 @@ describe("applying the defaults to new engagements only", () => {
     await save(partner, { currency: "AED", unit: "whole", notes: { general: "Firm general wording.", [KEY.revenue]: "Firm revenue policy.\n\nSecond paragraph." } });
   });
 
-  it("does the same for bulk roll-forward, and does not copy last year's edited notes", async () => {
+  it("does the same for bulk roll-forward, with last year's person-edited notes carried alongside (owner decision 2026-11-25)", async () => {
     const f = "cccccccc-8282-4000-8000-000000000001";
     await db.query("insert into firms (id, name, statement_currency, statement_unit) values ($1, 'Roll Firm', 'QAR', 'exact')", [f]);
     const p = user(f, 1, "partner");
@@ -176,7 +176,8 @@ describe("applying the defaults to new engagements only", () => {
     const [made] = await as(p, (tx) => rollForward(tx, p, [{ clientId, start: "2025-01-01", end: "2025-12-31" }], "2026-03-01"));
     expect((await db.query<{ currency: string; statement_unit: string }>("select currency, statement_unit from engagements where id = $1", [made.engagementId])).rows[0]).toEqual({ currency: "QAR", statement_unit: "exact" });
     const notes = await as(p, async (tx) => currentOf(await loadHistory(tx, made.engagementId)));
-    expect([...notes.keys()]).toEqual(["basis"]);
+    expect([...notes.keys()].sort()).toEqual(["basis", "general"]);
+    expect(notes.get("general")).toMatchObject({ version: 1, source: "carried_forward", paragraphs: ["Last year's edited general note."] });
     expect(notes.get("basis")).toMatchObject({ version: 1, source: "firm_default", paragraphs: ["Roll firm basis wording."] });
   });
 
