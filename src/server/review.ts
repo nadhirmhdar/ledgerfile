@@ -1,6 +1,8 @@
 import type { Tx } from "./db";
 import { audit, getEngagement, isSolePractitioner, listAccounts } from "./repo";
 import { getAuditOverview } from "./audit";
+import { getEqReview } from "./eq-review";
+import { EQ_LOCK_LABEL, EQ_OTHER_CHECKS, eqBlocker } from "../domain/eq-review";
 import { getAdoption } from "./methodology-adoption";
 import { getPriorYearChecks } from "./prior-year-checks";
 import { checkLockReason, signedComparativesDifference } from "../domain/prior-year-checks";
@@ -171,8 +173,17 @@ export async function getOverview(tx: Tx, engagementId: string): Promise<ReviewO
     }),
   };
   overview.readiness = { ready: overview.readiness.ready && auditBlockers.length === 0, blockers: [...overview.readiness.blockers, ...auditBlockers] };
+  // The optional engagement quality review (owner decision B2): an error check only while it is on.
+  const eq = eqBlocker(await getEqReview(tx, engagementId));
+  if (eq) overview.readiness = { ready: false, blockers: [...overview.readiness.blockers, eq] };
   overview.auditNotApplicable = auditOverview?.enabled ? auditOverview.notApplicable : 0;
   return overview;
+}
+
+/** The refusal for an EQ reviewer signing too early: every error lock check other than their own signature must pass. Null when they do. */
+export async function otherLockBlockers(tx: Tx, engagementId: string): Promise<string | null> {
+  const others = (await getOverview(tx, engagementId))!.readiness.blockers.filter((b) => !b.startsWith(EQ_LOCK_LABEL));
+  return others.length === 0 ? null : `${EQ_OTHER_CHECKS} ${others.join(" ")}`;
 }
 
 export async function signOff(tx: Tx, actor: Actor, engagementId: string, groupCode: string, level: Level): Promise<void> {
