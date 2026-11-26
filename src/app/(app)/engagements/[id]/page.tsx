@@ -10,6 +10,8 @@ import { confirmationSummary } from "@/server/confirmations";
 import { getEngagementTeam, listAssignable } from "@/server/engagement-team";
 import { listAreaAssignments } from "@/server/area-assignments";
 import { getIndependence } from "@/server/independence";
+import { getEqReview } from "@/server/eq-review";
+import { EqReviewSection } from "@/ui/eq-review-section";
 import { IndependenceSection } from "@/ui/independence-section";
 import { todayIso } from "@/domain/client-requests";
 import { canLock } from "@/domain/signoff";
@@ -50,10 +52,11 @@ export default async function EngagementHome({ params }: { params: Promise<{ id:
       people: await listAssignable(tx),
       areaAssignments: [...(await listAreaAssignments(tx, id)).values()],
       independence: await getIndependence(tx, id),
+      eq: await getEqReview(tx, id),
     };
   });
   if (!data || !data.audit || !data.overview || !data.index || !data.team) notFound();
-  const { engagement, accounts, audit, overview, index, requests, confirmations, priorYear, team, people, areaAssignments, independence } = data;
+  const { engagement, accounts, audit, overview, index, requests, confirmations, priorYear, team, people, areaAssignments, independence, eq } = data;
 
   const input: HomeInput = {
     engagementId: id,
@@ -167,6 +170,16 @@ export default async function EngagementHome({ params }: { params: Promise<{ id:
         </Section>
 
         <TeamPanel engagementId={id} team={team} people={people} canAssign={canLock(session.role) && engagement.status === "open"} today={todayIso()} areaAssignments={areaAssignments} />
+
+        <EqReviewSection
+          engagementId={id}
+          review={eq}
+          userId={session.userId}
+          canSet={canLock(session.role) && engagement.status === "open"}
+          open={engagement.status === "open"}
+          people={people}
+          teamIds={[team.preparer?.id, team.reviewer?.id, team.partner?.id, ...areaAssignments.flatMap((a) => [a.preparer?.id, a.reviewer?.id])].filter((x): x is string => !!x)}
+        />
 
         <IndependenceSection engagementId={id} data={independence} userId={session.userId} open={engagement.status === "open"} />
 

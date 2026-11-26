@@ -2,6 +2,7 @@ import type { Tx } from "./db";
 import { audit, lockEngagements, overlapRefusal, type Session } from "./repo";
 import { setAuditEnabled } from "./audit";
 import { applyFirmDefaults, carryPriorNotes } from "./statement-defaults";
+import { carryEqSetting } from "./eq-review";
 import { canCreateEngagement, ENGAGEMENT_REFUSAL } from "../domain/permissions";
 import { todayIso } from "../domain/client-requests";
 import { isRealDate, nextPeriod } from "../domain/client-details";
@@ -154,6 +155,8 @@ export async function rollForward(tx: Tx, s: Session, items: RollItem[], today: 
     await audit(tx, s, "create", "engagement", id, { clientId: item.clientId, periodStart: item.start, periodEnd: item.end, priorEngagementId: prior.id, bulk: true, carriedNotes: carried.length });
     // The firm's statement defaults, as for any new engagement, for the keys nothing was carried for.
     await applyFirmDefaults(tx, s, id, new Set(carried));
+    // Whether the engagement quality review is on, and who reviews, carry to the next year; the sign-off never does.
+    await carryEqSetting(tx, s, prior.id, id);
     // The audit on: turned on the usual way, so its checklist steps are loaded. Nothing else of last year's audit is carried.
     if (prior.auditEnabled) await setAuditEnabled(tx, { ...s, role: who.rows[0].role }, id, true);
     created.push({ engagementId: id, clientId: item.clientId, clientName: prior.clientName, start: item.start, end: item.end });
