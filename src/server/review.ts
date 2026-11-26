@@ -1,6 +1,8 @@
 import type { Tx } from "./db";
 import { audit, getEngagement, isSolePractitioner, listAccounts } from "./repo";
 import { getAuditOverview } from "./audit";
+import { getApprovals } from "./partner-approvals";
+import { approvalsBlocker } from "../domain/partner-approvals";
 import { getEqReview } from "./eq-review";
 import { EQ_LOCK_LABEL, EQ_OTHER_CHECKS, eqBlocker } from "../domain/eq-review";
 import { getAdoption } from "./methodology-adoption";
@@ -173,6 +175,9 @@ export async function getOverview(tx: Tx, engagementId: string): Promise<ReviewO
     }),
   };
   overview.readiness = { ready: overview.readiness.ready && auditBlockers.length === 0, blockers: [...overview.readiness.blockers, ...auditBlockers] };
+  // The partner's approval of acceptance and planning (owner decision B1): an error check at the final lock only, and only on an audited engagement.
+  const approvals = auditOverview?.enabled ? approvalsBlocker(await getApprovals(tx, engagementId)) : null;
+  if (approvals) overview.readiness = { ready: false, blockers: [...overview.readiness.blockers, approvals] };
   // The optional engagement quality review (owner decision B2): an error check only while it is on.
   const eq = eqBlocker(await getEqReview(tx, engagementId));
   if (eq) overview.readiness = { ready: false, blockers: [...overview.readiness.blockers, eq] };

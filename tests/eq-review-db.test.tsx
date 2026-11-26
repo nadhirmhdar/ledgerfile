@@ -7,6 +7,9 @@ import * as review from "../src/server/review";
 import { assignTeam } from "../src/server/engagement-team";
 import { setAreaAssignment } from "../src/server/area-assignments";
 import { getEqReview, setEqReview, signEqReview, withdrawEqReview } from "../src/server/eq-review";
+import { approve } from "../src/server/partner-approvals";
+import { LOCK_CHECK_LABEL } from "../src/domain/partner-approvals";
+import * as audit from "../src/server/audit";
 import { rollForward } from "../src/server/rollforward";
 import { getMyWork } from "../src/server/my-work";
 import { EQ_LOCK_LABEL, EQ_NOT_ON, EQ_NOT_REVIEWER, EQ_ONLY_NAMED, EQ_ON_TEAM, EQ_OTHER_CHECKS, EQ_SET_REFUSAL, eqSummary, NO_EQ_REVIEWER } from "../src/domain/eq-review";
@@ -141,6 +144,27 @@ describe("signing", () => {
     // Choosing another reviewer clears the signature, which belongs to the person who gave it.
     await set(partner, id, true, eqr2.userId);
     expect((await state(id)).signed).toBeNull();
+  });
+});
+
+describe("signing waits for the partner's approvals", () => {
+  it("counts the partner-approval check among the other checks that must pass on an audited engagement", async () => {
+    const { id } = await engagement();
+    await as(partner, (tx) => audit.setAuditEnabled(tx, partner, id, true));
+    await signSheets(id);
+    await set(partner, id, true, eqr.userId);
+    // Without the approvals the EQ reviewer is refused, and the refusal names the approval check.
+    expect(await as(eqr, (tx) => review.otherLockBlockers(tx, id))).toContain(LOCK_CHECK_LABEL);
+    await expect(sign(eqr, id)).rejects.toThrow(LOCK_CHECK_LABEL);
+    expect((await state(id)).signed).toBeNull();
+    // Both checks stand side by side in the lock list.
+    const both = await blockers(id);
+    expect(both.some((b) => b.startsWith(LOCK_CHECK_LABEL))).toBe(true);
+    expect(both.some((b) => b.startsWith(EQ_LOCK_LABEL))).toBe(true);
+    // Once the partner has approved, the approval check no longer stands in the way (other audit work still may).
+    await as(partner, (tx) => approve(tx, partner, id, "acceptance"));
+    await as(partner, (tx) => approve(tx, partner, id, "planning"));
+    expect((await as(eqr, (tx) => review.otherLockBlockers(tx, id))) ?? "").not.toContain(LOCK_CHECK_LABEL);
   });
 });
 

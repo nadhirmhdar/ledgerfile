@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { getDb, withFirm } from "@/server/db";
 import { getSession } from "@/server/session";
 import { buildWorkingPaperIndex } from "@/server/wp-index";
+import { canLock } from "@/domain/signoff";
 import * as repo from "@/server/repo";
 import { isIndexFilter, KIND_LABEL, notApplicableNote, STATUS_LABEL, type IndexEntry, type IndexFilter, type Status } from "@/domain/wp-index";
 import { Badge, StatusBadge } from "@/ui/badge";
@@ -110,9 +111,17 @@ export default async function IndexPage({ params, searchParams }: { params: Prom
         meta={<EngagementFacts client={engagement.clientName} periodStart={engagement.periodStart} periodEnd={engagement.periodEnd} />}
         subtitle={indexSentence(o)}
         actions={
-          <a href={`${base}/export`} className={buttonClass("secondary")}>
-            Download index (Excel)
-          </a>
+          <div className="flex flex-wrap gap-2">
+            <a href={`${base}/export`} className={buttonClass("secondary")}>
+              Download index (Excel)
+            </a>
+            {canLock(session.role) && (
+              // A plain link: the route streams the zip and logs the download, so it must not be prefetched. It re-reads the role itself.
+              <a href={`${base}/download-all`} className={buttonClass("secondary")}>
+                Download the whole file
+              </a>
+            )}
+          </div>
         }
       />
       <EngagementNav id={id} current="index" status={engagement.status} archived={engagement.archivedAt !== null} />
