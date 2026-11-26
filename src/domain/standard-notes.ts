@@ -25,6 +25,6 @@ export const STANDARD_NOTE_WORDING: Record<string, string[]> = {
     "These financial statements were approved for issue on [date the statements were approved]. [Describe any event after the reporting period that needs to be disclosed, and say whether it is an adjusting or a non-adjusting event, or state that there were none.]",
   ],
   [GOING_CONCERN_KEY]: [
-    "[State the preparers' assessment of whether the entity can continue in operation for the foreseeable future, the evidence and plans that support it, and any material uncertainty. Complete this note once that assessment has been made.]",
+    "[State management's assessment of whether the entity can continue in operation for the foreseeable future, the evidence and plans that support it, and any material uncertainty. Complete this note once management has made that assessment.]",
   ],
 };

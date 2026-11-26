@@ -179,3 +179,14 @@ describe("Word and PDF", () => {
     expect(text).not.toContain("[date the statements were approved]");
   });
 });
+
+describe("the going concern wording", () => {
+  it("is management's assessment, in one placeholder", async () => {
+    const { STANDARD_NOTE_WORDING } = await import("../src/domain/standard-notes");
+    const text = STANDARD_NOTE_WORDING[GOING_CONCERN_KEY];
+    expect(text).toHaveLength(1);
+    expect(text[0]).toContain("management's assessment");
+    expect(text[0]).not.toContain("preparers");
+    expect(placeholderCount(text)).toBe(1);
+  });
+});

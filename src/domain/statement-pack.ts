@@ -181,16 +181,29 @@ export function consistencyChecks({ base, equity, cashFlow, notes, unitMinor }: 
 
   // 2. Each note's table total against the line it supports, in presentation sign, for each year the statements show.
   const faceLines = [...base.comprehensiveIncome, ...base.financialPosition.flatMap((s) => s.lines)];
+  // The statement can split a group over more than one line (borrowings: non-current and the current portion), so its face is their sum.
+  const faceOf = (groupCode: string) => {
+    const face = faceLines.filter((l) => l.groupCode === groupCode);
+    return { current: face.reduce((s, l) => s + l.current, 0), prior: face.reduce((s, l) => s + l.prior, 0) };
+  };
   const differences = notes.flatMap((n) => {
-    if (!n.table || !n.groupCode) return [];
-    // The statement can split a group over more than one line (borrowings: non-current and the current portion), so its face is their sum.
-    const face = faceLines.filter((l) => l.groupCode === n.groupCode);
-    const faceCurrent = face.reduce((s, l) => s + l.current, 0);
-    const facePrior = face.reduce((s, l) => s + l.prior, 0);
-    const parts: string[] = [];
-    if (n.table.totalCurrent !== faceCurrent) parts.push(`note total ${money(n.table.totalCurrent)}, statements ${money(faceCurrent)}, difference ${money(n.table.totalCurrent - faceCurrent)}`);
-    if (base.hasComparatives && n.table.totalPrior !== facePrior) parts.push(`prior year: note total ${money(n.table.totalPrior)}, statements ${money(facePrior)}, difference ${money(n.table.totalPrior - facePrior)}`);
-    return parts.length === 0 ? [] : [`Note ${n.number}, ${n.title}: ${parts.join("; ")}`];
+    if (!n.table) return [];
+    if (n.groupCode) {
+      const face = faceOf(n.groupCode);
+      const parts: string[] = [];
+      if (n.table.totalCurrent !== face.current) parts.push(`note total ${money(n.table.totalCurrent)}, statements ${money(face.current)}, difference ${money(n.table.totalCurrent - face.current)}`);
+      if (base.hasComparatives && n.table.totalPrior !== face.prior) parts.push(`prior year: note total ${money(n.table.totalPrior)}, statements ${money(face.prior)}, difference ${money(n.table.totalPrior - face.prior)}`);
+      return parts.length === 0 ? [] : [`Note ${n.number}, ${n.title}: ${parts.join("; ")}`];
+    }
+    // The related-party and income tax notes are ledgers with no total: each row is compared with the face line of its own group.
+    return n.table.rows.flatMap((r) => {
+      if (!r.groupCode) return [];
+      const face = faceOf(r.groupCode);
+      const parts: string[] = [];
+      if (r.current !== face.current) parts.push(`row total ${money(r.current)}, statements ${money(face.current)}, difference ${money(r.current - face.current)}`);
+      if (base.hasComparatives && (r.prior ?? 0) !== face.prior) parts.push(`prior year: row total ${money(r.prior ?? 0)}, statements ${money(face.prior)}, difference ${money((r.prior ?? 0) - face.prior)}`);
+      return parts.length === 0 ? [] : [`Note ${n.number}, ${n.title}, ${r.label}: ${parts.join("; ")}`];
+    });
   });
   const noteCheck: Check = {
     label: NOTE_TOTALS_CHECK_LABEL,
