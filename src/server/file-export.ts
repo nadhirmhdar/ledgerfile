@@ -153,7 +153,7 @@ export async function* fileExportEntries(s: Session, plan: ExportPlan, store: ()
     const grouped = await read(async (tx) => {
       const built = await buildWorkingPaperIndex(tx, id);
       return (built?.sections ?? []).flatMap((section) =>
-        section.entries.filter((e) => e.kind === "file").map((e) => ({ folder: `06 Working papers/${safeName(`${section.code} ${section.title}`)}`, reference: e.reference, fileName: e.title, fileId: e.href.split("/").pop()! })),
+        section.entries.filter((e) => e.kind === "file").map((e) => ({ folder: `06 Working papers/${safeName(sectionFolder(section))}`, reference: e.reference, fileName: e.title, fileId: e.href.split("/").pop()! })),
       );
     });
     for (const paper of grouped) {
@@ -179,6 +179,9 @@ export async function* fileExportEntries(s: Session, plan: ExportPlan, store: ()
     );
   }
 }
+
+/** "C5 Trade receivables" for a coded section; the title alone where the code is a word (Unfiled, General). */
+const sectionFolder = (s: { code: string; title: string }) => (/^[A-Z]{3,}$/.test(s.code) ? s.title : `${s.code} ${s.title}`);
 
 export function readmeText(plan: ExportPlan, contents: string[], problems: string[], now: Date): string {
   const lines = [
