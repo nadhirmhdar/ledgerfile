@@ -4,7 +4,7 @@ import { DIRECT_UPLOAD_BYTES, DIRECT_UPLOAD_LABEL, maxUploadBytes, PENDING_UPLOA
 import { fileStoreKind, FILE_KEY } from "./file-store";
 import type { Session } from "./repo";
 import { UPLOAD_CONTENT_TYPE } from "../ui/upload-view";
-import { checkWorkingPaper, registerWorkingPaper, type CheckedPaper } from "./working-papers";
+import { checkWorkingPaper, paperToReplace, registerWorkingPaper, type CheckedPaper } from "./working-papers";
 
 /**
  * Hosted uploads that go straight from the browser to the private Blob store.
@@ -41,6 +41,8 @@ export interface PendingRow {
   fileName: string;
   sizeBytes: number;
   description: string | null;
+  /** The working paper this upload will be a new version of, when it is one. */
+  replacesId: string | null;
   expiresAt: Date;
 }
 
@@ -87,9 +89,9 @@ export function arrivalProblem(declaredBytes: number, arrived: { size: number } 
   return null;
 }
 
-type Row = { key: string; firmId: string; engagementId: string; userId: string; targetKind: string; target: string | null; fileName: string; sizeBytes: number; description: string | null; expiresAt: Date | string };
+type Row = { key: string; firmId: string; engagementId: string; userId: string; targetKind: string; target: string | null; fileName: string; sizeBytes: number; description: string | null; replacesId: string | null; expiresAt: Date | string };
 const COLUMNS = `key, firm_id as "firmId", engagement_id as "engagementId", user_id as "userId", target_kind as "targetKind", target, file_name as "fileName",
-  size_bytes::float8 as "sizeBytes", description, expires_at as "expiresAt"`;
+  size_bytes::float8 as "sizeBytes", description, replaces_id as "replacesId", expires_at as "expiresAt"`;
 const toRow = (r: Row): PendingRow => ({ ...r, expiresAt: new Date(r.expiresAt) });
 
 /** The pending row of this user for this key; null when there is none. Row-level security hides every other firm's rows. */
@@ -145,19 +147,26 @@ export async function beginDirectUpload(
   db: Db,
   s: Session,
   ops: BlobOps,
-  input: { engagementId: string; targetKind: string; target: string | null; fileName: string; sizeBytes: number; description: string },
+  input: { engagementId: string; targetKind: string; target: string | null; fileName: string; sizeBytes: number; description: string; replacesId?: string | null },
   now: Date = new Date(),
 ): Promise<{ key: string; fileName: string }> {
   const { key, swept, checked } = await withFirm(db, s.firmId, async (tx) => {
     const swept = await sweepExpired(tx, now);
-    const checked: CheckedPaper = await checkWorkingPaper(tx, input.engagementId, input, tooLarge);
+    // A new version supports what the paper it replaces supports and keeps its description unless a new one is written; the rest of the rules are the same.
+    let what = input;
+    if (input.replacesId) {
+      const old = await paperToReplace(tx, input.replacesId);
+      if (old.engagementId !== input.engagementId) throw new Error("Working paper not found.");
+      what = { ...input, targetKind: old.targetKind, target: old.target, description: input.description.trim() || old.description || "" };
+    }
+    const checked: CheckedPaper = await checkWorkingPaper(tx, input.engagementId, what, tooLarge);
     const open = await tx.query<{ n: number }>("select count(*)::int as n from pending_uploads where user_id = $1", [s.userId]);
     if (open.rows[0].n >= MAX_PENDING_PER_USER) throw new Error("Too many uploads are in progress. Wait a few minutes and try again.");
     const key = `${s.firmId}/${randomUUID()}`;
     await tx.query(
-      `insert into pending_uploads (key, firm_id, engagement_id, user_id, target_kind, target, file_name, size_bytes, description, created_at, expires_at)
-       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::timestamptz, $11::timestamptz)`,
-      [key, s.firmId, input.engagementId, s.userId, checked.targetKind, checked.target, checked.fileName, input.sizeBytes, checked.description, now.toISOString(), new Date(now.getTime() + PENDING_UPLOAD_MINUTES * 60_000).toISOString()],
+      `insert into pending_uploads (key, firm_id, engagement_id, user_id, target_kind, target, file_name, size_bytes, description, replaces_id, created_at, expires_at)
+       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::timestamptz, $12::timestamptz)`,
+      [key, s.firmId, input.engagementId, s.userId, checked.targetKind, checked.target, checked.fileName, input.sizeBytes, checked.description, input.replacesId ?? null, now.toISOString(), new Date(now.getTime() + PENDING_UPLOAD_MINUTES * 60_000).toISOString()],
     );
     return { key, swept, checked };
   });
@@ -216,7 +225,8 @@ export async function finishDirectUpload(db: Db, s: Session, ops: BlobOps, key: 
       if (!claimed) throw new Lost();
       const checked = await checkWorkingPaper(tx, claimed.engagementId, { targetKind: claimed.targetKind, target: claimed.target, fileName: claimed.fileName, sizeBytes: arrived.size, description: claimed.description ?? "" }, tooLarge);
       const id = key.split("/")[1];
-      await registerWorkingPaper(tx, s, { id, storageKey: key, engagementId: claimed.engagementId, checked, sizeBytes: arrived.size, sha256: arrived.sha256 });
+      // A new version is re-checked here against the paper as it is now: still current, not the same bytes, same engagement.
+      await registerWorkingPaper(tx, s, { id, storageKey: key, engagementId: claimed.engagementId, checked, sizeBytes: arrived.size, sha256: arrived.sha256, replacesId: claimed.replacesId });
       return { id, engagementId: claimed.engagementId, fileName: checked.fileName };
     });
   } catch (e) {

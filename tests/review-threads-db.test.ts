@@ -5,7 +5,6 @@ import * as repo from "../src/server/repo";
 import * as review from "../src/server/review";
 import { assignTeam } from "../src/server/engagement-team";
 import { getMyWork } from "../src/server/my-work";
-import { LATEST_MIGRATION } from "../src/server/migrations";
 import type { WorkGroup } from "../src/domain/my-work";
 
 // Invented firms and people.
@@ -56,8 +55,8 @@ afterAll(async () => {
 });
 
 describe("the replies table", () => {
-  it("is the latest migration, and the application role can only read and add replies", async () => {
-    expect(LATEST_MIGRATION).toBe("0036_review_point_replies.sql");
+  it("is migration 0036, and the application role can only read and add replies", async () => {
+    expect((await db.query("select 1 from schema_migrations where name = $1", ["0036_review_point_replies.sql"])).rows).toHaveLength(1);
     const e = await engagement();
     const p = await raise(e);
     await reply(prep, p, "Agreed to last year's file.");

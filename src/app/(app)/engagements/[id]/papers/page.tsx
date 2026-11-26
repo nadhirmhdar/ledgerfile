@@ -19,6 +19,7 @@ import { EmptyState } from "@/ui/feedback";
 import { PageHeader, Section, EngagementFacts } from "@/ui/layout";
 import { fileSize, filingText, filterPapers, paperControls, paperCounts, paperResults, papersSentence, parsePapersSearch, parsePapersShow, type PapersShow } from "@/ui/papers-view";
 import { TwoLineRow } from "@/ui/two-line-row";
+import { PaperHistory, versionLabel } from "@/ui/paper-history";
 import { EngagementNav } from "../nav";
 
 export const dynamic = "force-dynamic";
@@ -173,6 +174,7 @@ export default async function PapersPage({ params, searchParams }: { params: Pro
                           </a>
                           <span className="rounded-full bg-surface-muted px-2.5 py-0.5 text-sm text-ink-muted">{w.targetLabel}</span>
                           {w.reference && <span className="rounded-full border border-border-input px-2.5 py-0.5 text-sm font-medium tabular-nums">{w.reference}</span>}
+                          {versionLabel(w.version) && <span className="rounded-full bg-accent-soft px-2.5 py-0.5 text-sm font-medium text-accent">{versionLabel(w.version)}</span>}
                         </>
                       }
                       detail={[w.description, fileSize(w.sizeBytes), `Uploaded by ${w.uploadedByName}, ${w.uploadedAt}`, filingText(w)].filter(Boolean).join(" · ")}
@@ -213,15 +215,46 @@ export default async function PapersPage({ params, searchParams }: { params: Pro
                             <span className="font-medium">Index reference:</span> <span className="tabular-nums">{w.reference ?? "None"}</span>. {filingText(w)}.
                           </p>
                         )}
+                        <PaperHistory engagementId={id} history={w.history} />
+                        {ctrl.newVersion && (
+                          <Disclosure summary="Upload a new version">
+                            <UploadForm engagementId={id} fields={{ replacesId: w.id }}>
+                              <div className="flex flex-wrap items-end gap-3">
+                                <label className={fieldLabel}>
+                                  New file
+                                  <FileInput
+                                    maxBytes={limit.bytes}
+                                    label={`New version of ${w.fileName}`}
+                                    accept={papers.ALLOWED_EXTENSIONS.map((e) => `.${e}`).join(",")}
+                                    className="text-sm font-normal text-ink file:mr-3 file:min-h-10 file:cursor-pointer file:rounded-md file:border file:border-border-input file:bg-surface file:px-4 file:text-sm file:font-medium file:text-ink hover:file:bg-surface-muted"
+                                  />
+                                </label>
+                                <label className={`${fieldLabel} min-w-56 flex-1`}>
+                                  Description (optional, kept from this version if blank)
+                                  <input name="description" maxLength={500} className={ctl} />
+                                </label>
+                                <Button variant="primary" size="sm">
+                                  Upload version {w.version + 1}
+                                </Button>
+                              </div>
+                              <p className="mt-2 text-ink-muted">
+                                It supports the same thing, and the index reference moves to the new version. The earlier versions stay in the history and can still be downloaded.
+                              </p>
+                            </UploadForm>
+                          </Disclosure>
+                        )}
                         <p className="text-ink-muted">Every upload, download and removal is recorded in the audit log.</p>
                         {ctrl.remove && (
                           <div className="border-t border-border pt-3">
                             <ActionForm action={removeWorkingPaperAction} fields={{ paperId: w.id }}>
                               <Button variant="danger" size="sm">
-                                Remove
+                                {w.version > 1 ? `Remove version ${w.version}` : "Remove"}
                               </Button>
                             </ActionForm>
-                            <p className="mt-1 text-ink-muted">The person who uploaded a file, or a reviewer or partner, can remove it until the engagement is locked.</p>
+                            <p className="mt-1 text-ink-muted">
+                              The person who uploaded a file, or a reviewer or partner, can remove it until the engagement is locked.
+                              {w.version > 1 ? ` Version ${w.version - 1} becomes the current version again and takes the index reference back.` : ""}
+                            </p>
                           </div>
                         )}
                       </div>

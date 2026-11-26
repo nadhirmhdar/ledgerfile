@@ -13,8 +13,25 @@ export const ALLOWED_EXTENSIONS = ["pdf", "xlsx", "xls", "csv", "docx", "doc", "
 
 export type TargetKind = "engagement" | "lead_sheet" | "procedure";
 
+/** One version of a working paper, for its history. */
+export interface PaperVersion {
+  id: string;
+  /** 1 for the first upload, counted along the chain of replacements. */
+  version: number;
+  fileName: string;
+  sizeBytes: number;
+  uploadedByName: string;
+  uploadedAt: string;
+}
+
 export interface WorkingPaper {
   id: string;
+  /** The version number of this (the current) version. */
+  version: number;
+  /** Every version of this paper, newest first, the current one included. One entry when the paper has never been replaced. */
+  history: PaperVersion[];
+  /** The earlier version this one replaced, or null for version 1. */
+  replacesId: string | null;
   targetKind: TargetKind;
   /** Group code for a lead sheet, procedure id for a procedure, null for the engagement. */
   target: string | null;
@@ -56,22 +73,39 @@ export function cleanFileName(name: string): string {
 const SELECT = `
   select w.id, w.target_kind as "targetKind", w.target, w.file_name as "fileName", w.size_bytes::float8 as "sizeBytes", w.sha256,
          w.description, w.reference, w.section_code as "sectionCode", w.uploaded_by as "uploadedBy", u.name as "uploadedByName", to_char(w.uploaded_at, 'YYYY-MM-DD') as "uploadedAt",
-         p.template_id as "procedureCode"
+         w.replaces_id as "replacesId", p.template_id as "procedureCode"
   from working_papers w
   join users u on u.id = w.uploaded_by
   left join audit_procedures p on w.target_kind = 'procedure' and p.id::text = w.target`;
 
-type Row = Omit<WorkingPaper, "targetLabel"> & { procedureCode: string | null };
-const label = (r: Row): WorkingPaper => {
+type Row = Omit<WorkingPaper, "targetLabel" | "version" | "history"> & { procedureCode: string | null };
+const label = (r: Row, version: number, history: PaperVersion[]): WorkingPaper => {
   const { procedureCode, ...rest } = r;
   const targetLabel =
     r.targetKind === "engagement" ? "General" : r.targetKind === "lead_sheet" ? (GROUP_BY_CODE.get(r.target ?? "")?.name ?? r.target ?? "") : `Procedure ${procedureCode ?? ""}`.trim();
-  return { ...rest, targetLabel };
+  return { ...rest, version, history, targetLabel };
 };
 
+/** The rows no other row replaces, for SQL that must show a paper once, at its latest version. The working_papers row must be aliased w. */
+export const CURRENT = `not exists (select 1 from working_papers newer where newer.replaces_id = w.id)`;
+
+/**
+ * The engagement's working papers, each shown once at its CURRENT version (the row no other row replaces), with its version number and its
+ * history: every version, newest first, each of which can still be downloaded by its id.
+ */
 export async function listWorkingPapers(tx: Tx, engagementId: string): Promise<WorkingPaper[]> {
   const { rows } = await tx.query<Row>(`${SELECT} where w.engagement_id = $1 order by w.uploaded_at, w.file_name`, [engagementId]);
-  return rows.map(label);
+  const byId = new Map(rows.map((r) => [r.id, r]));
+  const replaced = new Set(rows.map((r) => r.replacesId).filter((x): x is string => !!x));
+  return rows
+    .filter((r) => !replaced.has(r.id))
+    .map((current) => {
+      // Walk back along the chain; the first upload is version 1.
+      const chain: Row[] = [];
+      for (let r: Row | undefined = current; r; r = r.replacesId ? byId.get(r.replacesId) : undefined) chain.push(r);
+      const history = chain.map((r, i): PaperVersion => ({ id: r.id, version: chain.length - i, fileName: r.fileName, sizeBytes: r.sizeBytes, uploadedByName: r.uploadedByName, uploadedAt: r.uploadedAt }));
+      return label(current, chain.length, history);
+    });
 }
 
 /**
@@ -167,14 +201,106 @@ export async function checkWorkingPaper(
 export async function registerWorkingPaper(
   tx: Tx,
   s: Session,
-  p: { id: string; storageKey: string; engagementId: string; checked: CheckedPaper; sizeBytes: number; sha256: string },
+  p: { id: string; storageKey: string; engagementId: string; checked: CheckedPaper; sizeBytes: number; sha256: string; replacesId?: string | null },
 ): Promise<void> {
+  let reference: string | null = null;
+  let sectionCode: string | null = null;
+  let version = 1;
+  if (p.replacesId) {
+    const old = await currentVersionOf(tx, p.engagementId, p.replacesId, p.sha256);
+    if (old.targetKind !== p.checked.targetKind || old.target !== p.checked.target) throw new Error("A new version supports the same thing as the file it replaces.");
+    // The reference follows the current file: cleared on the old row first, so the unique rule holds, then set on the new one.
+    reference = old.reference;
+    sectionCode = old.sectionCode;
+    await tx.query("update working_papers set reference = null, section_code = null where id = $1", [p.replacesId]);
+    version = old.version + 1;
+  }
   await tx.query(
-    `insert into working_papers (id, firm_id, engagement_id, target_kind, target, file_name, size_bytes, sha256, storage_key, description, uploaded_by)
-     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
-    [p.id, s.firmId, p.engagementId, p.checked.targetKind, p.checked.target, p.checked.fileName, p.sizeBytes, p.sha256, p.storageKey, p.checked.description, s.userId],
+    `insert into working_papers (id, firm_id, engagement_id, target_kind, target, file_name, size_bytes, sha256, storage_key, description, uploaded_by, reference, section_code, replaces_id)
+     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
+    [p.id, s.firmId, p.engagementId, p.checked.targetKind, p.checked.target, p.checked.fileName, p.sizeBytes, p.sha256, p.storageKey, p.checked.description, s.userId, reference, sectionCode, p.replacesId ?? null],
   );
-  await log(tx, s, "upload", "working_paper", p.id, { engagementId: p.engagementId, fileName: p.checked.fileName, targetKind: p.checked.targetKind, target: p.checked.target });
+  if (p.replacesId) {
+    await log(tx, s, "upload_version", "working_paper", p.id, {
+      engagementId: p.engagementId,
+      id: p.id,
+      replacesId: p.replacesId,
+      version,
+      fileName: p.checked.fileName,
+      targetKind: p.checked.targetKind,
+      target: p.checked.target,
+      reference,
+    });
+  } else {
+    await log(tx, s, "upload", "working_paper", p.id, { engagementId: p.engagementId, fileName: p.checked.fileName, targetKind: p.checked.targetKind, target: p.checked.target });
+  }
+}
+
+/** How many versions a paper has up to and including this row, counted back along the chain of replacements. */
+async function versionNumber(tx: Tx, id: string): Promise<number> {
+  const { rows } = await tx.query<{ n: number }>(
+    `with recursive c(id, replaces_id) as (
+       select id, replaces_id from working_papers where id = $1
+       union all select w.id, w.replaces_id from working_papers w join c on w.id = c.replaces_id
+     ) select count(*)::int as n from c`,
+    [id],
+  );
+  return rows[0].n;
+}
+
+/**
+ * The paper a new version would replace, locked, or a refusal: it is on this engagement, it is still the current version (nothing has replaced it
+ * since the page was shown), and the new file is not byte-for-byte the current one.
+ */
+async function currentVersionOf(tx: Tx, engagementId: string, id: string, newSha256: string) {
+  const { rows } = await tx.query<{ targetKind: TargetKind; target: string | null; reference: string | null; sectionCode: string | null; sha256: string; description: string | null }>(
+    `select target_kind as "targetKind", target, reference, section_code as "sectionCode", sha256, description
+     from working_papers where id::text = $1 and engagement_id = $2 for update`,
+    [id, engagementId],
+  );
+  if (rows.length === 0) throw new Error("Working paper not found.");
+  const newer = await tx.query("select 1 from working_papers where replaces_id = $1", [id]);
+  if (newer.rows.length > 0) throw new Error("A newer version of this file has been uploaded. Reload the page and upload against the latest version.");
+  if (rows[0].sha256 === newSha256) throw new Error("This is the same file as the current version.");
+  return { ...rows[0], version: await versionNumber(tx, id) };
+}
+
+/** What a new version inherits from the paper it replaces. Throws when there is no such paper. Also used when a direct upload begins. */
+export async function paperToReplace(tx: Tx, replacesId: string) {
+  const { rows } = await tx.query<{ engagementId: string; targetKind: TargetKind; target: string | null; description: string | null; sha256: string }>(
+    'select engagement_id as "engagementId", target_kind as "targetKind", target, description, sha256 from working_papers where id::text = $1',
+    [replacesId],
+  );
+  if (rows.length === 0) throw new Error("Working paper not found.");
+  return rows[0];
+}
+
+/**
+ * Store a file as a new version of a current working paper, through the server. It supports the same thing, keeps the description unless a new one is
+ * written, and takes over the reference. Whoever may upload today may upload a version; the engagement must be open.
+ */
+export async function addWorkingPaperVersion(
+  tx: Tx,
+  s: Session,
+  store: FileStore,
+  replacesId: string,
+  input: { fileName: string; data: Uint8Array; description: string },
+): Promise<{ id: string; engagementId: string }> {
+  const old = await paperToReplace(tx, replacesId);
+  const checked = await checkWorkingPaper(tx, old.engagementId, { targetKind: old.targetKind, target: old.target, fileName: input.fileName, sizeBytes: input.data.byteLength, description: input.description.trim() || old.description || "" });
+  const sha256 = createHash("sha256").update(input.data).digest("hex");
+  // Refused before anything is stored when it is the same file; the registration checks again inside the transaction that records it.
+  if (old.sha256 === sha256) throw new Error("This is the same file as the current version.");
+  const id = randomUUID();
+  const storageKey = `${s.firmId}/${id}`;
+  await store.put(storageKey, input.data);
+  try {
+    await registerWorkingPaper(tx, s, { id, storageKey, engagementId: old.engagementId, checked, sizeBytes: input.data.byteLength, sha256, replacesId });
+  } catch (e) {
+    await store.remove(storageKey);
+    throw e;
+  }
+  return { id, engagementId: old.engagementId };
 }
 
 /**
@@ -222,12 +348,17 @@ export async function readWorkingPaper(tx: Tx, store: FileStore, engagementId: s
  * transaction has committed, so a failed commit never leaves a record whose file is gone.
  */
 export async function removeWorkingPaper(tx: Tx, s: Session, id: string): Promise<{ engagementId: string; storageKey: string }> {
-  const { rows } = await tx.query<{ engagementId: string; uploadedBy: string; storageKey: string; fileName: string; targetKind: TargetKind; target: string | null }>(
-    'select engagement_id as "engagementId", uploaded_by as "uploadedBy", storage_key as "storageKey", file_name as "fileName", target_kind as "targetKind", target from working_papers where id::text = $1',
+  const { rows } = await tx.query<{ engagementId: string; uploadedBy: string; storageKey: string; fileName: string; targetKind: TargetKind; target: string | null; replacesId: string | null; reference: string | null; sectionCode: string | null }>(
+    `select engagement_id as "engagementId", uploaded_by as "uploadedBy", storage_key as "storageKey", file_name as "fileName", target_kind as "targetKind", target,
+            replaces_id as "replacesId", reference, section_code as "sectionCode"
+     from working_papers where id::text = $1`,
     [id],
   );
   if (rows.length === 0) throw new Error("Working paper not found.");
   await requireOpen(tx, rows[0].engagementId);
+  // An earlier version is part of the history of a newer one: only the current version can be removed, and then the one before it is current again.
+  const newer = await tx.query("select 1 from working_papers where replaces_id::text = $1", [id]);
+  if (newer.rows.length > 0) throw new Error("An earlier version cannot be removed on its own. Remove the newer version first.");
   if (rows[0].uploadedBy !== s.userId && !canReview(s.role)) throw new Error("Only the person who uploaded this file, or a reviewer or partner, can remove it.");
   // Evidence that work already relies on stays put: reopen the procedure, or withdraw the sign-off, first.
   if (rows[0].targetKind === "procedure") {
@@ -245,6 +376,10 @@ export async function removeWorkingPaper(tx: Tx, s: Session, id: string): Promis
     if (signed.rows.length > 0) throw new Error("This file supports a lead sheet that has been signed off. Withdraw the sign-off before removing it.");
   }
   await tx.query("delete from working_papers where id::text = $1", [id]);
-  await log(tx, s, "remove", "working_paper", id, { engagementId: rows[0].engagementId, fileName: rows[0].fileName });
+  // The version before it is the current one again, and the reference (and filing) move back to it.
+  if (rows[0].replacesId) {
+    await tx.query("update working_papers set reference = $2, section_code = $3 where id = $1", [rows[0].replacesId, rows[0].reference, rows[0].sectionCode]);
+  }
+  await log(tx, s, "remove", "working_paper", id, { engagementId: rows[0].engagementId, fileName: rows[0].fileName, ...(rows[0].replacesId ? { restoredId: rows[0].replacesId, reference: rows[0].reference } : {}) });
   return { engagementId: rows[0].engagementId, storageKey: rows[0].storageKey };
 }
