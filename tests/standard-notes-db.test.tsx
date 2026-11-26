@@ -5,7 +5,6 @@ import { openDatabase, withFirm } from "../src/server/db";
 import * as repo from "../src/server/repo";
 import { currentOf, loadHistory, loadNoteOverrides, restoreNoteText, saveNoteText, useGeneratedWording } from "../src/server/note-texts";
 import { DEFAULT_KEYS, loadFirmDefaults, saveFirmDefaults } from "../src/server/statement-defaults";
-import { LATEST_MIGRATION } from "../src/server/migrations";
 import { buildStatementPack } from "../src/domain/statement-pack";
 import { keptButNotShown } from "../src/domain/note-texts";
 import { NotePassage, type PassageData } from "../src/app/note-passage";
@@ -50,8 +49,8 @@ afterAll(async () => {
 });
 
 describe("the migration", () => {
-  it("is 0038, accepts the five new keys in both tables, keeps the old keys, and still refuses anything else", async () => {
-    expect(LATEST_MIGRATION).toBe("0038_standard_note_keys.sql");
+  it("is migration 0038, accepts the five new keys in both tables, keeps the old keys, and still refuses anything else", async () => {
+    expect((await db.query("select 1 from schema_migrations where name = $1", ["0038_standard_note_keys.sql"])).rows).toHaveLength(1);
     const e = await newEngagement();
     const insertNote = (key: string) =>
       db.query("insert into note_texts (firm_id, engagement_id, note_key, version, paragraphs, written_by) values ($1, $2, $3, 1, '[\"x\"]', $4)", [A, e, key, partner.userId]);

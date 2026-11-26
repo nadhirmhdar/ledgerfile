@@ -17,6 +17,7 @@ export interface PassageVersion {
   generated: boolean;
   by: string;
   at: string;
+  source?: "person" | "firm_default" | "carried_forward" | null;
 }
 
 export interface PassageData {
@@ -29,7 +30,9 @@ export interface PassageData {
   /** A person's text is shown. */
   overridden: boolean;
   /** Who and when, for the current person's version. */
-  current: { version: number; by: string; at: string; /** The wording was copied from the firm's statement defaults when the file was created. */ fromDefault?: boolean } | null;
+  current: { version: number; by: string; at: string; /** The wording was copied from the firm's statement defaults when the file was created. */ fromDefault?: boolean; /** The wording was carried forward from last year's file. */ carried?: boolean } | null;
+  /** The period end of last year's file, for the label on a carried passage. */
+  priorPeriodEnd?: string | null;
   history: PassageVersion[];
   /** The person may edit and the file is open. */
   canEdit: boolean;
@@ -90,7 +93,18 @@ export function NotePassage(p: PassageData) {
     setMode("edit");
   };
 
-  const label = p.overridden && p.current?.fromDefault ? (
+  // The date stays together on a narrow screen: "period ended 2025-" / "12-31" must never split.
+  const carriedText = (priorEnd?: string | null) =>
+    priorEnd ? (
+      <>
+        Carried forward from last year (period ended <span className="whitespace-nowrap">{priorEnd}</span>)
+      </>
+    ) : (
+      "Carried forward from last year"
+    );
+  const label = p.overridden && p.current?.carried ? (
+    <span className="text-small font-medium text-ink-subtle">{carriedText(p.priorPeriodEnd)}</span>
+  ) : p.overridden && p.current?.fromDefault ? (
     <span className="text-small font-medium text-ink-subtle">{firmDefaultLabel(p.current.at.slice(0, 10))}</span>
   ) : p.overridden && p.current ? (
     <span className="text-small text-ink-subtle">
@@ -189,6 +203,7 @@ export function NotePassage(p: PassageData) {
                 <li key={v.version} className="space-y-1 border-b border-border pb-3 last:border-b-0 last:pb-0">
                   <p className="text-small font-medium text-ink">
                     Version {v.version}, {v.by}, {v.at}
+                    {v.source === "carried_forward" && <span className="ml-2 font-normal text-ink-subtle">{carriedText(p.priorPeriodEnd)}</span>}
                     {latest && <span className="ml-2 font-normal text-ink-subtle">(current)</span>}
                   </p>
                   {v.generated ? (

@@ -81,6 +81,14 @@ export function checkParagraphs(input: unknown): ParagraphCheck {
   return { ok: true, paragraphs };
 }
 
+export type NoteSource = "person" | "firm_default" | "carried_forward";
+
+/** How a carried passage reads: it is a person's earlier wording, not the app's draft. */
+export const carriedLabel = (priorPeriodEnd: string): string => `Carried forward from last year (period ended ${priorPeriodEnd})`;
+
+/** Whether the current version of a PRIOR year's passage is carried into the next year: a person's own words (written, or carried and not edited since). */
+export const carriesForward = (v: { generated: boolean; source: NoteSource | null }): boolean => !v.generated && (v.source === null || v.source === "person" || v.source === "carried_forward");
+
 /** One saved version of a passage. */
 export interface NoteVersion {
   version: number;
@@ -90,8 +98,11 @@ export interface NoteVersion {
   by: string;
   /** Date and time, UTC, as shown. */
   at: string;
-  /** "firm_default" for wording copied from the firm's statement defaults when the engagement was created; null for a person's own text. */
-  source?: "person" | "firm_default" | null;
+  /**
+   * "firm_default" for wording copied from the firm's statement defaults when the engagement was created; "carried_forward" for a person's wording carried
+   * from last year's file by roll-forward; null (or "person") for a person's own text written on this file.
+   */
+  source?: NoteSource | null;
 }
 
 /** The overrides the statement pack takes: the paragraphs of every passage whose current version is a person's text. */
