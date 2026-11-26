@@ -34,6 +34,12 @@ import { coveredInQuestionnaire } from "@/domain/planning-questions";
 import { filterProcedures, parseProcedureShow, procedureControls, procedureResults, reviewPill, workPill, type ProcedureShow } from "@/ui/procedure-view";
 import { areaCrumbs } from "@/ui/engagement-nav";
 import { EngagementNav } from "../../nav";
+import { AreaAssignees } from "@/ui/area-assignees";
+import { AreaAssignmentForm } from "@/app/area-assignment-form";
+import { listAreaAssignments } from "@/server/area-assignments";
+import { getEngagementTeam, listAssignable } from "@/server/engagement-team";
+import { canLock } from "@/domain/signoff";
+import { SAME_AS_ENGAGEMENT } from "@/domain/area-assignments";
 
 export const dynamic = "force-dynamic";
 
@@ -48,12 +54,15 @@ export default async function ProgrammePage({ params, searchParams }: { params: 
   if (!/^[0-9a-f-]{36}$/i.test(id) || !area) notFound();
 
   const session = await getSession();
-  const { engagement, procedures, files, overview, scheduleList, requestSummary, confirmationCounts, selfReviewAllowed, adoption } = await withFirm(await getDb(), session.firmId, async (tx) => ({
+  const { engagement, procedures, files, overview, scheduleList, requestSummary, confirmationCounts, selfReviewAllowed, adoption, areaTeams, team, people } = await withFirm(await getDb(), session.firmId, async (tx) => ({
     engagement: await repo.getEngagement(tx, id),
     procedures: await audit.listProcedures(tx, id, area.code, session.userId),
     // Whether the firm may let a reviewer review work they did themselves (the server's own rule).
     selfReviewAllowed: await repo.canSelfReviewAudit(tx),
     adoption: (await getAdoption(tx)).state,
+    areaTeams: await listAreaAssignments(tx, id),
+    team: await getEngagementTeam(tx, id),
+    people: await listAssignable(tx),
     files: await papers.listWorkingPapers(tx, id),
     overview: await audit.getAuditOverview(tx, id),
     scheduleList: checklist ? [] : await listSchedules(tx, id, area.code),
@@ -101,6 +110,20 @@ export default async function ProgrammePage({ params, searchParams }: { params: 
       <EngagementNav id={id} current="audit" status={engagement.status} archived={engagement.archivedAt !== null} />
 
       <div className="mt-6 space-y-8">
+        <AreaAssignees area={areaTeams.get(area.code)} engagement={{ preparerId: team?.preparer?.id ?? null, reviewerId: team?.reviewer?.id ?? null }} />
+        {open && canLock(session.role) && (
+          <details className="rounded-lg border border-border bg-surface px-4 py-3 shadow-card" id="area-team">
+            <summary className="cursor-pointer text-sm font-semibold">This area&apos;s own preparer and reviewer</summary>
+            <p className="mt-2 mb-3 text-sm text-ink-muted">{SAME_AS_ENGAGEMENT} unless you choose a person here. My work follows the area&apos;s own person for this area&apos;s procedures and schedules.</p>
+            <AreaAssignmentForm
+              engagementId={id}
+              people={people}
+              areas={[{ code: area.code, title: area.title }]}
+              fixedArea={area.code}
+              current={Object.fromEntries([...areaTeams].map(([code, a]) => [code, { preparerId: a.preparer?.id ?? null, reviewerId: a.reviewer?.id ?? null }]))}
+            />
+          </details>
+        )}
         {procedures.length > 0 && (
           <div className="max-w-xl">
             <ProgressBar value={completed} max={procedures.length} label={`${completed} of ${procedures.length} ${noun} completed`} />
