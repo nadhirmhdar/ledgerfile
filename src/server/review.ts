@@ -2,9 +2,12 @@ import type { Tx } from "./db";
 import { audit, getEngagement, isSolePractitioner, listAccounts } from "./repo";
 import { getAuditOverview } from "./audit";
 import { getAdoption } from "./methodology-adoption";
+import { getPriorYearChecks } from "./prior-year-checks";
+import { checkLockReason, signedComparativesDifference } from "../domain/prior-year-checks";
 import { lockAdoption } from "../domain/methodology-adoption";
 import { buildLeadSheets } from "../domain/leadsheet";
 import { buildStatements } from "../domain/statements";
+import { buildStatementPack, packBlockers } from "../domain/statement-pack";
 import { GROUP_BY_CODE } from "../domain/groups";
 import { canLock, canReview, lockReadiness, signOffBlocker, type Level, type LockReadiness, type Role } from "../domain/signoff";
 
@@ -27,8 +30,19 @@ export interface LeadSheetReview {
   openPoints: number;
 }
 
+/** One reply in a review point's thread, oldest first. A response written before threads existed is read from the point itself and shown first, with no date. */
+export interface ThreadReply {
+  id: string;
+  authorName: string;
+  body: string;
+  /** YYYY-MM-DD; null for a response written before the date was kept. */
+  writtenAt: string | null;
+  legacy: boolean;
+}
+
 export interface ReviewPoint {
   id: string;
+  authorId: string;
   target: string;
   targetName: string;
   body: string;
@@ -36,6 +50,8 @@ export interface ReviewPoint {
   createdAt: string;
   response: string | null;
   responderName: string | null;
+  /** The reply thread. When the point has no replies yet but has a single older response, that response is the one entry. */
+  thread: ThreadReply[];
   status: "open" | "cleared";
   clearedByName: string | null;
 }
@@ -80,14 +96,16 @@ export async function getOverview(tx: Tx, engagementId: string): Promise<ReviewO
   const accounts = (await listAccounts(tx, engagementId)).map((a) => ({ ...a, closingMinor: a.closingMinor + a.adjustmentMinor }));
   const sheets = buildLeadSheets(accounts).sheets;
   const statements = buildStatements(accounts, { borrowingsCurrent: { current: lock.rows[0].splitCurrent, prior: lock.rows[0].splitPrior } });
+  // The pack's own error checks (cash flow, equity, profit across the statements, note totals) stop a lock like the base checks. The placeholder warning never does.
+  const consistency = packBlockers(buildStatementPack(accounts, { borrowingsCurrent: { current: lock.rows[0].splitCurrent, prior: lock.rows[0].splitPrior } }).checks);
 
   const signOffs = await tx.query<{ target: string; level: Level; userId: string; name: string; at: string }>(
     `select s.target, s.level, s.user_id as "userId", u.name, to_char(s.signed_at, 'YYYY-MM-DD') as at
      from sign_offs s join users u on u.id = s.user_id where s.engagement_id = $1`,
     [engagementId],
   );
-  const points = await tx.query<Omit<ReviewPoint, "targetName">>(
-    `select p.id, p.target, p.body, a.name as "authorName", to_char(p.created_at, 'YYYY-MM-DD') as "createdAt",
+  const pointRows = await tx.query<Omit<ReviewPoint, "targetName" | "thread">>(
+    `select p.id, p.author_id as "authorId", p.target, p.body, a.name as "authorName", to_char(p.created_at, 'YYYY-MM-DD') as "createdAt",
             p.response, r.name as "responderName", p.status, c.name as "clearedByName"
      from review_points p
      join users a on a.id = p.author_id
@@ -97,6 +115,20 @@ export async function getOverview(tx: Tx, engagementId: string): Promise<ReviewO
      order by (p.status = 'cleared'), p.created_at`,
     [engagementId],
   );
+
+  const replies = await tx.query<{ pointId: string; id: string; authorName: string; body: string; writtenAt: string; legacy: boolean }>(
+    `select r.point_id as "pointId", r.id::text as id, u.name as "authorName", r.body, to_char(r.written_at, 'YYYY-MM-DD') as "writtenAt", r.legacy
+     from review_point_replies r join users u on u.id = r.author_id where r.engagement_id = $1 order by r.id`,
+    [engagementId],
+  );
+  const points = {
+    rows: pointRows.rows.map((p): Omit<ReviewPoint, "targetName"> => {
+      const own = replies.rows.filter((r) => r.pointId === p.id).map((r) => ({ id: r.id, authorName: r.authorName, body: r.body, legacy: r.legacy, writtenAt: r.legacy ? null : r.writtenAt }));
+      // No backfill: an older single response is read from the column and shown as the first reply until the point is first replied to.
+      const thread: ThreadReply[] = own.length === 0 && p.response ? [{ id: "legacy", authorName: p.responderName ?? "Unknown", body: p.response, writtenAt: null, legacy: true }] : own;
+      return { ...p, thread };
+    }),
+  };
 
   const solePractitioner = await isSolePractitioner(tx);
 
@@ -132,8 +164,8 @@ export async function getOverview(tx: Tx, engagementId: string): Promise<ReviewO
     leadSheets,
     points: points.rows.map((p) => ({ ...p, targetName: targetName(p.target) })),
     readiness: lockReadiness({
-      statementsClean: statements.clean,
-      failedChecks: statements.checks.filter((c) => !c.passed).map((c) => c.label),
+      statementsClean: statements.clean && consistency.length === 0,
+      failedChecks: [...statements.checks.filter((c) => !c.passed).map((c) => c.label), ...consistency],
       leadSheets: leadSheets.map((l) => ({ name: l.groupName, prepared: !!l.preparer, reviewed: !!l.reviewer })),
       openPoints: points.rows.filter((p) => p.status === "open").length,
     }),
@@ -201,8 +233,8 @@ export async function addReviewPoint(tx: Tx, actor: Actor, engagementId: string,
 }
 
 async function openPoint(tx: Tx, pointId: string) {
-  const { rows } = await tx.query<{ engagementId: string; status: string }>(
-    'select engagement_id as "engagementId", status from review_points where id = $1',
+  const { rows } = await tx.query<{ engagementId: string; status: string; authorId: string }>(
+    'select engagement_id as "engagementId", status, author_id as "authorId" from review_points where id = $1',
     [pointId],
   );
   if (rows.length === 0) throw new Error("Review point not found.");
@@ -211,14 +243,41 @@ async function openPoint(tx: Tx, pointId: string) {
   return rows[0];
 }
 
-export async function respondToReviewPoint(tx: Tx, actor: Actor, pointId: string, response: string): Promise<void> {
+/**
+ * Reply on a review point. Anyone in the firm may reply, as anyone may respond today; the reviewer or partner who raised the point answers back the
+ * same way. Only on an open point of an open engagement. The thread is append-only.
+ *
+ * "Answered" keeps its meaning everywhere (review_points.response is not null): a reply by someone other than the point's author sets response and
+ * responded_by to that reply, as respond always did; a reply by the author, asking again, clears both, so the point waits for a response again.
+ */
+export async function replyToReviewPoint(tx: Tx, actor: Actor, pointId: string, reply: string): Promise<void> {
   const point = await openPoint(tx, pointId);
-  const text = response.trim();
-  if (text.length < 2) throw new Error("Write a response.");
-  if (text.length > 2000) throw new Error("The response is too long.");
-  await tx.query("update review_points set response = $2, responded_by = $3 where id = $1", [pointId, text, actor.userId]);
-  await audit(tx, actor, "respond", "review_point", pointId, { engagementId: point.engagementId, response: text });
+  const text = reply.trim();
+  if (text.length < 2) throw new Error("Write a reply.");
+  if (text.length > 2000) throw new Error("The reply is too long.");
+  // A response written before threads existed would be overwritten below, so it is first kept in the thread as its own entry.
+  const earlier = await tx.query<{ n: number; response: string | null; respondedBy: string | null }>(
+    `select (select count(*)::int from review_point_replies where point_id = $1) as n, response, responded_by as "respondedBy" from review_points where id = $1`,
+    [pointId],
+  );
+  if (earlier.rows[0].n === 0 && earlier.rows[0].response && earlier.rows[0].respondedBy) {
+    await tx.query("insert into review_point_replies (firm_id, engagement_id, point_id, author_id, body, legacy) values ($1, $2, $3, $4, $5, true)", [
+      actor.firmId,
+      point.engagementId,
+      pointId,
+      earlier.rows[0].respondedBy,
+      earlier.rows[0].response,
+    ]);
+  }
+  await tx.query("insert into review_point_replies (firm_id, engagement_id, point_id, author_id, body) values ($1, $2, $3, $4, $5)", [actor.firmId, point.engagementId, pointId, actor.userId, text]);
+  const byAuthor = actor.userId === point.authorId;
+  if (byAuthor) await tx.query("update review_points set response = null, responded_by = null where id = $1", [pointId]);
+  else await tx.query("update review_points set response = $2, responded_by = $3 where id = $1", [pointId, text, actor.userId]);
+  await audit(tx, actor, "reply", "review_point", pointId, { engagementId: point.engagementId, byAuthor, answered: !byAuthor, reply: text });
 }
+
+/** The name the form and older callers use: responding is replying. */
+export const respondToReviewPoint = replyToReviewPoint;
 
 export async function clearReviewPoint(tx: Tx, actor: Actor, pointId: string): Promise<void> {
   const point = await openPoint(tx, pointId);
@@ -227,14 +286,34 @@ export async function clearReviewPoint(tx: Tx, actor: Actor, pointId: string): P
   await audit(tx, actor, "clear", "review_point", pointId, { engagementId: point.engagementId });
 }
 
-export async function lockEngagement(tx: Tx, actor: Actor, engagementId: string): Promise<void> {
+/**
+ * What a partner must explain before locking, or null. Only when last year's file is signed and this year's comparatives check fails (the check
+ * itself stays a warning). Used by the lock and by the page that shows the reason field.
+ */
+export async function lockExplanationNeeded(tx: Tx, firmId: string, engagementId: string): Promise<{ detail: string | undefined; items: string[] } | null> {
+  const failed = signedComparativesDifference(await getPriorYearChecks(tx, firmId, engagementId));
+  return failed ? { detail: failed.detail, items: failed.items ?? [] } : null;
+}
+
+export async function lockEngagement(tx: Tx, actor: Actor, engagementId: string, reason = ""): Promise<void> {
   await requireOpen(tx, engagementId);
   if (!canLock(actor.role)) throw new Error("Only a partner can lock an engagement.");
   const overview = await getOverview(tx, engagementId);
   if (!overview!.readiness.ready) throw new Error(`The engagement is not ready to lock. ${overview!.readiness.blockers.join(" ")}`);
+  // Owner decision (2026-11-25): with last year signed and the comparatives differing, a reason is required and recorded. Otherwise nothing extra, and a reason given is ignored.
+  const needed = await lockExplanationNeeded(tx, actor.firmId, engagementId);
+  let explained: { reason: string; detail: string | undefined; lines: string[] } | null = null;
+  if (needed) {
+    const checked = checkLockReason(reason);
+    if (!checked.ok) throw new Error(checked.message);
+    explained = { reason: checked.reason, detail: needed.detail, lines: needed.items };
+  }
   await tx.query("update engagements set status = 'locked', locked_by = $2, locked_at = now() where id = $1", [engagementId, actor.userId]);
   // Which adoption of the methodology was current when the file was locked, or "none". Recorded only: it changes nothing about locking.
-  await audit(tx, actor, "lock", "engagement", engagementId, { methodologyAdoption: lockAdoption((await getAdoption(tx)).state) });
+  await audit(tx, actor, "lock", "engagement", engagementId, {
+    methodologyAdoption: lockAdoption((await getAdoption(tx)).state),
+    ...(explained ? { comparativesDifference: explained } : {}),
+  });
 }
 
 export async function unlockEngagement(tx: Tx, actor: Actor, engagementId: string, reason: string): Promise<void> {

@@ -5,6 +5,7 @@ import { getAnalytics } from "./analytics";
 import { requestCounts } from "./client-requests";
 import { buildLeadSheets } from "../domain/leadsheet";
 import { buildStatements } from "../domain/statements";
+import { buildStatementPack, packBlockers } from "../domain/statement-pack";
 import { AREA_BY_CODE, CHECKLISTS } from "../domain/audit";
 import { GROUP_BY_CODE } from "../domain/groups";
 import { confirmationState } from "../domain/confirmations";
@@ -94,7 +95,9 @@ export async function buildWorkingPaperIndex(tx: Tx, engagementId: string): Prom
   });
 
   const statements = buildStatements(accounts, { borrowingsCurrent: { current: engagement.borrowingsCurrentMinor, prior: engagement.borrowingsCurrentPriorMinor } });
-  const failed = statements.checks.filter((c) => !c.passed).length;
+  const failed =
+    statements.checks.filter((c) => !c.passed).length +
+    packBlockers(buildStatementPack(accounts, { borrowingsCurrent: { current: engagement.borrowingsCurrentMinor, prior: engagement.borrowingsCurrentPriorMinor } }).checks).length;
   add({
     reference: "G3",
     section: GENERAL,
@@ -172,15 +175,20 @@ export async function buildWorkingPaperIndex(tx: Tx, engagementId: string): Prom
   }
 
   // --- Uploaded files: any engagement, filed where the preparer put them ------------------------------------------------------------
-  const files = await tx.query<{ id: string; fileName: string; reference: string | null; sectionCode: string | null; targetKind: string; target: string | null; template: string | null; by: string; on: string }>(
-    `select w.id, w.file_name as "fileName", w.reference, w.section_code as "sectionCode", w.target_kind as "targetKind", w.target,
+  // Only the current version of each file is indexed (the row no other row replaces); the earlier versions stay on the file's own page.
+  const files = await tx.query<{ id: string; replacesId: string | null; fileName: string; reference: string | null; sectionCode: string | null; targetKind: string; target: string | null; template: string | null; by: string; on: string }>(
+    `select w.id, w.replaces_id as "replacesId", w.file_name as "fileName", w.reference, w.section_code as "sectionCode", w.target_kind as "targetKind", w.target,
             p.template_id as template, u.name as by, to_char(w.uploaded_at, 'YYYY-MM-DD') as "on"
      from working_papers w join users u on u.id = w.uploaded_by
      left join audit_procedures p on w.target_kind = 'procedure' and p.id::text = w.target
      where w.engagement_id = $1 order by w.reference nulls last, w.file_name, w.id`,
     [engagementId],
   );
-  for (const f of files.rows) {
+  const replacedIds = new Set(files.rows.map((f) => f.replacesId).filter((x): x is string => !!x));
+  const fileById = new Map(files.rows.map((f) => [f.id, f]));
+  for (const f of files.rows.filter((x) => !replacedIds.has(x.id))) {
+    let version = 1;
+    for (let r = f.replacesId ? fileById.get(f.replacesId) : undefined; r; r = r.replacesId ? fileById.get(r.replacesId) : undefined) version++;
     const home = homeOfFile({ targetKind: f.targetKind, target: f.target, procedureTemplate: f.template, sectionCode: f.sectionCode });
     add({
       reference: f.reference,
@@ -192,7 +200,7 @@ export async function buildWorkingPaperIndex(tx: Tx, engagementId: string): Prom
       reviewable: false,
       preparedBy: f.by,
       preparedOn: f.on,
-      note: "Uploaded evidence. Files are not reviewed as such; the paper they support is.",
+      note: `${version > 1 ? `Version ${version}. ` : ""}Uploaded evidence. Files are not reviewed as such; the paper they support is.`,
     });
   }
 

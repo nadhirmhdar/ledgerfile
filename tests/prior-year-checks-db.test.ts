@@ -170,7 +170,8 @@ describe("warnings are not errors", () => {
     const s = buildStatements(accounts);
     expect(s.checks.length).toBeGreaterThan(4);
     expect(s.checks.every((c) => severityOf(c) === "error")).toBe(true);
-    expect(buildStatementPack(accounts).checks.every((c) => severityOf(c) === "error")).toBe(true);
+    // The one warning in the pack is the notes' placeholder check; every other check is an error.
+    expect(buildStatementPack(accounts).checks.filter((c) => severityOf(c) === "warning").map((c) => c.label)).toEqual(["No placeholders left in the notes"]);
     // The statements are built without any knowledge of last year, so the warnings cannot change `clean`.
     expect(s.clean).toBe(true);
     expect(s.checks.some((c) => /last year/i.test(c.label))).toBe(false);

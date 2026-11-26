@@ -101,13 +101,17 @@ async function populated(name: string): Promise<{ engagement: string; client: st
     ]);
     await ledger.selectForTesting(tx, partner, e, "J1");
     await ledger.recordJournalTest(tx, partner, e, "J1", { workDone: "Agreed to the invoice.", conclusion: "No exception found." });
-    await review.addReviewPoint(tx, partner, e, "GENERAL", "Explain the opening balance.");
+    const point = await review.addReviewPoint(tx, partner, e, "GENERAL", "Explain the opening balance.");
+    await review.replyToReviewPoint(tx, preparer, point, "The opening balance agrees to last year's signed file.");
     const sheets = (await review.getOverview(tx, e))!.leadSheets.map((l) => l.groupCode);
     await review.signOff(tx, preparer, e, sheets[0], "preparer").catch(() => undefined);
   });
   await as(preparer, (tx) => review.signOff(tx, preparer, e, "CASH", "preparer").catch(() => undefined));
   const wp = await as(partner, (tx) => papers.addWorkingPaper(tx, partner, mem.store, e, { targetKind: "engagement", target: null, fileName: "evidence.txt", data: new TextEncoder().encode("Invented evidence."), description: "Invented" }));
   const wpKey = (await db.query<{ storage_key: string }>("select storage_key from working_papers where id = $1", [wp])).rows[0].storage_key;
+  // The paper has a second version: the purge must delete both rows (the self-reference included) and return both storage keys.
+  const wp2 = (await as(partner, (tx) => papers.addWorkingPaperVersion(tx, partner, mem.store, wp, { fileName: "evidence-v2.txt", data: new TextEncoder().encode("Invented evidence, second version."), description: "" }))).id;
+  const wpKey2 = (await db.query<{ storage_key: string }>("select storage_key from working_papers where id = $1", [wp2])).rows[0].storage_key;
   await as(partner, async (tx) => {
     const req = await requests.addRequest(tx, partner, e, { description: "Send the invented bank statements." });
     await requests.linkFile(tx, partner, req, wp);
@@ -131,7 +135,7 @@ async function populated(name: string): Promise<{ engagement: string; client: st
   mem.files.set(pendingKey, new Uint8Array([1]));
   await db.query("insert into risk_assessments (firm_id, engagement_id, area_code, assertion, level, updated_by) values ($1, $2, 'C1', 'E', 'low', $3) on conflict do nothing", [A, e, partner.userId]);
   await db.query("insert into risk_approvals (firm_id, engagement_id, snapshot, approved_by) values ($1, $2, 'invented snapshot', $3)", [A, e, partner.userId]);
-  return { engagement: e, client: made.client, keys: [wpKey, pendingKey] };
+  return { engagement: e, client: made.client, keys: [wpKey, wpKey2, pendingKey] };
 }
 async function recordOpinion2(e: string) {
   await as(partner, (tx) => recordOpinion(tx, partner, e, { opinion: "unmodified", basisForModification: "", goingConcern: false, goingConcernNote: "", emphasisOfMatter: "", otherMatter: "", reportDate: "2025-12-31" }).catch(() => undefined));
@@ -323,7 +327,7 @@ describe("the purge", () => {
     expect((await as(partner, (tx) => getRetention(tx))).pendingFiles.map((f) => f.key).sort()).toEqual(p.keys.sort());
     expect(mem.state.removed).not.toContain(p.keys[0]);
     const res = await removePendingFiles(db, A, mem.store);
-    expect(res).toEqual({ removed: 2, failed: [] });
+    expect(res).toEqual({ removed: 3, failed: [] });
     expect(mem.state.removed).toEqual(expect.arrayContaining(p.keys));
     for (const k of p.keys) expect(mem.files.has(k)).toBe(false);
     expect((await as(partner, (tx) => getRetention(tx))).pendingFiles).toEqual([]);
@@ -345,7 +349,7 @@ describe("the purge", () => {
     expect((await as(partner, (tx) => getRetention(tx))).pendingFiles.map((f) => f.key).sort()).toEqual(p.keys.sort());
     mem.state.failing = false;
     const retry = await removePendingFiles(db, A, mem.store, p.keys);
-    expect(retry).toEqual({ removed: 2, failed: [] });
+    expect(retry).toEqual({ removed: 3, failed: [] });
     expect((await as(partner, (tx) => getRetention(tx))).pendingFiles).toEqual([]);
   }, 120_000);
 
@@ -362,7 +366,7 @@ describe("the purge", () => {
     const r = await requestFor(partner, p.engagement);
     await approveFor(partner2, r, p.engagement);
     expect(existsSync(path.join(root, ...p.keys[0].split("/")))).toBe(true);
-    expect(await removePendingFiles(db, A, store, p.keys)).toEqual({ removed: 2, failed: [] });
+    expect(await removePendingFiles(db, A, store, p.keys)).toEqual({ removed: 3, failed: [] });
     expect(existsSync(path.join(root, ...p.keys[0].split("/")))).toBe(false);
   }, 120_000);
 });

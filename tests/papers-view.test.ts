@@ -83,6 +83,9 @@ describe("a file's controls", () => {
     expect(paperControls(p("a", { targetKind: "lead_sheet" }), ctx("preparer"))).toMatchObject({ filing: true, sectionSelect: false });
     expect(paperControls(p("a", { targetKind: "procedure" }), ctx("preparer"))).toMatchObject({ filing: true, sectionSelect: false });
   });
+  it("offers a new version to anyone while the engagement is open", () => {
+    for (const role of ["preparer", "reviewer", "partner"] as const) expect(paperControls(p("a"), ctx(role, { userId: "u2" })).newVersion).toBe(true);
+  });
   it("lets the uploader, or a reviewer or partner, remove a file", () => {
     expect(paperControls(p("a"), ctx("preparer")).remove).toBe(true);
     expect(paperControls(p("a"), ctx("preparer", { userId: "u2" })).remove).toBe(false);
@@ -90,6 +93,6 @@ describe("a file's controls", () => {
     expect(paperControls(p("a"), ctx("partner", { userId: "u2" })).remove).toBe(true);
   });
   it("offers nothing on a locked engagement", () => {
-    for (const role of ["preparer", "reviewer", "partner"] as const) expect(paperControls(p("a"), ctx(role, { open: false }))).toEqual({ filing: false, sectionSelect: false, remove: false });
+    for (const role of ["preparer", "reviewer", "partner"] as const) expect(paperControls(p("a"), ctx(role, { open: false }))).toEqual({ filing: false, sectionSelect: false, remove: false, newVersion: false });
   });
 });

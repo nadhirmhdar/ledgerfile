@@ -4,6 +4,7 @@ import { getSession } from "@/server/session";
 import { listFirmMethodology } from "@/server/firm-methodology";
 import { getAdoption } from "@/server/methodology-adoption";
 import { adoptionLine } from "@/domain/methodology-adoption";
+import { MethodologyLabel } from "@/ui/methodology-label";
 import { AdoptionSection } from "@/ui/adoption-section";
 import { LIBRARY_STATUS, ASSERTIONS } from "@/domain/audit";
 import { ActionForm } from "@/app/action-form";
@@ -82,11 +83,16 @@ export default async function FirmMethodologyPage() {
       />
       <div className="mt-6 space-y-8">
         <AdoptionSection state={adoption.state} history={adoption.history} changeCount={adoption.now.changeCount} version={adoption.now.version} mayEdit={mayEdit} />
-        <Callout variant="draft" title={DRAFT_LABEL_TITLE}>
-          {DRAFT_LABEL} ({LIBRARY_STATUS})
-          {/* The label above is the standing rule and is not changed by an adoption. This line only states the firm's own record. */}
-          <span className="mt-1 block font-medium">{adoptionLine(adoption.state)}</span>
-        </Callout>
+        {/* A current adoption replaces the draft label on the methodology procedures (owner decision 2026-11-25). */}
+        <MethodologyLabel
+          state={adoption.state}
+          draft={
+            <Callout variant="draft" title={DRAFT_LABEL_TITLE}>
+              {DRAFT_LABEL} ({LIBRARY_STATUS})
+              <span className="mt-1 block font-medium">{adoptionLine(adoption.state)}</span>
+            </Callout>
+          }
+        />
         <p className="text-sm text-ink-muted">{CHANGES_APPLY}</p>
 
         {areas.map((area) => (

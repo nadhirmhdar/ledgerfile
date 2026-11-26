@@ -17,6 +17,7 @@ const row = (over: Partial<PendingRow> = {}): PendingRow => ({
   firmId: FIRM,
   engagementId: "cccccccc-4444-4000-8000-000000000001",
   userId: ME,
+  replacesId: null,
   targetKind: "engagement",
   target: null,
   fileName: "bank-statement.pdf",

@@ -42,7 +42,7 @@ export default async function FirmPage() {
           </Link>
           .
         </Callout>
-        {admin && (
+        {canLock(session.role) && (
           <Callout variant="info" title="Audit log">
             Every change made in the firm, who made it and when, can be filtered and downloaded on the{" "}
             <Link href="/firm/audit-log" className="font-medium underline">

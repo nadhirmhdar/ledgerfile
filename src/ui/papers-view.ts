@@ -106,9 +106,11 @@ export interface PaperControls {
   /** The section select: only for a file that supports the engagement as a whole. */
   sectionSelect: boolean;
   remove: boolean;
+  /** Upload a new version of this file: anyone while the engagement is open, as for any upload. */
+  newVersion: boolean;
 }
 
 /** Filing is for anyone while the engagement is open; removing is for the uploader or a reviewer or partner. Nothing once locked. */
 export function paperControls(p: Pick<PaperLike, "targetKind" | "uploadedBy">, c: { open: boolean; role: Role; userId: string }): PaperControls {
-  return { filing: c.open, sectionSelect: c.open && p.targetKind === "engagement", remove: c.open && (p.uploadedBy === c.userId || canReview(c.role)) };
+  return { filing: c.open, sectionSelect: c.open && p.targetKind === "engagement", remove: c.open && (p.uploadedBy === c.userId || canReview(c.role)), newVersion: c.open };
 }

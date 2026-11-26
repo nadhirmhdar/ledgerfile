@@ -33,6 +33,28 @@ export const isDividendAccount = (name: string): boolean => /dividend|drawing/i.
 /** The words that say how firm last year's figures are. */
 export const priorBasis = (signed: boolean): string => (signed ? "last year's signed figures" : "last year's figures (that file is not yet locked)");
 
+/**
+ * Owner decision (2026-11-25): the comparatives check stays a warning and never blocks by itself. But when last year's file is SIGNED (locked or archived)
+ * and the check fails, locking asks the partner for a short reason, recorded in the lock's audit entry with the differing lines.
+ */
+export const COMPARATIVES_LABEL_PREFIX = "Comparative figures agree to";
+export const LOCK_REASON_MIN = 5;
+export const LOCK_REASON_MAX = 500;
+export const LOCK_REASON_WORDS = `Last year's file is signed and this year's comparative figures differ from it. Give a short reason (${LOCK_REASON_MIN} to ${LOCK_REASON_MAX} characters) to lock anyway; it is recorded in the audit log.`;
+
+/** The failed comparatives check, when last year is signed; null when there is nothing to explain. */
+export function signedComparativesDifference(result: { linked: false } | { linked: true; priorSigned: boolean; checks: Check[] } | null): Check | null {
+  if (!result || !result.linked || !result.priorSigned) return null;
+  return result.checks.find((c) => c.label.startsWith(COMPARATIVES_LABEL_PREFIX) && !c.passed) ?? null;
+}
+
+export function checkLockReason(input: string): { ok: true; reason: string } | { ok: false; message: string } {
+  const reason = input.trim();
+  if (reason.length < LOCK_REASON_MIN) return { ok: false, message: LOCK_REASON_WORDS };
+  if (reason.length > LOCK_REASON_MAX) return { ok: false, message: `The reason is too long: the most is ${LOCK_REASON_MAX} characters.` };
+  return { ok: true, reason };
+}
+
 export const NOT_LINKED = "Not linked to last year's file, so the prior-year checks do not run.";
 export const MAX_LISTED = 5;
 /** This year's trial balance has no comparative column at all, so every difference would only repeat that. */
