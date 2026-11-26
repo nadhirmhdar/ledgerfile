@@ -194,7 +194,9 @@ describe("the label", () => {
     const next = await roll(partner, client, "2025-01-01", "2025-12-31");
     const html = renderToStaticMarkup(<NotePassage {...passage(next, "tax", await history(partner, next), "2024-12-31")} />);
     expect(carriedLabel("2024-12-31")).toBe("Carried forward from last year (period ended 2024-12-31)");
-    expect(html).toContain("Carried forward from last year (period ended 2024-12-31)");
+    // The date is one unbreakable piece, so it cannot split across lines at 390 px.
+    expect(html.replace(/<[^>]+>/g, "")).toContain("Carried forward from last year (period ended 2024-12-31)");
+    expect(html).toContain('<span class="whitespace-nowrap">2024-12-31</span>');
     expect(html).not.toContain("Unreviewed draft wording");
     expect(html).not.toContain("Edited by");
     // Wording nobody wrote keeps the draft label exactly as before.

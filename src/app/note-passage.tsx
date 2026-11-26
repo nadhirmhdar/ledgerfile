@@ -6,7 +6,7 @@ import { Badge } from "@/ui/badge";
 import { Callout } from "@/ui/feedback";
 import { splitBrackets } from "@/ui/statements-view";
 import { firmDefaultLabel } from "@/domain/statement-defaults";
-import { carriedLabel, DRAFT_PASSAGE_LABEL, MAX_PARAGRAPH_LENGTH, MAX_PARAGRAPHS } from "@/domain/note-texts";
+import { DRAFT_PASSAGE_LABEL, MAX_PARAGRAPH_LENGTH, MAX_PARAGRAPHS } from "@/domain/note-texts";
 import { POLICY_REVIEW_NOTICE } from "@/domain/policies";
 import { generatedNoteAction, restoreNoteAction, saveNoteAction } from "./note-actions";
 import type { FormState } from "./actions";
@@ -93,7 +93,15 @@ export function NotePassage(p: PassageData) {
     setMode("edit");
   };
 
-  const carriedText = (priorEnd?: string | null) => (priorEnd ? carriedLabel(priorEnd) : "Carried forward from last year");
+  // The date stays together on a narrow screen: "period ended 2025-" / "12-31" must never split.
+  const carriedText = (priorEnd?: string | null) =>
+    priorEnd ? (
+      <>
+        Carried forward from last year (period ended <span className="whitespace-nowrap">{priorEnd}</span>)
+      </>
+    ) : (
+      "Carried forward from last year"
+    );
   const label = p.overridden && p.current?.carried ? (
     <span className="text-small font-medium text-ink-subtle">{carriedText(p.priorPeriodEnd)}</span>
   ) : p.overridden && p.current?.fromDefault ? (
