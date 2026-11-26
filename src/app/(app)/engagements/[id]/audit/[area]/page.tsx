@@ -10,6 +10,8 @@ import { ActionForm } from "@/app/action-form";
 import { reviewAreaAction, reviewProcedureAction, updateProcedureAction } from "@/app/audit-actions";
 import { removeWorkingPaperAction } from "@/app/papers-actions";
 import * as papers from "@/server/working-papers";
+import { getAdoption } from "@/server/methodology-adoption";
+import { MethodologyLabel } from "@/ui/methodology-label";
 import { listSchedules } from "@/server/test-schedules";
 import { confirmationSummary } from "@/server/confirmations";
 import { requestCounts } from "@/server/client-requests";
@@ -45,11 +47,12 @@ export default async function ProgrammePage({ params, searchParams }: { params: 
   if (!/^[0-9a-f-]{36}$/i.test(id) || !area) notFound();
 
   const session = await getSession();
-  const { engagement, procedures, files, overview, scheduleList, requestSummary, confirmationCounts, selfReviewAllowed } = await withFirm(await getDb(), session.firmId, async (tx) => ({
+  const { engagement, procedures, files, overview, scheduleList, requestSummary, confirmationCounts, selfReviewAllowed, adoption } = await withFirm(await getDb(), session.firmId, async (tx) => ({
     engagement: await repo.getEngagement(tx, id),
     procedures: await audit.listProcedures(tx, id, area.code, session.userId),
     // Whether the firm may let a reviewer review work they did themselves (the server's own rule).
     selfReviewAllowed: await repo.canSelfReviewAudit(tx),
+    adoption: (await getAdoption(tx)).state,
     files: await papers.listWorkingPapers(tx, id),
     overview: await audit.getAuditOverview(tx, id),
     scheduleList: checklist ? [] : await listSchedules(tx, id, area.code),
@@ -102,9 +105,10 @@ export default async function ProgrammePage({ params, searchParams }: { params: 
             <ProgressBar value={completed} max={procedures.length} label={`${completed} of ${procedures.length} ${noun} completed`} />
           </div>
         )}
-        <Callout variant="draft" title={`Methodology content: ${LIBRARY_STATUS}`}>
-          {procedures.some((p) => p.firmWording || p.firmAdded) ? DRAFT_REST_NOTE : undefined}
-        </Callout>
+        <MethodologyLabel
+          state={adoption}
+          draft={<Callout variant="draft" title={`Methodology content: ${LIBRARY_STATUS}`}>{procedures.some((p) => p.firmWording || p.firmAdded) ? DRAFT_REST_NOTE : undefined}</Callout>}
+        />
         {!auditOn && (
           <Callout variant="info" title="The audit is off for this engagement">
             The programme is shown as a record only. Turn the audit on, on the audit planning page, to change it.

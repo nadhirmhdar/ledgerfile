@@ -2,6 +2,8 @@ import type { Tx } from "./db";
 import { audit, getEngagement, isSolePractitioner, listAccounts } from "./repo";
 import { getAuditOverview } from "./audit";
 import { getAdoption } from "./methodology-adoption";
+import { getPriorYearChecks } from "./prior-year-checks";
+import { checkLockReason, signedComparativesDifference } from "../domain/prior-year-checks";
 import { lockAdoption } from "../domain/methodology-adoption";
 import { buildLeadSheets } from "../domain/leadsheet";
 import { buildStatements } from "../domain/statements";
@@ -230,14 +232,34 @@ export async function clearReviewPoint(tx: Tx, actor: Actor, pointId: string): P
   await audit(tx, actor, "clear", "review_point", pointId, { engagementId: point.engagementId });
 }
 
-export async function lockEngagement(tx: Tx, actor: Actor, engagementId: string): Promise<void> {
+/**
+ * What a partner must explain before locking, or null. Only when last year's file is signed and this year's comparatives check fails (the check
+ * itself stays a warning). Used by the lock and by the page that shows the reason field.
+ */
+export async function lockExplanationNeeded(tx: Tx, firmId: string, engagementId: string): Promise<{ detail: string | undefined; items: string[] } | null> {
+  const failed = signedComparativesDifference(await getPriorYearChecks(tx, firmId, engagementId));
+  return failed ? { detail: failed.detail, items: failed.items ?? [] } : null;
+}
+
+export async function lockEngagement(tx: Tx, actor: Actor, engagementId: string, reason = ""): Promise<void> {
   await requireOpen(tx, engagementId);
   if (!canLock(actor.role)) throw new Error("Only a partner can lock an engagement.");
   const overview = await getOverview(tx, engagementId);
   if (!overview!.readiness.ready) throw new Error(`The engagement is not ready to lock. ${overview!.readiness.blockers.join(" ")}`);
+  // Owner decision (2026-11-25): with last year signed and the comparatives differing, a reason is required and recorded. Otherwise nothing extra, and a reason given is ignored.
+  const needed = await lockExplanationNeeded(tx, actor.firmId, engagementId);
+  let explained: { reason: string; detail: string | undefined; lines: string[] } | null = null;
+  if (needed) {
+    const checked = checkLockReason(reason);
+    if (!checked.ok) throw new Error(checked.message);
+    explained = { reason: checked.reason, detail: needed.detail, lines: needed.items };
+  }
   await tx.query("update engagements set status = 'locked', locked_by = $2, locked_at = now() where id = $1", [engagementId, actor.userId]);
   // Which adoption of the methodology was current when the file was locked, or "none". Recorded only: it changes nothing about locking.
-  await audit(tx, actor, "lock", "engagement", engagementId, { methodologyAdoption: lockAdoption((await getAdoption(tx)).state) });
+  await audit(tx, actor, "lock", "engagement", engagementId, {
+    methodologyAdoption: lockAdoption((await getAdoption(tx)).state),
+    ...(explained ? { comparativesDifference: explained } : {}),
+  });
 }
 
 export async function unlockEngagement(tx: Tx, actor: Actor, engagementId: string, reason: string): Promise<void> {

@@ -196,7 +196,7 @@ describe("withdrawing", () => {
 });
 
 describe("the draft label", () => {
-  it("is unchanged by an adoption: the constants, the pages' own text, and the line beside it", () => {
+  it("keeps the draft label wording, as the fallback whenever the adoption is not current, and the line beside it", () => {
     expect(DRAFT_LABEL_TITLE).toBe("The library is an unreviewed AI draft.");
     expect(DRAFT_LABEL).toBe("The procedures below come from a library that was drafted with AI and has not been reviewed. Check them against the standards and your firm's own policy before you rely on them. Any change your firm makes here is your firm's own responsibility.");
     expect(LIBRARY_STATUS).toBe("AI draft v0.1: not reviewed, not approved for use on any engagement");

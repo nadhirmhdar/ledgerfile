@@ -4,7 +4,7 @@ import type { Db } from "../src/server/db";
 import { openDatabase, withFirm } from "../src/server/db";
 import * as repo from "../src/server/repo";
 import * as review from "../src/server/review";
-import { checkFilters, countLog, exportLog, filterChoices, getLogPage, isAdmin } from "../src/server/audit-log";
+import { checkFilters, countLog, exportLog, filterChoices, getLogPage, canSeeAuditLog } from "../src/server/audit-log";
 import { NO_FILTERS, parseFilters, type LogFilters } from "../src/domain/audit-log";
 
 let db: Db;
@@ -77,17 +77,21 @@ afterAll(async () => {
 });
 
 describe("who may see the log", () => {
-  it("confirms an active administrator from the database, and nobody else", async () => {
-    const check = (s: repo.Session) => as(s, (tx) => isAdmin(tx, { ...s, name: "x", email: "x@x", firmName: "F" }));
+  it("confirms an active partner or administrator from the database, and nobody else (Owner decision 2026-11-25)", async () => {
+    const check = (s: repo.Session) => as(s, (tx) => canSeeAuditLog(tx, { ...s, name: "x", email: "x@x", firmName: "F" }));
     expect(await check(admin)).toBe(true);
-    for (const s of [partner, reviewer, preparer, lapsed]) expect(await check(s), s.role).toBe(false);
-    // A session that claims to be an administrator is not believed: the database says preparer.
-    expect(await as(preparer, (tx) => isAdmin(tx, { ...preparer, role: "admin", name: "x", email: "x@x", firmName: "F" }))).toBe(false);
+    expect(await check(partner)).toBe(true);
+    for (const s of [reviewer, preparer, lapsed]) expect(await check(s), s.role).toBe(false);
+    // A session that claims to be a partner or an administrator is not believed: the database says preparer.
+    expect(await as(preparer, (tx) => canSeeAuditLog(tx, { ...preparer, role: "admin", name: "x", email: "x@x", firmName: "F" }))).toBe(false);
+    expect(await as(preparer, (tx) => canSeeAuditLog(tx, { ...preparer, role: "partner", name: "x", email: "x@x", firmName: "F" }))).toBe(false);
   });
 
-  it("shows the page to an administrator and says not found to everyone else", async () => {
+  it("shows the page to a partner and an administrator and says not found to everyone else", async () => {
     const { default: Page } = await import("../src/app/(app)/firm/audit-log/page");
-    for (const s of [partner, reviewer, preparer, lapsed]) {
+    current = { firmId: A, userId: partner.userId, name: NAMES[partner.userId], firmName: "Gulf Audit & Co", role: "partner" };
+    await expect(Page({ searchParams: Promise.resolve({}) })).resolves.toBeDefined();
+    for (const s of [reviewer, preparer, lapsed]) {
       current = { firmId: A, userId: s.userId, name: NAMES[s.userId], firmName: "Gulf Audit & Co", role: s.role };
       await expect(Page({ searchParams: Promise.resolve({}) }), s.role).rejects.toThrow();
     }
@@ -95,10 +99,16 @@ describe("who may see the log", () => {
     await expect(Page({ searchParams: Promise.resolve({}) })).resolves.toBeDefined();
   });
 
-  it("answers the export with 404 to everyone else, 400 for no format, and a file to an administrator", async () => {
+  it("answers the export with 404 to everyone else, 400 for no format, and a file to a partner and an administrator", async () => {
     const { GET } = await import("../src/app/(app)/firm/audit-log/export/route");
     const req = (q: string) => new Request(`http://x/firm/audit-log/export?${q}`);
-    for (const s of [partner, reviewer, preparer, lapsed]) {
+    current = { firmId: A, userId: partner.userId, name: NAMES[partner.userId], firmName: "Gulf Audit & Co", role: "partner" };
+    const byPartner = await GET(req("format=csv"));
+    expect(byPartner.status).toBe(200);
+    // The export is still recorded, with who exported.
+    const exported = await db.query<{ user_id: string }>("select user_id from audit_log where action = 'export' and entity = 'audit_log' order by id desc limit 1");
+    expect(exported.rows[0].user_id).toBe(partner.userId);
+    for (const s of [reviewer, preparer, lapsed]) {
       current = { firmId: A, userId: s.userId, name: NAMES[s.userId], firmName: "Gulf Audit & Co", role: s.role };
       expect((await GET(req("format=csv"))).status, s.role).toBe(404);
       expect((await GET(req("format=xlsx"))).status, s.role).toBe(404);

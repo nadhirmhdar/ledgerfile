@@ -25,6 +25,8 @@ import { Callout, EmptyState, ProgressBar } from "@/ui/feedback";
 import { ArchiveForm } from "@/app/archive-form";
 import { ASSEMBLY_RULE } from "@/domain/archiving";
 import { todayIso } from "@/domain/client-requests";
+import { canLock } from "@/domain/signoff";
+import { LOCK_REASON_MAX, LOCK_REASON_MIN } from "@/domain/prior-year-checks";
 import { ARCHIVE_IRREVERSIBLE, ARCHIVE_PREVENTS, ARCHIVE_STAYS, archiveSection, deadlineView } from "@/ui/archive-view";
 import { Card, PageHeader, Section, EngagementFacts } from "@/ui/layout";
 import { ToDoRows } from "@/ui/todo-rows";
@@ -40,10 +42,12 @@ export default async function ReviewPage({ params }: { params: Promise<{ id: str
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
 
   const session = await getSession();
-  const { engagement, overview, revenue } = await withFirm(await getDb(), session.firmId, async (tx) => ({
+  const { engagement, overview, revenue, explain } = await withFirm(await getDb(), session.firmId, async (tx) => ({
     engagement: await repo.getEngagement(tx, id),
     overview: await review.getOverview(tx, id),
     revenue: await getRevenuePresumption(tx, id),
+    // Only a partner who can lock is asked: with last year signed and the comparatives differing, a reason is needed.
+    explain: canLock(session.role) ? await review.lockExplanationNeeded(tx, session.firmId, id) : null,
   }));
   if (!engagement || !overview) notFound();
 
@@ -189,6 +193,24 @@ export default async function ReviewPage({ params }: { params: Promise<{ id: str
             <div className="mt-4">
               {view.lock === "lock" ? (
                 <ActionForm action={lockAction} fields={{ engagementId: id }}>
+                  {explain && (
+                    <Callout variant="warning" title="This year's comparative figures differ from last year's signed figures." className="mb-3 max-w-2xl">
+                      <div className="space-y-2">
+                        {explain.detail && <p>{explain.detail}</p>}
+                        {explain.items.length > 0 && (
+                          <ul className="list-disc space-y-0.5 pl-5">
+                            {explain.items.map((item) => (
+                              <li key={item}>{item}</li>
+                            ))}
+                          </ul>
+                        )}
+                        <label className={fieldLabel}>
+                          Reason for locking anyway ({LOCK_REASON_MIN} to {LOCK_REASON_MAX} characters, recorded in the audit log)
+                          <textarea name="reason" required minLength={LOCK_REASON_MIN} maxLength={LOCK_REASON_MAX} rows={3} className={`${ctl} min-h-20`} />
+                        </label>
+                      </div>
+                    </Callout>
+                  )}
                   <Button variant="primary">Lock engagement</Button>
                 </ActionForm>
               ) : (

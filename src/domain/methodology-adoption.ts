@@ -86,6 +86,16 @@ export function adoptionLine(state: AdoptionState): string {
   return state.kind === "current" ? `${base}.` : `${base}; the methodology has changed since.`;
 }
 
+/**
+ * Owner decision (2026-11-25): on METHODOLOGY PROCEDURE content only, a current adoption replaces the "unreviewed draft" label with this line. Null
+ * unless the adoption is current (adopted, not withdrawn, and nothing changed since), in which case the draft label stays exactly as before. It says the
+ * firm adopted the library; it never says anyone outside the firm reviewed it. No other draft label in the application uses it.
+ */
+export function adoptedLabel(state: AdoptionState): string | null {
+  return state.kind === "current" ? `Adopted by the firm on ${state.adoption.at} (library v${state.adoption.version})` : null;
+}
+export const ADOPTED_NOTE = "The firm's partner reviewed this methodology, with the firm's own changes, and adopted it for use. This is the firm's own record.";
+
 /** The full sentence in the Adoption section. */
 export const adoptionSentence = (a: Pick<AdoptionRecord, "by" | "at" | "version">): string => `Adopted for this firm by ${a.by} on ${a.at}, library v${a.version}.`;
 

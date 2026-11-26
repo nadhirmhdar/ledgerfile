@@ -1,7 +1,8 @@
 import ExcelJS from "exceljs";
 import type { Tx } from "./db";
 import { audit as log, type Session } from "./repo";
-import { AuthError, requireAdmin, type AuthSession } from "./auth";
+import type { AuthSession } from "./auth";
+import { canLock, type Role } from "../domain/signoff";
 import { setText } from "./schedule-xlsx";
 import { safePart } from "./schedule-export";
 import {
@@ -22,22 +23,21 @@ import {
 } from "../domain/audit-log";
 
 /**
- * The firm's audit log: read for administrators only, newest first, paged by position (never by offset), filtered, and exported.
+ * The firm's audit log: read for partners and administrators only, newest first, paged by position (never by offset), filtered, and exported.
  *
  * Which engagement an entry belongs to is worked out inside the one list query, not per row (see ENGAGEMENT_OF): the entry's own entity when
  * it is the engagement, else the engagementId its detail carries, else the engagement of an account, else the entity id of an entry whose
  * entity is something kept per engagement. Firm-level, client-level and sign-in entries have none. No column is added for it.
  */
 
-/** Confirm from the database that the person is an active administrator. Everyone else gets "not found" from the page and the export. */
-export async function isAdmin(tx: Tx, s: AuthSession): Promise<boolean> {
-  try {
-    await requireAdmin(tx, s);
-    return true;
-  } catch (e) {
-    if (e instanceof AuthError) return false;
-    throw e;
-  }
+/**
+ * Confirm from the database that the person is an active partner-level user (a partner, or the firm administrator, by the same rule as locking). The
+ * session's own claim is never believed. Everyone else gets "not found" from the page and the export.
+ * Owner decision (2026-11-25): partners as well as administrators see and export the firm's audit log.
+ */
+export async function canSeeAuditLog(tx: Tx, s: AuthSession): Promise<boolean> {
+  const { rows } = await tx.query<{ role: Role; active: boolean }>("select role, active from users where id = $1 and firm_id = $2", [s.userId, s.firmId]);
+  return !!rows[0] && rows[0].active && canLock(rows[0].role);
 }
 
 const UUID_RE = "'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'";
