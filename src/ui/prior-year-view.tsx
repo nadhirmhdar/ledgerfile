@@ -20,7 +20,8 @@ export function PriorYearChecks({ result, engagementId }: { result: PriorYearRes
     <ul className="divide-y divide-border">
       {[...failing, ...result.checks.filter((c) => c.passed)].map((c) => (
         <li key={c.label} className="flex flex-wrap items-start gap-x-3 gap-y-1 py-2 first:pt-0 last:pb-0">
-          <StatusBadge status={c.passed ? "done" : "needs_review"} label={c.passed ? "Passed" : "Needs attention"} />
+          {/* A failing check sits in the box titled "Needs attention", so it does not repeat the words on a badge of its own. */}
+          {c.passed && <StatusBadge status="done" label="Passed" />}
           <div className="min-w-0 flex-1 basis-60 text-ink">
             <p className={c.passed ? "" : "font-semibold"}>{c.label}.</p>
             {c.detail && <p className="text-ink-muted">{plainCount(c.detail)}</p>}
