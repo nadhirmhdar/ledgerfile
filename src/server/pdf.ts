@@ -2,14 +2,16 @@ import PDFDocument from "pdfkit";
 import type { Block } from "../domain/letters";
 import type { FigureRow, StatementBlock } from "../domain/statements-document";
 import { fitLogo, type LogoImage } from "../domain/branding";
+import { arabicAvailable, arabicHeight, drawArabic, hasArabic } from "./pdf-arabic";
 
 /**
  * A small PDF renderer for the downloads: A4, headings, paragraphs, bullets and numbered items, tables of figures (right-aligned, bold
  * totals, the header repeated when a table runs onto another page), the client and period at the top of every page and "Page N of M" at the
  * bottom. Both the financial statements and the auditor's report are drawn with it from the same block lists as their Word files.
  *
- * Only pdfkit's built-in Helvetica family is used, so no font file of ours is needed. Those fonts take WinAnsi (Windows-1252) text, so every
- * string goes through toWinAnsi first: anything outside it is replaced, never sent as a missing glyph.
+ * pdfkit's built-in Helvetica family prints the documents. Those fonts take WinAnsi (Windows-1252) text, so every string goes through
+ * toWinAnsi first: anything outside it is replaced, never sent as a missing glyph. The one exception is text holding Arabic (a client,
+ * firm, person or account name): see pdf-arabic.ts, which draws it with the font in assets/fonts.
  */
 
 export type PdfBlock = StatementBlock | Block;
@@ -71,7 +73,7 @@ const inWinAnsi = (ch: string) => {
 /**
  * Text the standard fonts can print. Characters in WinAnsi (letters with accents, "–", "×", "÷", curly quotes, the bullet) are kept; a few
  * look-alikes are mapped ("−" to "-", "≥" to ">="); a letter with a mark that WinAnsi lacks becomes its plain letter; control characters are
- * dropped; anything else, such as Arabic or Chinese, becomes "?" (one for each character, so a name stays recognisably a name).
+ * dropped; anything else, such as Chinese, becomes "?" (one for each character, so a name stays recognisably a name). Arabic is not sent here.
  */
 export function toWinAnsi(text: string): string {
   let out = "";
@@ -105,6 +107,25 @@ const LINE_AFTER = 5;
 const PAD = 3;
 
 type Doc = InstanceType<typeof PDFDocument>;
+type Look = { font: "Helvetica" | "Helvetica-Bold" | "Helvetica-Oblique"; size: number };
+type Place = { width: number; align?: "left" | "right"; lineBreak?: boolean };
+
+const needsArabic = (text: string) => hasArabic(text) && arabicAvailable();
+
+/** Draw text at (x, y); the current font is already the look's. Without Arabic this is pdfkit's own call, unchanged. */
+function write(doc: Doc, look: Look, text: string, x: number, y: number, place: Place) {
+  if (!needsArabic(text)) {
+    doc.text(toWinAnsi(text), x, y, place);
+    return;
+  }
+  const page = place.lineBreak === false ? undefined : { top: MARGIN.top, bottom: PAGE.height - MARGIN.bottom };
+  drawArabic(doc, { ...look, plain: toWinAnsi }, text, x, y, { ...place, page });
+}
+
+/** The height the text takes at this width. */
+function heightOf(doc: Doc, look: Look, text: string, width: number): number {
+  return needsArabic(text) ? arabicHeight(doc, { ...look, plain: toWinAnsi }, text, width) : doc.heightOfString(toWinAnsi(text) || " ", { width });
+}
 
 function drawFigures(doc: Doc, rows: FigureRow[], labelPct: number) {
   const labelW = (CONTENT_WIDTH * labelPct) / 100;
@@ -115,12 +136,12 @@ function drawFigures(doc: Doc, rows: FigureRow[], labelPct: number) {
 
   const draw = (r: FigureRow, y: number): number => {
     const bold = r.kind !== "line";
-    doc.font(bold ? "Helvetica-Bold" : "Helvetica").fontSize(BODY);
-    const label = toWinAnsi(r.label);
-    const h = Math.max(doc.heightOfString(label || " ", { width: labelW - 6 }), BODY * 1.15) + PAD * 2;
+    const look: Look = { font: bold ? "Helvetica-Bold" : "Helvetica", size: BODY };
+    doc.font(look.font).fontSize(look.size);
+    const h = Math.max(heightOf(doc, look, r.label, labelW - 6), BODY * 1.15) + PAD * 2;
     if (y + h > bottom) return -1;
-    doc.text(label, MARGIN.left, y + PAD, { width: labelW - 6, align: "left", lineBreak: true });
-    r.figures.forEach((f, i) => doc.text(toWinAnsi(f), MARGIN.left + labelW + colW * i, y + PAD, { width: colW - 2, align: "right", lineBreak: false }));
+    write(doc, look, r.label, MARGIN.left, y + PAD, { width: labelW - 6, align: "left", lineBreak: true });
+    r.figures.forEach((f, i) => write(doc, look, f, MARGIN.left + labelW + colW * i, y + PAD, { width: colW - 2, align: "right", lineBreak: false }));
     const left = MARGIN.left + labelW;
     const right = MARGIN.left + CONTENT_WIDTH;
     doc.lineWidth(0.6).strokeColor("#000000");
@@ -169,45 +190,50 @@ function render(doc: Doc, b: PdfBlock) {
   switch (b.kind) {
     case "title":
       ensure(doc, 60);
-      doc.font("Helvetica-Bold").fontSize(15).text(toWinAnsi(b.text), MARGIN.left, doc.y, { width: CONTENT_WIDTH });
+      doc.font("Helvetica-Bold").fontSize(15);
+      write(doc, { font: "Helvetica-Bold", size: 15 }, b.text, MARGIN.left, doc.y, { width: CONTENT_WIDTH });
       doc.moveDown(0.2);
       return;
     case "heading": {
       const level = "level" in b && b.level === 3 ? 3 : 2;
       ensure(doc, 50);
       doc.moveDown(level === 3 ? 0.5 : 0.7);
-      doc.font("Helvetica-Bold").fontSize(level === 3 ? 10.5 : 12).text(toWinAnsi(b.text), MARGIN.left, doc.y, { width: CONTENT_WIDTH });
+      const look: Look = { font: "Helvetica-Bold", size: level === 3 ? 10.5 : 12 };
+      doc.font(look.font).fontSize(look.size);
+      write(doc, look, b.text, MARGIN.left, doc.y, { width: CONTENT_WIDTH });
       doc.moveDown(0.3);
       return;
     }
     case "para": {
       const italics = "italics" in b && b.italics;
       const bold = "bold" in b && b.bold;
-      doc.font(bold ? "Helvetica-Bold" : italics ? "Helvetica-Oblique" : "Helvetica").fontSize(BODY);
-      doc.text(toWinAnsi(b.text), MARGIN.left, doc.y, { width: CONTENT_WIDTH, align: "left" });
+      const look: Look = { font: bold ? "Helvetica-Bold" : italics ? "Helvetica-Oblique" : "Helvetica", size: BODY };
+      doc.font(look.font).fontSize(look.size);
+      write(doc, look, b.text, MARGIN.left, doc.y, { width: CONTENT_WIDTH, align: "left" });
       doc.moveDown(LINE_AFTER / BODY);
       return;
     }
     case "bullet": {
       const indent = b.level === 2 ? 34 : 18;
-      doc.font("Helvetica").fontSize(BODY);
-      const text = toWinAnsi(b.text);
-      ensure(doc, doc.heightOfString(text, { width: CONTENT_WIDTH - indent }) + 4);
+      const look: Look = { font: "Helvetica", size: BODY };
+      doc.font(look.font).fontSize(look.size);
+      ensure(doc, heightOf(doc, look, b.text, CONTENT_WIDTH - indent) + 4);
       const y = doc.y;
       doc.text("•", MARGIN.left + indent - 12, y, { width: 10, lineBreak: false });
-      doc.text(text, MARGIN.left + indent, y, { width: CONTENT_WIDTH - indent });
+      write(doc, look, b.text, MARGIN.left + indent, y, { width: CONTENT_WIDTH - indent });
       doc.moveDown(3 / BODY);
       return;
     }
     case "numbered": {
-      doc.font("Helvetica").fontSize(BODY);
+      const look: Look = { font: "Helvetica", size: BODY };
+      doc.font(look.font).fontSize(look.size);
       const dot = b.text.indexOf(". ");
       const number = dot > 0 ? toWinAnsi(b.text.slice(0, dot + 1)) : "";
-      const text = toWinAnsi(dot > 0 ? b.text.slice(dot + 2) : b.text);
-      ensure(doc, doc.heightOfString(text, { width: CONTENT_WIDTH - 28 }) + 4);
+      const text = dot > 0 ? b.text.slice(dot + 2) : b.text;
+      ensure(doc, heightOf(doc, look, text, CONTENT_WIDTH - 28) + 4);
       const y = doc.y;
       if (number) doc.text(number, MARGIN.left, y, { width: 24, lineBreak: false });
-      doc.text(text, MARGIN.left + 28, y, { width: CONTENT_WIDTH - 28 });
+      write(doc, look, text, MARGIN.left + 28, y, { width: CONTENT_WIDTH - 28 });
       doc.moveDown(4 / BODY);
       return;
     }
@@ -216,7 +242,7 @@ function render(doc: Doc, b: PdfBlock) {
       doc.moveDown(0.6);
       for (const line of b.lines) {
         ensure(doc, 24);
-        doc.text(toWinAnsi(line), MARGIN.left, doc.y, { width: CONTENT_WIDTH });
+        write(doc, { font: "Helvetica", size: BODY }, line, MARGIN.left, doc.y, { width: CONTENT_WIDTH });
         doc.moveDown(0.5);
       }
       return;
@@ -245,7 +271,8 @@ export function renderPdf(blocks: PdfBlock[], options: PdfOptions): Promise<Buff
       margins: { top: MARGIN.top, bottom: MARGIN.bottom, left: MARGIN.left, right: MARGIN.right },
       bufferPages: true,
       compress: options.compress ?? true,
-      info: { Title: toWinAnsi(options.title), Author: "LedgerFile", Creator: "LedgerFile", Producer: "LedgerFile" },
+      // The title property is not drawn, and a PDF holds any characters there.
+      info: { Title: hasArabic(options.title) ? options.title : toWinAnsi(options.title), Author: "LedgerFile", Creator: "LedgerFile", Producer: "LedgerFile" },
     });
     const chunks: Buffer[] = [];
     doc.on("data", (c: Buffer) => chunks.push(c));
@@ -277,8 +304,9 @@ export function renderPdf(blocks: PdfBlock[], options: PdfOptions): Promise<Buff
           const drawn = drawLogo(doc, brand.logo, 56, 20, MARGIN.left, 24);
           if (drawn) textX += drawn.width + 8;
         }
-        doc.text(toWinAnsi(options.header), textX, 34, { width: CONTENT_WIDTH - (textX - MARGIN.left) - (brand ? 150 : 0), align: "left", lineBreak: false });
-        if (brand) doc.text(toWinAnsi(brand.firmName), PAGE.width - MARGIN.right - 146, 34, { width: 146, align: "right", lineBreak: false });
+        const small: Look = { font: "Helvetica", size: 8 };
+        write(doc, small, options.header, textX, 34, { width: CONTENT_WIDTH - (textX - MARGIN.left) - (brand ? 150 : 0), align: "left", lineBreak: false });
+        if (brand) write(doc, small, brand.firmName, PAGE.width - MARGIN.right - 146, 34, { width: 146, align: "right", lineBreak: false });
         doc.lineWidth(0.4).strokeColor("#999999").moveTo(MARGIN.left, 50).lineTo(PAGE.width - MARGIN.right, 50).stroke();
         doc.text(`Page ${i - start + 1} of ${count}`, MARGIN.left, PAGE.height - 40, { width: CONTENT_WIDTH, align: "center", lineBreak: false });
         doc.page.margins.bottom = saved;
